@@ -1,0 +1,35 @@
+{
+  "name": "postgres-cookbook-web",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "cookbook-sync-images",
+    "build": "next build",
+    "postbuild": "cookbook-fix-static-images",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dsbasko/cookbook-engine": "1.0.0",
+    "next": "14.2.18",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.9",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.18",
+    "eslint-config-prettier": "9.1.0",
+    "prettier": "3.4.2",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

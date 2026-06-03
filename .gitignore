@@ -1,0 +1,30 @@
+/.*
+.DS_Store
+Thumbs.db
+
+!.gitignore
+!.github/
+
+# Dotfiles that are conventionally committed — otherwise `/.*` would silently swallow them.
+# (files may not exist yet; the rules are ready for when they appear, no `git add -f` needed)
+!.gitattributes
+!.editorconfig
+!.nvmrc
+!.node-version
+!.dockerignore
+!.env.example
+
+# Compiled lecture binaries — run via `go run` or `make run`.
+# Every unit's demo binary sits next to `cmd/demo/main.go` (or at the lecture root).
+lectures/*/*/demo
+
+# Web app build artefacts (also covered by web/.gitignore, listed here
+# so a stray `git add web/.next` from repo root is ignored).
+web/node_modules/
+web/.next/
+web/out/
+web/public/static/lectures/
+*.tsbuildinfo
+
+# pnpm workspace install output at the repo root (root pnpm-lock.yaml IS tracked).
+/node_modules/

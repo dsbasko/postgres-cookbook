@@ -1,0 +1,5 @@
+# postgres-cookbook is a consumer of @dsbasko/cookbook-engine, which is a
+# published npm package (its source lives in its own repo). The site in web/
+# installs the engine from the registry; only web/ remains a workspace member.
+packages:
+  - web

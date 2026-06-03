@@ -1,0 +1,10 @@
+{
+  "name": "postgres-cookbook",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PostgreSQL Cookbook — a consumer of @dsbasko/cookbook-engine. This root package.json only defines the pnpm workspace; the site lives in web/.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
