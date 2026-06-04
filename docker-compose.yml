@@ -1,0 +1,74 @@
+name: sandbox-postgres
+
+# Песочница курса: один Postgres 18 + Adminer как веб-UI.
+#
+# Это базовый стенд, общий для всех юнитов. Каждый юнит накатывает свою
+# схему поверх канона Brew (см. schema/brew.sql) через `make db-reset`,
+# поэтому отдельный контейнер на юнит не нужен — одна БД на весь курс.
+#
+# Подключение (дефолты, на них настроен internal/pg.NewPool):
+#
+#   DATABASE_URL=postgres://brew:brew@localhost:5432/brew?sslmode=disable
+#
+# Эквивалентные PG*-переменные, если DATABASE_URL не задан:
+#   PGHOST=localhost  PGPORT=5432  PGDATABASE=brew  PGUSER=brew  PGPASSWORD=brew
+#
+# Команды:
+#   docker compose up -d            # поднять стенд
+#   psql "$DATABASE_URL" -c '\l'    # проверить подключение
+#   open http://localhost:8090      # Adminer (System: PostgreSQL, Server: postgres)
+#   docker compose down -v          # снести стенд вместе с данными
+
+networks:
+  brew-net:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: brew-postgres
+    hostname: brew-postgres
+    networks: [brew-net]
+    # Только loopback — стенд для локальной разработки, наружу не торчит.
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: brew
+      POSTGRES_USER: brew
+      POSTGRES_PASSWORD: brew
+    # wal_level=logical + слоты/сендеры нужны логической репликации и CDC:
+    # модуль 09 (outbox/LISTEN-NOTIFY) и капстон 10-05 (CREATE PUBLICATION
+    # dbz_publication, эстафета в kafka-cookbook). Включено в базе, чтобы
+    # эти юниты не требовали отдельного docker-compose.override.yml.
+    command: >
+      postgres
+        -c wal_level=logical
+        -c max_replication_slots=4
+        -c max_wal_senders=4
+    # PG18+ хранит данные в major-version-подкаталоге, поэтому том монтируется
+    # на /var/lib/postgresql (а не .../data, как было до 18) — см.
+    # github.com/docker-library/postgres/pull/1259.
+    volumes:
+      - brew-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brew -d brew"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  adminer:
+    image: adminer:4.8.1
+    container_name: brew-adminer
+    hostname: brew-adminer
+    networks: [brew-net]
+    ports:
+      - "127.0.0.1:8090:8080"
+    environment:
+      # Adminer ходит до Postgres по hostname внутри сети стенда.
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  brew-pgdata:
