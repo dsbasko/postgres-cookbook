@@ -1,0 +1,8 @@
+go 1.26
+
+// Workspace юнитов курса. На старте здесь только общий модуль internal;
+// каждый юнит добавляет свою строку `use ./NN-module/MM-slug` по мере создания
+// (см. per-unit рецепт в docs/plans). НЕ копировать go.work из kafka-cookbook:
+// тамошний `replace google.golang.org/genproto` нужен только pebble (07-02),
+// которого в postgres-курсе нет.
+use ./internal
