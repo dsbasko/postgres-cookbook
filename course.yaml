@@ -49,136 +49,148 @@ modules:
         connecting from Go via pgxpool, and typed queries via sqlc. After this module you have a
         working pipeline — "SQL by hand → sqlc generate → typed pgx code" — that every other topic
         builds on.
-    lessons: []
+    lessons:
+      - slug: 00-01-client-server-and-sandbox
+        title: { ru: Клиент, сервер и песочница, en: Client, server, and the sandbox }
+        duration: 25m
+        tags: [client-server, sandbox, sqlc, pgx]
 
-  - id: 01-data-types
-    title: { ru: Типы данных, en: Data types }
-    description:
-      ru: |
-        Какой тип выбрать и почему: numeric vs float для денег, text/boolean/null, timestamptz
-        для времени, uuid и PG18 uuidv7, enum/массивы и введение в jsonb. Правильный тип на старте
-        снимает целый класс багов на проде.
-      en: |
-        Which type to pick and why: numeric vs float for money, text/boolean/null, timestamptz for
-        time, uuid and PG18 uuidv7, enums/arrays, and an intro to jsonb. The right type up front
-        removes a whole class of production bugs.
-    lessons: []
-
-  - id: 02-schema-and-constraints
-    title: { ru: Схема, DDL и ограничения, en: Schema, DDL, and constraints }
-    description:
-      ru: |
-        Identity vs serial, NOT NULL, первичные и внешние ключи, UNIQUE/CHECK, генерируемые столбцы
-        и домены (PG18 virtual vs stored), и мышление миграций — какие ALTER мгновенны, а какие
-        переписывают таблицу и блокируют запись.
-      en: |
-        Identity vs serial, NOT NULL, primary and foreign keys, UNIQUE/CHECK, generated columns and
-        domains (PG18 virtual vs stored), and a migration mindset — which ALTERs are instant and
-        which rewrite the table and block writes.
-    lessons: []
-
-  - id: 03-crud-fluency
-    title: { ru: CRUD-беглость, en: CRUD fluency }
-    description:
-      ru: |
-        Уверенный CRUD: INSERT ... RETURNING, SELECT с WHERE/ORDER/LIMIT и keyset-пагинация,
-        безопасные UPDATE/DELETE, upsert через ON CONFLICT, PG18 RETURNING old/new и трезвая
-        семантика NULL (ловушка NOT IN + NULL, COALESCE/NULLIF/IS DISTINCT FROM).
-      en: |
-        Confident CRUD: INSERT ... RETURNING, SELECT with WHERE/ORDER/LIMIT and keyset pagination,
-        safe UPDATE/DELETE, upsert via ON CONFLICT, PG18 RETURNING old/new, and sober NULL semantics
-        (the NOT IN + NULL trap, COALESCE/NULLIF/IS DISTINCT FROM).
-    lessons: []
-
-  - id: 04-querying-across-tables
-    title: { ru: Запросы по таблицам, en: Querying across tables }
-    description:
-      ru: |
-        Связываем данные: join'ы (inner/left/right/full), self-join'ы, агрегация GROUP BY/HAVING,
-        DISTINCT ON (последний заказ на клиента), подзапросы EXISTS vs IN и CTE с материализацией.
-        Здесь данные превращаются в ответы на вопросы бизнеса.
-      en: |
-        Tying data together: joins (inner/left/right/full), self-joins, aggregation with
-        GROUP BY/HAVING, DISTINCT ON (the latest order per customer), EXISTS vs IN subqueries, and
-        CTEs with materialization. This is where data turns into answers to business questions.
-    lessons: []
-
-  - id: 05-transactions-and-mvcc
-    title: { ru: Транзакции, MVCC и конкурентность, en: Transactions, MVCC, and concurrency }
-    description:
-      ru: |
-        Как Postgres ведёт себя под конкурентной нагрузкой: ACID и транзакции, ментальная модель
-        MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции для
-        разработчика, ретраи на 40001 и дедлоки с advisory-локами.
-      en: |
-        How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
-        (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
-        40001, and deadlocks with advisory locks.
-    lessons: []
-
-  - id: 06-indexing-and-explain
-    title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }
-    description:
-      ru: |
-        Производительность через чтение планов: EXPLAIN ANALYZE с buffers (в PG18 по умолчанию),
-        B-tree и порядок столбцов (PG18 skip-scan), когда индексы не помогают (expression index),
-        partial/covering/unique и Index-Only Scan, GIN для jsonb/массивов, CREATE INDEX CONCURRENTLY.
-      en: |
-        Performance through reading plans: EXPLAIN ANALYZE with buffers (on by default in PG18),
-        B-tree and column order (PG18 skip-scan), when indexes don't help (expression index),
-        partial/covering/unique and Index-Only Scan, GIN for jsonb/arrays, CREATE INDEX CONCURRENTLY.
-    lessons: []
-
-  - id: 07-jsonb-arrays-and-search
-    title: { ru: JSONB, массивы и поиск, en: JSONB, arrays, and search }
-    description:
-      ru: |
-        Полуструктурированные данные и поиск внутри БД: доступ и containment в jsonb (-> ->> @> ?),
-        когда jsonb не нужен, SQL/JSON path и сборка, массивы vs junction-таблица, полнотекстовый
-        поиск (tsvector + GIN) и нечёткий поиск через pg_trgm — с матрицей выбора FTS/trgm/движок.
-      en: |
-        Semi-structured data and in-database search: jsonb access and containment (-> ->> @> ?),
-        when not to use jsonb, SQL/JSON path and building, arrays vs a junction table, full-text
-        search (tsvector + GIN), and fuzzy search via pg_trgm — with an FTS/trgm/engine decision
-        matrix.
-    lessons: []
-
-  - id: 08-analytical-and-lateral
-    title: { ru: Аналитика, оконные функции и LATERAL, en: Analytics, window functions, and LATERAL }
-    description:
-      ru: |
-        Аналитика прямо в SQL: оконные функции (running total, ранжирование, top-N на группу),
-        lag/lead и фреймы (day-over-day, скользящее среднее), рекурсивные CTE (дерево категорий),
-        LATERAL-join'ы (top-3 на клиента — убийца N+1) и grouping sets/rollup/cube.
-      en: |
-        Analytics right inside SQL: window functions (running total, ranking, top-N per group),
-        lag/lead and frames (day-over-day, moving average), recursive CTEs (a category tree),
-        LATERAL joins (top-3 per customer — the N+1 killer), and grouping sets/rollup/cube.
-    lessons: []
-
-  - id: 09-writes-eventing-and-server-logic
-    title: { ru: Запись, события и серверная логика, en: Writes, eventing, and server logic }
-    description:
-      ru: |
-        Продвинутая запись и логика на стороне БД: MERGE и COPY, очередь задач через SKIP LOCKED,
-        transactional outbox, LISTEN/NOTIFY, триггеры и волатильность функций (IMMUTABLE/STABLE/
-        VOLATILE) — с явной секцией «когда НЕ класть логику в БД».
-      en: |
-        Advanced writes and database-side logic: MERGE and COPY, a job queue via SKIP LOCKED, the
-        transactional outbox, LISTEN/NOTIFY, triggers and function volatility (IMMUTABLE/STABLE/
-        VOLATILE) — with an explicit "when NOT to put logic in the database" section.
-    lessons: []
-
-  - id: 10-use-cases
-    title: { ru: Use cases, en: Use cases }
-    description:
-      ru: |
-        Сквозные капстоны с integration-тестами, связывающие весь курс в работающие приложения:
-        сборка схемы Brew, движок цен и промо (PG18 temporal), клиника анти-паттернов приложения,
-        пулинг из приложения (pgbouncer caveats) и CDC-шов — байт-совместимый handoff в kafka-cookbook.
-      en: |
-        End-to-end capstones with integration tests that tie the whole course into working apps:
-        building the Brew schema, a price-and-promo engine (PG18 temporal), an app anti-patterns
-        clinic, pooling from the app (pgbouncer caveats), and the CDC seam — a byte-compatible
-        handoff into kafka-cookbook.
-    lessons: []
+  # ── Модули 01–10 запаркованы до фазы 3 ──────────────────────────────────
+  # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
+  # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
+  # которых уже есть хотя бы один доведённый юнит (курс публикуется
+  # инкрементально). Описания модулей 01–10 уже написаны и ждут здесь:
+  # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
+  # его lessons[] (см. per-unit рецепт в docs/plans).
+  #
+  #   - id: 01-data-types
+  #     title: { ru: Типы данных, en: Data types }
+  #     description:
+  #       ru: |
+  #         Какой тип выбрать и почему: numeric vs float для денег, text/boolean/null, timestamptz
+  #         для времени, uuid и PG18 uuidv7, enum/массивы и введение в jsonb. Правильный тип на старте
+  #         снимает целый класс багов на проде.
+  #       en: |
+  #         Which type to pick and why: numeric vs float for money, text/boolean/null, timestamptz for
+  #         time, uuid and PG18 uuidv7, enums/arrays, and an intro to jsonb. The right type up front
+  #         removes a whole class of production bugs.
+  #     lessons: []
+  #
+  #   - id: 02-schema-and-constraints
+  #     title: { ru: Схема, DDL и ограничения, en: Schema, DDL, and constraints }
+  #     description:
+  #       ru: |
+  #         Identity vs serial, NOT NULL, первичные и внешние ключи, UNIQUE/CHECK, генерируемые столбцы
+  #         и домены (PG18 virtual vs stored), и мышление миграций — какие ALTER мгновенны, а какие
+  #         переписывают таблицу и блокируют запись.
+  #       en: |
+  #         Identity vs serial, NOT NULL, primary and foreign keys, UNIQUE/CHECK, generated columns and
+  #         domains (PG18 virtual vs stored), and a migration mindset — which ALTERs are instant and
+  #         which rewrite the table and block writes.
+  #     lessons: []
+  #
+  #   - id: 03-crud-fluency
+  #     title: { ru: CRUD-беглость, en: CRUD fluency }
+  #     description:
+  #       ru: |
+  #         Уверенный CRUD: INSERT ... RETURNING, SELECT с WHERE/ORDER/LIMIT и keyset-пагинация,
+  #         безопасные UPDATE/DELETE, upsert через ON CONFLICT, PG18 RETURNING old/new и трезвая
+  #         семантика NULL (ловушка NOT IN + NULL, COALESCE/NULLIF/IS DISTINCT FROM).
+  #       en: |
+  #         Confident CRUD: INSERT ... RETURNING, SELECT with WHERE/ORDER/LIMIT and keyset pagination,
+  #         safe UPDATE/DELETE, upsert via ON CONFLICT, PG18 RETURNING old/new, and sober NULL semantics
+  #         (the NOT IN + NULL trap, COALESCE/NULLIF/IS DISTINCT FROM).
+  #     lessons: []
+  #
+  #   - id: 04-querying-across-tables
+  #     title: { ru: Запросы по таблицам, en: Querying across tables }
+  #     description:
+  #       ru: |
+  #         Связываем данные: join'ы (inner/left/right/full), self-join'ы, агрегация GROUP BY/HAVING,
+  #         DISTINCT ON (последний заказ на клиента), подзапросы EXISTS vs IN и CTE с материализацией.
+  #         Здесь данные превращаются в ответы на вопросы бизнеса.
+  #       en: |
+  #         Tying data together: joins (inner/left/right/full), self-joins, aggregation with
+  #         GROUP BY/HAVING, DISTINCT ON (the latest order per customer), EXISTS vs IN subqueries, and
+  #         CTEs with materialization. This is where data turns into answers to business questions.
+  #     lessons: []
+  #
+  #   - id: 05-transactions-and-mvcc
+  #     title: { ru: Транзакции, MVCC и конкурентность, en: Transactions, MVCC, and concurrency }
+  #     description:
+  #       ru: |
+  #         Как Postgres ведёт себя под конкурентной нагрузкой: ACID и транзакции, ментальная модель
+  #         MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции для
+  #         разработчика, ретраи на 40001 и дедлоки с advisory-локами.
+  #       en: |
+  #         How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
+  #         (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
+  #         40001, and deadlocks with advisory locks.
+  #     lessons: []
+  #
+  #   - id: 06-indexing-and-explain
+  #     title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }
+  #     description:
+  #       ru: |
+  #         Производительность через чтение планов: EXPLAIN ANALYZE с buffers (в PG18 по умолчанию),
+  #         B-tree и порядок столбцов (PG18 skip-scan), когда индексы не помогают (expression index),
+  #         partial/covering/unique и Index-Only Scan, GIN для jsonb/массивов, CREATE INDEX CONCURRENTLY.
+  #       en: |
+  #         Performance through reading plans: EXPLAIN ANALYZE with buffers (on by default in PG18),
+  #         B-tree and column order (PG18 skip-scan), when indexes don't help (expression index),
+  #         partial/covering/unique and Index-Only Scan, GIN for jsonb/arrays, CREATE INDEX CONCURRENTLY.
+  #     lessons: []
+  #
+  #   - id: 07-jsonb-arrays-and-search
+  #     title: { ru: JSONB, массивы и поиск, en: JSONB, arrays, and search }
+  #     description:
+  #       ru: |
+  #         Полуструктурированные данные и поиск внутри БД: доступ и containment в jsonb (-> ->> @> ?),
+  #         когда jsonb не нужен, SQL/JSON path и сборка, массивы vs junction-таблица, полнотекстовый
+  #         поиск (tsvector + GIN) и нечёткий поиск через pg_trgm — с матрицей выбора FTS/trgm/движок.
+  #       en: |
+  #         Semi-structured data and in-database search: jsonb access and containment (-> ->> @> ?),
+  #         when not to use jsonb, SQL/JSON path and building, arrays vs a junction table, full-text
+  #         search (tsvector + GIN), and fuzzy search via pg_trgm — with an FTS/trgm/engine decision
+  #         matrix.
+  #     lessons: []
+  #
+  #   - id: 08-analytical-and-lateral
+  #     title: { ru: Аналитика, оконные функции и LATERAL, en: Analytics, window functions, and LATERAL }
+  #     description:
+  #       ru: |
+  #         Аналитика прямо в SQL: оконные функции (running total, ранжирование, top-N на группу),
+  #         lag/lead и фреймы (day-over-day, скользящее среднее), рекурсивные CTE (дерево категорий),
+  #         LATERAL-join'ы (top-3 на клиента — убийца N+1) и grouping sets/rollup/cube.
+  #       en: |
+  #         Analytics right inside SQL: window functions (running total, ranking, top-N per group),
+  #         lag/lead and frames (day-over-day, moving average), recursive CTEs (a category tree),
+  #         LATERAL joins (top-3 per customer — the N+1 killer), and grouping sets/rollup/cube.
+  #     lessons: []
+  #
+  #   - id: 09-writes-eventing-and-server-logic
+  #     title: { ru: Запись, события и серверная логика, en: Writes, eventing, and server logic }
+  #     description:
+  #       ru: |
+  #         Продвинутая запись и логика на стороне БД: MERGE и COPY, очередь задач через SKIP LOCKED,
+  #         transactional outbox, LISTEN/NOTIFY, триггеры и волатильность функций (IMMUTABLE/STABLE/
+  #         VOLATILE) — с явной секцией «когда НЕ класть логику в БД».
+  #       en: |
+  #         Advanced writes and database-side logic: MERGE and COPY, a job queue via SKIP LOCKED, the
+  #         transactional outbox, LISTEN/NOTIFY, triggers and function volatility (IMMUTABLE/STABLE/
+  #         VOLATILE) — with an explicit "when NOT to put logic in the database" section.
+  #     lessons: []
+  #
+  #   - id: 10-use-cases
+  #     title: { ru: Use cases, en: Use cases }
+  #     description:
+  #       ru: |
+  #         Сквозные капстоны с integration-тестами, связывающие весь курс в работающие приложения:
+  #         сборка схемы Brew, движок цен и промо (PG18 temporal), клиника анти-паттернов приложения,
+  #         пулинг из приложения (pgbouncer caveats) и CDC-шов — байт-совместимый handoff в kafka-cookbook.
+  #       en: |
+  #         End-to-end capstones with integration tests that tie the whole course into working apps:
+  #         building the Brew schema, a price-and-promo engine (PG18 temporal), an app anti-patterns
+  #         clinic, pooling from the app (pgbouncer caveats), and the CDC seam — a byte-compatible
+  #         handoff into kafka-cookbook.
+  #     lessons: []

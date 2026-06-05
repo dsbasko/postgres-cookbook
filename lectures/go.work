@@ -6,3 +6,5 @@ go 1.26
 // тамошний `replace google.golang.org/genproto` нужен только pebble (07-02),
 // которого в postgres-курсе нет.
 use ./internal
+
+use ./00-getting-connected/00-01-client-server-and-sandbox
