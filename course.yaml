@@ -252,26 +252,50 @@ modules:
         duration: 25m
         tags: [deadlock, "40P01", advisory-lock, locks, escape-hatch]
 
-  # ── Модули 06–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 06-indexing-and-explain
+    title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }
+    description:
+      ru: |
+        Производительность через чтение планов: EXPLAIN ANALYZE с buffers (в PG18 по умолчанию),
+        B-tree и порядок столбцов (PG18 skip-scan), когда индексы не помогают (expression index),
+        partial/covering/unique и Index-Only Scan, GIN для jsonb/массивов, CREATE INDEX CONCURRENTLY.
+      en: |
+        Performance through reading plans: EXPLAIN ANALYZE with buffers (on by default in PG18),
+        B-tree and column order (PG18 skip-scan), when indexes don't help (expression index),
+        partial/covering/unique and Index-Only Scan, GIN for jsonb/arrays, CREATE INDEX CONCURRENTLY.
+    lessons:
+      - slug: 06-01-reading-explain-analyze-buffers
+        title: { ru: Чтение EXPLAIN ANALYZE, en: Reading EXPLAIN ANALYZE }
+        duration: 25m
+        tags: [explain, analyze, buffers, pg18, escape-hatch]
+      - slug: 06-02-btree-and-composite-column-order
+        title: { ru: "B-tree и порядок столбцов", en: "B-tree and column order" }
+        duration: 25m
+        tags: [btree, composite-index, left-prefix, skip-scan, escape-hatch]
+      - slug: 06-03-when-indexes-dont-help
+        title: { ru: Когда индексы не помогают, en: When indexes don't help }
+        duration: 20m
+        tags: [non-sargable, expression-index, "lower", escape-hatch]
+      - slug: 06-04-partial-covering-and-unique
+        title: { ru: "Частичные, покрывающие и уникальные", en: "Partial, covering, and unique" }
+        duration: 25m
+        tags: [partial-index, covering-index, include, index-only-scan, escape-hatch]
+      - slug: 06-05-gin-for-jsonb-and-arrays
+        title: { ru: GIN для jsonb и массивов, en: GIN for jsonb and arrays }
+        duration: 25m
+        tags: [gin, jsonb, arrays, containment, escape-hatch]
+      - slug: 06-06-create-index-concurrently
+        title: { ru: CREATE INDEX CONCURRENTLY, en: CREATE INDEX CONCURRENTLY }
+        duration: 20m
+        tags: [create-index-concurrently, locks, migrations, escape-hatch]
+
+  # ── Модули 07–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 06–10 уже написаны и ждут здесь:
+  # инкрементально). Описания модулей 07–10 уже написаны и ждут здесь:
   # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
   # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 06-indexing-and-explain
-  #     title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }
-  #     description:
-  #       ru: |
-  #         Производительность через чтение планов: EXPLAIN ANALYZE с buffers (в PG18 по умолчанию),
-  #         B-tree и порядок столбцов (PG18 skip-scan), когда индексы не помогают (expression index),
-  #         partial/covering/unique и Index-Only Scan, GIN для jsonb/массивов, CREATE INDEX CONCURRENTLY.
-  #       en: |
-  #         Performance through reading plans: EXPLAIN ANALYZE with buffers (on by default in PG18),
-  #         B-tree and column order (PG18 skip-scan), when indexes don't help (expression index),
-  #         partial/covering/unique and Index-Only Scan, GIN for jsonb/arrays, CREATE INDEX CONCURRENTLY.
-  #     lessons: []
   #
   #   - id: 07-jsonb-arrays-and-search
   #     title: { ru: JSONB, массивы и поиск, en: JSONB, arrays, and search }
