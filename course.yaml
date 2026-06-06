@@ -71,26 +71,46 @@ modules:
         duration: 20m
         tags: [pgxpool, pooling, pg_stat_activity, lifecycle]
 
-  # ── Модули 01–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 01-data-types
+    title: { ru: Типы данных, en: Data types }
+    description:
+      ru: |
+        Какой тип выбрать и почему: numeric vs float для денег, text/boolean/null, timestamptz
+        для времени, uuid и PG18 uuidv7, enum/массивы и введение в jsonb. Правильный тип на старте
+        снимает целый класс багов на проде.
+      en: |
+        Which type to pick and why: numeric vs float for money, text/boolean/null, timestamptz for
+        time, uuid and PG18 uuidv7, enums/arrays, and an intro to jsonb. The right type up front
+        removes a whole class of production bugs.
+    lessons:
+      - slug: 01-01-numbers-and-money
+        title: { ru: Числа и деньги, en: Numbers and money }
+        duration: 25m
+        tags: [numeric, float, money, bigint]
+      - slug: 01-02-text-boolean-and-null-teaser
+        title: { ru: text, boolean и тизер NULL, en: text, boolean, and the NULL teaser }
+        duration: 20m
+        tags: [text, boolean, "null", three-valued-logic]
+      - slug: 01-03-date-time-timestamptz
+        title: { ru: Дата, время и timestamptz, en: Date, time, and timestamptz }
+        duration: 20m
+        tags: [timestamptz, time-zones, psql, escape-hatch]
+      - slug: 01-04-uuid-and-uuidv7
+        title: { ru: uuid и uuidv7, en: uuid and uuidv7 }
+        duration: 25m
+        tags: [uuid, uuidv7, primary-key, pg18]
+      - slug: 01-05-enums-arrays-and-jsonb-intro
+        title: { ru: enum, массивы и intro в jsonb, en: enums, arrays, and a jsonb intro }
+        duration: 25m
+        tags: [enum, arrays, jsonb, containers]
+
+  # ── Модули 02–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 01–10 уже написаны и ждут здесь:
+  # инкрементально). Описания модулей 02–10 уже написаны и ждут здесь:
   # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
   # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 01-data-types
-  #     title: { ru: Типы данных, en: Data types }
-  #     description:
-  #       ru: |
-  #         Какой тип выбрать и почему: numeric vs float для денег, text/boolean/null, timestamptz
-  #         для времени, uuid и PG18 uuidv7, enum/массивы и введение в jsonb. Правильный тип на старте
-  #         снимает целый класс багов на проде.
-  #       en: |
-  #         Which type to pick and why: numeric vs float for money, text/boolean/null, timestamptz for
-  #         time, uuid and PG18 uuidv7, enums/arrays, and an intro to jsonb. The right type up front
-  #         removes a whole class of production bugs.
-  #     lessons: []
   #
   #   - id: 02-schema-and-constraints
   #     title: { ru: Схема, DDL и ограничения, en: Schema, DDL, and constraints }

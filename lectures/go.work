@@ -14,3 +14,11 @@ use ./00-getting-connected/00-03-connecting-from-go
 use ./00-getting-connected/00-04-typed-queries-with-sqlc
 
 use ./00-getting-connected/00-05-connection-lifecycle-and-pooling
+
+use ./01-data-types/01-01-numbers-and-money
+
+use ./01-data-types/01-02-text-boolean-and-null-teaser
+
+use ./01-data-types/01-04-uuid-and-uuidv7
+
+use ./01-data-types/01-05-enums-arrays-and-jsonb-intro

@@ -1,0 +1,6 @@
+-- schema.sql — DDL-добавки ЭТОГО юнита поверх канона Brew (schema/brew.sql).
+--
+-- Юниту 01-01 своих таблиц не нужно: деньги мы показываем на каноне (drinks
+-- base_price BIGINT в центах, order_items unit_price), а разницу numeric/float —
+-- на литералах. Файл оставлен намеренно: он часть канонической анатомии юнита,
+-- и sqlc.yaml всегда перечисляет [../../../schema/brew.sql, schema.sql].
