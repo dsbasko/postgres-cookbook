@@ -115,18 +115,24 @@ modules:
   #         CTEs with materialization. This is where data turns into answers to business questions.
   #     lessons: []
   #
-  #   - id: 05-transactions-and-mvcc
-  #     title: { ru: Транзакции, MVCC и конкурентность, en: Transactions, MVCC, and concurrency }
-  #     description:
-  #       ru: |
-  #         Как Postgres ведёт себя под конкурентной нагрузкой: ACID и транзакции, ментальная модель
-  #         MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции для
-  #         разработчика, ретраи на 40001 и дедлоки с advisory-локами.
-  #       en: |
-  #         How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
-  #         (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
-  #         40001, and deadlocks with advisory locks.
-  #     lessons: []
+  - id: 05-transactions-and-mvcc
+    title: { ru: Транзакции, MVCC и конкурентность, en: Transactions, MVCC, and concurrency }
+    description:
+      ru: |
+        Как Postgres ведёт себя под конкурентной нагрузкой: ACID и транзакции, ментальная модель
+        MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции для
+        разработчика, ретраи на 40001 и дедлоки с advisory-локами.
+      en: |
+        How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
+        (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
+        40001, and deadlocks with advisory locks.
+    lessons:
+      # 05-01 (transactions-and-acid) придёт в фазе 3; здесь — первый готовый
+      # юнит модуля: эталон escape-hatch (две psql-сессии, видимые xmin/xmax).
+      - slug: 05-02-mvcc-mental-model
+        title: { ru: Ментальная модель MVCC, en: The MVCC mental model }
+        duration: 25m
+        tags: [mvcc, transactions, snapshot, psql, escape-hatch]
   #
   #   - id: 06-indexing-and-explain
   #     title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }
