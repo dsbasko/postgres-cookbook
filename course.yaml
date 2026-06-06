@@ -104,26 +104,50 @@ modules:
         duration: 25m
         tags: [enum, arrays, jsonb, containers]
 
-  # ── Модули 02–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 02-schema-and-constraints
+    title: { ru: Схема, DDL и ограничения, en: Schema, DDL, and constraints }
+    description:
+      ru: |
+        Identity vs serial, NOT NULL, первичные и внешние ключи, UNIQUE/CHECK, генерируемые столбцы
+        и домены (PG18 virtual vs stored), и мышление миграций — какие ALTER мгновенны, а какие
+        переписывают таблицу и блокируют запись.
+      en: |
+        Identity vs serial, NOT NULL, primary and foreign keys, UNIQUE/CHECK, generated columns and
+        domains (PG18 virtual vs stored), and a migration mindset — which ALTERs are instant and
+        which rewrite the table and block writes.
+    lessons:
+      - slug: 02-01-identity-and-defaults
+        title: { ru: identity и defaults, en: identity and defaults }
+        duration: 20m
+        tags: [identity, serial, default, pg18]
+      - slug: 02-02-not-null-pk-natural-vs-surrogate
+        title: { ru: "NOT NULL, PK, натуральный vs суррогатный ключ", en: "NOT NULL, PK, natural vs surrogate key" }
+        duration: 20m
+        tags: [primary-key, not-null, surrogate-key, natural-key]
+      - slug: 02-03-foreign-keys
+        title: { ru: Внешние ключи (CASCADE/SET NULL), en: Foreign keys (CASCADE/SET NULL) }
+        duration: 25m
+        tags: [foreign-key, on-delete, cascade, referential-integrity]
+      - slug: 02-04-unique-and-check
+        title: { ru: UNIQUE и CHECK (NULLS NOT DISTINCT), en: UNIQUE and CHECK (NULLS NOT DISTINCT) }
+        duration: 20m
+        tags: [unique, check, nulls-not-distinct, pg15]
+      - slug: 02-05-generated-columns-and-domains
+        title: { ru: Генерируемые столбцы и домены, en: Generated columns and domains }
+        duration: 25m
+        tags: [generated-columns, virtual, stored, domain, pg18, escape-hatch]
+      - slug: 02-06-alter-table-migration-mindset
+        title: { ru: "ALTER TABLE: мышление миграций", en: "ALTER TABLE: a migration mindset" }
+        duration: 25m
+        tags: [alter-table, migrations, locks, not-valid, escape-hatch]
+
+  # ── Модули 03–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 02–10 уже написаны и ждут здесь:
+  # инкрементально). Описания модулей 03–10 уже написаны и ждут здесь:
   # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
   # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 02-schema-and-constraints
-  #     title: { ru: Схема, DDL и ограничения, en: Schema, DDL, and constraints }
-  #     description:
-  #       ru: |
-  #         Identity vs serial, NOT NULL, первичные и внешние ключи, UNIQUE/CHECK, генерируемые столбцы
-  #         и домены (PG18 virtual vs stored), и мышление миграций — какие ALTER мгновенны, а какие
-  #         переписывают таблицу и блокируют запись.
-  #       en: |
-  #         Identity vs serial, NOT NULL, primary and foreign keys, UNIQUE/CHECK, generated columns and
-  #         domains (PG18 virtual vs stored), and a migration mindset — which ALTERs are instant and
-  #         which rewrite the table and block writes.
-  #     lessons: []
   #
   #   - id: 03-crud-fluency
   #     title: { ru: CRUD-беглость, en: CRUD fluency }

@@ -22,3 +22,11 @@ use ./01-data-types/01-02-text-boolean-and-null-teaser
 use ./01-data-types/01-04-uuid-and-uuidv7
 
 use ./01-data-types/01-05-enums-arrays-and-jsonb-intro
+
+use ./02-schema-and-constraints/02-01-identity-and-defaults
+
+use ./02-schema-and-constraints/02-02-not-null-pk-natural-vs-surrogate
+
+use ./02-schema-and-constraints/02-03-foreign-keys
+
+use ./02-schema-and-constraints/02-04-unique-and-check
