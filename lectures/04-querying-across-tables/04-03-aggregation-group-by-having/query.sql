@@ -1,0 +1,52 @@
+-- query.sql — протагонист урока. `make gen` → типизированный pgx-код в
+-- internal/db/. Имя после `-- name:` → метод; суффикс — форма результата.
+--
+-- Тема — агрегация: схлопнуть много строк в сводку. GROUP BY режет таблицу на
+-- группы, агрегатные функции (count/sum/min/max/avg) считают по каждой, HAVING
+-- фильтрует уже ГОТОВЫЕ группы. И коварная пара: count(*) vs count(колонка) —
+-- они считают разное, и на LEFT JOIN это видно невооружённым глазом.
+
+-- name: MenuStatsByCategory :many
+-- GROUP BY category: одна строка-сводка на категорию. count(*) — сколько
+-- напитков, min/max — границы цены, avg — средняя (округляем до целых центов и
+-- приводим к bigint, чтобы в Go это был int64, а не numeric).
+SELECT
+    category                       AS category,
+    count(*)                       AS drinks,
+    min(base_price)::bigint        AS price_min,
+    max(base_price)::bigint        AS price_max,
+    round(avg(base_price))::bigint AS price_avg
+FROM drinks
+GROUP BY category
+ORDER BY category;
+
+-- name: CustomerOrderStats :many
+-- GROUP BY по клиенту на customers LEFT JOIN orders. Ключевой момент урока:
+--   count(*)     — считает СТРОКИ группы (у Карины строка одна, даже без заказа);
+--   count(o.id)  — считает строки, где o.id НЕ NULL (у Карины таких нет → 0).
+-- Поэтому для клиента без заказов count(*)=1, а count(o.id)=0. sum по amount
+-- может быть NULL (нет заказов) → COALESCE к 0; приводим к numeric(10,2)::text
+-- для стабильного «Ц.КК» в выводе.
+SELECT
+    c.name                                          AS customer,
+    count(*)                                        AS rows_in_group,
+    count(o.id)                                     AS orders,
+    (COALESCE(sum(o.amount), 0))::numeric(10, 2)::text AS revenue
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id::text
+GROUP BY c.id, c.name
+ORDER BY c.id;
+
+-- name: RegularCustomers :many
+-- HAVING фильтрует ГРУППЫ (не строки — для строк есть WHERE). Оставляем только
+-- клиентов с двумя и более заказами. WHERE так нельзя: count(o.id) ещё не
+-- посчитан на этапе WHERE, он появляется только после группировки.
+SELECT
+    c.name                                          AS customer,
+    count(o.id)                                     AS orders,
+    (COALESCE(sum(o.amount), 0))::numeric(10, 2)::text AS revenue
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id::text
+GROUP BY c.id, c.name
+HAVING count(o.id) >= 2
+ORDER BY c.id;

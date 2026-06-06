@@ -1,0 +1,37 @@
+-- query.sql — протагонист урока. `make gen` → типизированный pgx-код в
+-- internal/db/. Имя после `-- name:` → метод; суффикс — форма результата.
+--
+-- Тема — DISTINCT ON: вернуть ровно ПО ОДНОЙ строке на группу, причём целую
+-- строку (а не только агрегаты по ней). Классическая задача — «последний заказ
+-- каждого клиента»: GROUP BY дал бы max(created_at), но не сам заказ; оконные
+-- функции (08-02) умеют это через ROW_NUMBER()=1, а в Postgres есть короткий
+-- путь — DISTINCT ON.
+
+-- name: LatestOrderPerCustomer :many
+-- DISTINCT ON (o.customer_id) оставляет ПЕРВУЮ строку в каждой группе
+-- customer_id — а какая «первая», решает ORDER BY. Ключевое правило: ORDER BY
+-- обязан НАЧИНАТЬСЯ с выражения DISTINCT ON, а дальше идёт «по какому критерию
+-- выбрать строку группы». Здесь дальше — created_at DESC (самый свежий) и id DESC
+-- как tie-break. Итог: один, самый последний заказ на клиента.
+SELECT DISTINCT ON (o.customer_id)
+    c.name                  AS customer,
+    o.id                    AS order_id,
+    o.amount::numeric(10, 2)::text AS amount,
+    o.status                AS status,
+    o.created_at::date::text AS day
+FROM orders o
+JOIN customers c ON c.id::text = o.customer_id
+ORDER BY o.customer_id, o.created_at DESC, o.id DESC;
+
+-- name: PriciestOrderPerCustomer :many
+-- Тот же DISTINCT ON, но «победителя» группы выбираем по другому критерию —
+-- меняем хвост ORDER BY на amount DESC. Получаем самый ДОРОГОЙ заказ на клиента.
+-- Видно, что DISTINCT ON гибкий: что стоит после выражения группировки в
+-- ORDER BY, то и определяет, какая строка останется.
+SELECT DISTINCT ON (o.customer_id)
+    c.name                  AS customer,
+    o.id                    AS order_id,
+    o.amount::numeric(10, 2)::text AS amount
+FROM orders o
+JOIN customers c ON c.id::text = o.customer_id
+ORDER BY o.customer_id, o.amount DESC, o.id DESC;

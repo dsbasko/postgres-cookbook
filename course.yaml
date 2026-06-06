@@ -141,40 +141,80 @@ modules:
         duration: 25m
         tags: [alter-table, migrations, locks, not-valid, escape-hatch]
 
-  # ── Модули 03–10 запаркованы до фазы 3 ──────────────────────────────────
-  # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
-  # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
-  # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 03–10 уже написаны и ждут здесь:
-  # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
-  # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 03-crud-fluency
-  #     title: { ru: CRUD-беглость, en: CRUD fluency }
-  #     description:
-  #       ru: |
-  #         Уверенный CRUD: INSERT ... RETURNING, SELECT с WHERE/ORDER/LIMIT и keyset-пагинация,
-  #         безопасные UPDATE/DELETE, upsert через ON CONFLICT, PG18 RETURNING old/new и трезвая
-  #         семантика NULL (ловушка NOT IN + NULL, COALESCE/NULLIF/IS DISTINCT FROM).
-  #       en: |
-  #         Confident CRUD: INSERT ... RETURNING, SELECT with WHERE/ORDER/LIMIT and keyset pagination,
-  #         safe UPDATE/DELETE, upsert via ON CONFLICT, PG18 RETURNING old/new, and sober NULL semantics
-  #         (the NOT IN + NULL trap, COALESCE/NULLIF/IS DISTINCT FROM).
-  #     lessons: []
-  #
-  #   - id: 04-querying-across-tables
-  #     title: { ru: Запросы по таблицам, en: Querying across tables }
-  #     description:
-  #       ru: |
-  #         Связываем данные: join'ы (inner/left/right/full), self-join'ы, агрегация GROUP BY/HAVING,
-  #         DISTINCT ON (последний заказ на клиента), подзапросы EXISTS vs IN и CTE с материализацией.
-  #         Здесь данные превращаются в ответы на вопросы бизнеса.
-  #       en: |
-  #         Tying data together: joins (inner/left/right/full), self-joins, aggregation with
-  #         GROUP BY/HAVING, DISTINCT ON (the latest order per customer), EXISTS vs IN subqueries, and
-  #         CTEs with materialization. This is where data turns into answers to business questions.
-  #     lessons: []
-  #
+  - id: 03-crud-fluency
+    title: { ru: CRUD-беглость, en: CRUD fluency }
+    description:
+      ru: |
+        Уверенный CRUD: INSERT ... RETURNING, SELECT с WHERE/ORDER/LIMIT и keyset-пагинация,
+        безопасные UPDATE/DELETE, upsert через ON CONFLICT, PG18 RETURNING old/new и трезвая
+        семантика NULL (ловушка NOT IN + NULL, COALESCE/NULLIF/IS DISTINCT FROM).
+      en: |
+        Confident CRUD: INSERT ... RETURNING, SELECT with WHERE/ORDER/LIMIT and keyset pagination,
+        safe UPDATE/DELETE, upsert via ON CONFLICT, PG18 RETURNING old/new, and sober NULL semantics
+        (the NOT IN + NULL trap, COALESCE/NULLIF/IS DISTINCT FROM).
+    lessons:
+      - slug: 03-01-insert-and-returning
+        title: { ru: INSERT и RETURNING, en: INSERT and RETURNING }
+        duration: 25m
+        tags: [insert, returning, crud, sqlc]
+      - slug: 03-02-select-where-order-limit
+        title: { ru: "SELECT: WHERE/ORDER/LIMIT и keyset", en: "SELECT: WHERE/ORDER/LIMIT and keyset" }
+        duration: 25m
+        tags: [select, pagination, keyset, offset]
+      - slug: 03-03-update-delete-safely
+        title: { ru: UPDATE/DELETE безопасно, en: UPDATE/DELETE safely }
+        duration: 25m
+        tags: [update, delete, transaction, returning]
+      - slug: 03-04-upsert-on-conflict
+        title: { ru: upsert через ON CONFLICT, en: upsert via ON CONFLICT }
+        duration: 20m
+        tags: [upsert, on-conflict, excluded, idempotency]
+      - slug: 03-05-returning-old-new
+        title: { ru: RETURNING old/new, en: RETURNING old/new }
+        duration: 20m
+        tags: [returning, pg18, audit, escape-hatch]
+      - slug: 03-06-null-semantics-reckoning
+        title: { ru: Трезвая семантика NULL, en: Sober NULL semantics }
+        duration: 20m
+        tags: ["null", three-valued-logic, not-in, coalesce]
+
+  - id: 04-querying-across-tables
+    title: { ru: Запросы по таблицам, en: Querying across tables }
+    description:
+      ru: |
+        Связываем данные: join'ы (inner/left/right/full), self-join'ы, агрегация GROUP BY/HAVING,
+        DISTINCT ON (последний заказ на клиента), подзапросы EXISTS vs IN и CTE с материализацией.
+        Здесь данные превращаются в ответы на вопросы бизнеса.
+      en: |
+        Tying data together: joins (inner/left/right/full), self-joins, aggregation with
+        GROUP BY/HAVING, DISTINCT ON (the latest order per customer), EXISTS vs IN subqueries, and
+        CTEs with materialization. This is where data turns into answers to business questions.
+    lessons:
+      - slug: 04-01-joins-inner-left-right-full
+        title: { ru: "JOIN: inner/left/right/full", en: "JOIN: inner/left/right/full" }
+        duration: 25m
+        tags: [join, inner, left, right, full, sqlc]
+      - slug: 04-02-multi-table-and-self-joins
+        title: { ru: Многотабличные и self-join, en: Multi-table and self-joins }
+        duration: 25m
+        tags: [join, multi-table, self-join, alias]
+      - slug: 04-03-aggregation-group-by-having
+        title: { ru: "Агрегация: GROUP BY/HAVING", en: "Aggregation: GROUP BY/HAVING" }
+        duration: 25m
+        tags: [aggregation, group-by, having, count]
+      - slug: 04-04-distinct-on
+        title: { ru: DISTINCT ON, en: DISTINCT ON }
+        duration: 20m
+        tags: [distinct-on, order-by, top-n, postgres-specific]
+      - slug: 04-05-subqueries-exists-vs-in
+        title: { ru: "Подзапросы: EXISTS vs IN", en: "Subqueries: EXISTS vs IN" }
+        duration: 25m
+        tags: [subquery, exists, "in", not-in, "null"]
+      - slug: 04-06-ctes-and-materialization
+        title: { ru: CTE и материализация, en: CTEs and materialization }
+        duration: 25m
+        tags: [cte, with, materialized, readability]
+
   - id: 05-transactions-and-mvcc
     title: { ru: Транзакции, MVCC и конкурентность, en: Transactions, MVCC, and concurrency }
     description:
@@ -187,12 +227,38 @@ modules:
         (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
         40001, and deadlocks with advisory locks.
     lessons:
-      # 05-01 (transactions-and-acid) придёт в фазе 3; здесь — первый готовый
-      # юнит модуля: эталон escape-hatch (две psql-сессии, видимые xmin/xmax).
+      - slug: 05-01-transactions-and-acid
+        title: { ru: Транзакции и ACID, en: Transactions and ACID }
+        duration: 25m
+        tags: [transactions, acid, atomicity, rollback, sqlc]
       - slug: 05-02-mvcc-mental-model
         title: { ru: Ментальная модель MVCC, en: The MVCC mental model }
         duration: 25m
         tags: [mvcc, transactions, snapshot, psql, escape-hatch]
+      - slug: 05-03-row-locks-and-lost-updates
+        title: { ru: Блокировки строк и потерянные обновления, en: Row locks and lost updates }
+        duration: 25m
+        tags: [locks, for-update, skip-locked, lost-update, escape-hatch]
+      - slug: 05-04-isolation-levels-for-devs
+        title: { ru: Уровни изоляции для разработчика, en: Isolation levels for developers }
+        duration: 25m
+        tags: [isolation, serializable, write-skew, "40001", escape-hatch]
+      - slug: 05-05-retry-on-40001
+        title: { ru: Ретрай на 40001, en: Retrying on 40001 }
+        duration: 20m
+        tags: ["40001", retry, serializable, pgconn, escape-hatch]
+      - slug: 05-06-deadlocks-and-advisory-locks
+        title: { ru: Дедлоки и advisory-локи, en: Deadlocks and advisory locks }
+        duration: 25m
+        tags: [deadlock, "40P01", advisory-lock, locks, escape-hatch]
+
+  # ── Модули 06–10 запаркованы до фазы 3 ──────────────────────────────────
+  # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
+  # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
+  # которых уже есть хотя бы один доведённый юнит (курс публикуется
+  # инкрементально). Описания модулей 06–10 уже написаны и ждут здесь:
+  # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
+  # его lessons[] (см. per-unit рецепт в docs/plans).
   #
   #   - id: 06-indexing-and-explain
   #     title: { ru: Индексы и EXPLAIN, en: Indexing and EXPLAIN }

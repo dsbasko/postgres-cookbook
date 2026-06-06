@@ -1,0 +1,7 @@
+-- schema.sql — DDL-добавки ЭТОГО юнита поверх канона Brew (schema/brew.sql).
+--
+-- Юниту 04-03 своих таблиц не нужно: и агрегацию (count/sum/min/max/avg), и
+-- GROUP BY/HAVING, и разницу count(*) vs count(колонка) мы показываем на каноне
+-- Brew (drinks, customers, orders, read-only). Файл оставлен намеренно: он часть
+-- канонической анатомии юнита, и sqlc.yaml всегда перечисляет
+-- [../../../schema/brew.sql, schema.sql].

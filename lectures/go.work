@@ -30,3 +30,31 @@ use ./02-schema-and-constraints/02-02-not-null-pk-natural-vs-surrogate
 use ./02-schema-and-constraints/02-03-foreign-keys
 
 use ./02-schema-and-constraints/02-04-unique-and-check
+
+use ./03-crud-fluency/03-01-insert-and-returning
+
+use ./03-crud-fluency/03-02-select-where-order-limit
+
+use ./03-crud-fluency/03-03-update-delete-safely
+
+use ./03-crud-fluency/03-04-upsert-on-conflict
+
+use ./03-crud-fluency/03-05-returning-old-new
+
+use ./03-crud-fluency/03-06-null-semantics-reckoning
+
+use ./04-querying-across-tables/04-01-joins-inner-left-right-full
+
+use ./04-querying-across-tables/04-02-multi-table-and-self-joins
+
+use ./04-querying-across-tables/04-03-aggregation-group-by-having
+
+use ./04-querying-across-tables/04-04-distinct-on
+
+use ./04-querying-across-tables/04-05-subqueries-exists-vs-in
+
+use ./04-querying-across-tables/04-06-ctes-and-materialization
+
+use ./05-transactions-and-mvcc/05-01-transactions-and-acid
+
+use ./05-transactions-and-mvcc/05-05-retry-on-40001
