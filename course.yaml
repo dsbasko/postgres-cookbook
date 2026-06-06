@@ -54,6 +54,22 @@ modules:
         title: { ru: Клиент, сервер и песочница, en: Client, server, and the sandbox }
         duration: 25m
         tags: [client-server, sandbox, sqlc, pgx]
+      - slug: 00-02-psql-survival-kit
+        title: { ru: psql на каждый день, en: psql survival kit }
+        duration: 20m
+        tags: [psql, meta-commands, tooling, escape-hatch]
+      - slug: 00-03-connecting-from-go
+        title: { ru: Подключение из Go, en: Connecting from Go }
+        duration: 25m
+        tags: [pgx, pgxpool, parameters, sql-injection]
+      - slug: 00-04-typed-queries-with-sqlc
+        title: { ru: Типизированные запросы через sqlc, en: Typed queries via sqlc }
+        duration: 25m
+        tags: [sqlc, codegen, pgx, parameters]
+      - slug: 00-05-connection-lifecycle-and-pooling
+        title: { ru: Жизненный цикл соединения и пулинг, en: Connection lifecycle and pooling }
+        duration: 20m
+        tags: [pgxpool, pooling, pg_stat_activity, lifecycle]
 
   # ── Модули 01–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
