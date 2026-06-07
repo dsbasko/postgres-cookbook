@@ -27,6 +27,34 @@ The cure is `NOT EXISTS`: it asks "does a matching row exist," working at the "y
 - `NULLIF(a, b)` — `NULL` if `a = b`, otherwise `a`. A frequent trick is guarding division by zero: `x / NULLIF(y, 0)` returns `NULL` instead of an error when `y = 0`.
 - `IS DISTINCT FROM` / `IS NOT DISTINCT FROM` — `NULL`-safe "not equal"/"equal." Unlike `=`/`<>`, they treat `NULL` as an ordinary value: `NULL IS NOT DISTINCT FROM NULL` = `true`, `1 IS DISTINCT FROM NULL` = `true`.
 
+## The `NOT IN` trap and NULL tools
+
+Here's why a single `NULL` in the list zeroes out the answer — a step-by-step layout:
+
+```
+WHERE id NOT IN (SELECT drink_id FROM unavailable)      -- list = {4, NULL}
+
+  id NOT IN (4, NULL)
+        │  expands to the negation of IN
+        ▼
+  id <> 4  AND  id <> NULL  ←── id <> NULL is ALWAYS NULL (comparison with "unknown")
+        │
+        ├─ id = 4  :  false AND NULL = false  → doesn't pass (which is correct)
+        └─ id <> 4 :  true  AND NULL = NULL   → does NOT pass, though it should!
+        │
+        ▼
+  no row can become true  →  the result is empty
+```
+
+The cure is switching to `NOT EXISTS` (it works at the "yes/no" level, not on a comparison with `NULL`) or an explicit `WHERE col IS NOT NULL` in the subquery. And here's a cheat-sheet of tools for working with `NULL`:
+
+| Tool | What it does | Typical use |
+|---|---|---|
+| `COALESCE(a, b, …)` | the first non-`NULL` from the list | a default value: `COALESCE(nickname, name, 'anonymous')` |
+| `NULLIF(a, b)` | `NULL` if `a = b`, otherwise `a` | a divide-by-zero guard: `x / NULLIF(y, 0)` |
+| `IS [NOT] DISTINCT FROM` | `NULL`-safe "not equal" / "equal" | comparing nullable values: "did a field change" |
+| `IS [NOT] NULL` | a `NULL` check (not `=` / `<>`) | the only correct test for `NULL` |
+
 ## What our code shows
 
 `NullLogic` gathers four facts on literals:
@@ -78,7 +106,11 @@ Output:
 
 ## The fence
 
-The best defense against the trap is to not allow `NULL` where it isn't needed: a `NOT NULL` on the column (module 02) makes it impossible in principle. What we simplified: the `NOT IN` trap is the most famous, but three-valued logic surfaces everywhere there are nullable columns: `WHERE`, `JOIN ... ON`, `CHECK`, aggregates (`count(col)` skips `NULL`, `count(*)` doesn't — see 01-02 and later 04-03), `DISTINCT` (treats all `NULL`s as equal, unlike `=`). In production the standard hygiene is: put `NOT NULL` where a value must exist; in subqueries for `NOT IN` either switch to `NOT EXISTS` or explicitly filter `WHERE col IS NOT NULL`; for comparing values that **can** be `NULL` (e.g., "did a field change") use `IS DISTINCT FROM`, not `<>`. And remember: `NULL` is "unknown," not "zero" and not "empty string" — conflating them is a separate source of bugs.
+The best defense against the trap is to not allow `NULL` where it isn't needed: a `NOT NULL` on the column (module 02) makes it impossible in principle. What we simplified:
+
+- **The `NOT IN` trap is the most famous, but not the only one.** Three-valued logic surfaces everywhere there are nullable columns: `WHERE`, `JOIN ... ON`, `CHECK`, aggregates (`count(col)` skips `NULL`, `count(*)` doesn't — see 01-02 and later 04-03), `DISTINCT` (treats all `NULL`s as equal, unlike `=`).
+- **The standard hygiene in production:** put `NOT NULL` where a value must exist; in subqueries for `NOT IN` either switch to `NOT EXISTS` or explicitly filter `WHERE col IS NOT NULL`; for comparing values that **can** be `NULL`, use `IS DISTINCT FROM`, not `<>`.
+- **`NULL` is "unknown," not "zero" and not "empty string".** Conflating them is a separate source of bugs.
 
 ## Takeaways
 

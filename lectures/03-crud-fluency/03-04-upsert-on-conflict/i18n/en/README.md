@@ -12,11 +12,37 @@ The goal of this unit is to do it in one atomic, concurrency-safe command: `INSE
 
 On a conflict `DO UPDATE SET ...` runs. There a special pseudo-table `EXCLUDED` is available — it's the row we **tried to insert** (it was "excluded" from the insert due to the conflict). `SET on_hand = EXCLUDED.on_hand` means "take the new stock value from the input." That's how you write a typical upsert counter: the new value overwrites the old. You can also accumulate (`SET on_hand = stock_levels.on_hand + EXCLUDED.on_hand` — add to the current), referring to the old value by the table name and to the new one via `EXCLUDED`.
 
-The alternative is `DO NOTHING`: on a conflict, do nothing. That's the idempotent-insert idiom: "insert if not present, otherwise silently skip." This is exactly how the Brew canon absorbs duplicates in `processed_outbox_ids` — a redelivered event doesn't break the consumer.
+The alternative is `DO NOTHING`: on a conflict, do nothing. That's the idempotent-insert idiom: "insert if not present, otherwise silently skip." This is exactly how the Brew canon silences duplicates by `outbox_id` (the `processed_outbox_ids` table) — a redelivered event doesn't break the consumer.
 
 ## Insert or update? The xmax trick
 
 `RETURNING` hands back the resulting row, but doesn't say directly whether it was an insert or an update. A well-known trick is the system column `xmax`: a just-inserted row version has `xmax = 0`, an updated one does not. So `(xmax <> 0) AS was_update` is a compact detector. (The system columns `xmin`/`xmax` are MVCC mechanics, covered in **05-02**; here it's enough to know the trick distinguishes an insert from an update.)
+
+## The ON CONFLICT fork: insert or a conflict branch
+
+`INSERT ... ON CONFLICT` is one atomic command with a fork inside. The arbiter (a `UNIQUE`/`PK`) checks whether a row with this key already exists and picks a branch:
+
+```
+INSERT (shop_code, drink_sku, on_hand)
+        │
+        ▼
+  key already exists?  ◄── arbiter: PK (shop_code, drink_sku)
+   ┌────┴───────────────────┐
+   │ no                     │ yes → ON CONFLICT (...)
+   ▼                        ▼
+INSERT the row       ┌───────┴────────────┐
+was_update = false   ▼                    ▼
+                 DO UPDATE             DO NOTHING
+             SET on_hand =          leave the row alone:
+             EXCLUDED.on_hand       0 rows, duplicate silenced
+             was_update = true
+```
+
+| Branch | On a conflict | Returns | When to use |
+|---|---|---|---|
+| `DO UPDATE SET …` | overwrites/accumulates the row (`EXCLUDED` = what you tried to insert) | the updated row | syncing reference data, counters |
+| `DO NOTHING` | silently skips | 0 rows | idempotent insert (dedup by `outbox_id` in `processed_outbox_ids`) |
+| `MERGE` (PG15+) | `WHEN MATCHED / NOT MATCHED` branches | per branch | complex merge logic, but weaker race protection (→ 09-01) |
 
 ## What our code shows
 
@@ -74,14 +100,19 @@ Output:
 
 ## The fence
 
-`ON CONFLICT` solves precisely the race problem: the insert and the conflict check are one atomic operation at the engine level, so two concurrent upserts of the same key won't create a duplicate or fail — one inserts, the other updates. That's its main advantage over `SELECT`-then-`INSERT`. What not to miss: in `DO UPDATE SET`, list only the columns you really want to overwrite — it's easy to accidentally clobber `created_at` or a counter with a value from `EXCLUDED`. What we simplified: `ON CONFLICT` targets **one** specific conflict (one unique index); if a table has several unique constraints and a row can conflict on different ones, the logic gets more complex. PG15+ also has the more flexible `MERGE` command (multiple `WHEN MATCHED/NOT MATCHED` branches), but it has a different character: `MERGE` is **not** as race-safe as `ON CONFLICT` — we cover that and `COPY` for bulk loading in **09-01**. In production a nightly stock sync is more often done in a batch (`COPY` into a temp table → one `INSERT ... SELECT ... ON CONFLICT`) rather than row by row.
+`ON CONFLICT` solves precisely the race problem: the insert and the conflict check are one atomic operation at the engine level, so two concurrent upserts of the same key won't create a duplicate or fail — one inserts, the other updates. That's its main advantage over `SELECT`-then-`INSERT`. What to keep in mind:
+
+- **In `DO UPDATE SET`, list only what you really want to overwrite** — it's easy to accidentally clobber `created_at` or a counter with a value from `EXCLUDED`.
+- **`ON CONFLICT` targets one specific conflict** (one unique index). If a table has several unique constraints and a row can conflict on different ones, the logic gets more complex.
+- **`MERGE` (PG15+) is more flexible but weaker under a race.** Multiple `WHEN MATCHED/NOT MATCHED` branches, but `MERGE` is **not** as race-safe as `ON CONFLICT` — we cover that and `COPY` for bulk loading in **09-01**.
+- **A nightly sync in production is done in a batch**, not row by row: `COPY` into a temp table → one `INSERT ... SELECT ... ON CONFLICT`.
 
 ## Takeaways
 
 - `INSERT ... ON CONFLICT (cols) DO UPDATE` — "insert or update" in one atomic, concurrency-safe command.
 - The conflict is caught by a `UNIQUE`/`PRIMARY KEY` on the named columns — without such a constraint `ON CONFLICT` doesn't work.
 - `EXCLUDED` is a pseudo-table with the row you tried to insert; `SET col = EXCLUDED.col` takes the new value (you can also accumulate, referring to the old one by the table name).
-- `DO NOTHING` is an idempotent insert: insert if absent, otherwise silently skip (like `processed_outbox_ids` in the canon).
+- `DO NOTHING` is an idempotent insert: insert if absent, otherwise silently skip (like dedup by `outbox_id` in `processed_outbox_ids`).
 - The `(xmax <> 0)` trick distinguishes an update from an insert in `RETURNING`.
 
 Next up — the **03-05 "RETURNING old/new"** unit: in PG18 `UPDATE ... RETURNING old.status, new.status` returns both the old and the new value of a row in one command — a ready-made audit of a transition with no separate `SELECT` and no trigger.

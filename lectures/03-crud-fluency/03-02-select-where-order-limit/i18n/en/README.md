@@ -27,6 +27,32 @@ ORDER BY base_price DESC, id DESC
 
 The price: keyset can't "jump to page 500" (there's no cursor without traversing) and requires a total `ORDER BY`. But for an "infinite feed" / "show more" it's exactly what you want.
 
+## OFFSET vs keyset: what the server does
+
+Take the menu sorted `base_price DESC, id DESC`, and page 2 (two rows each). `OFFSET 2` traverses and **discards** the rows of page 1; keyset, by the cursor of page 1's last row, **jumps straight** to the right place via the index:
+
+```
+menu descending (base_price DESC, id DESC):
+
+  #4 Колд брю    5.20   OFFSET 2 → read and discard · keyset → skip via index
+  #3 Латте       4.80   OFFSET 2 → read and discard · keyset → skip via index
+  ─────────────────────  cursor after page 1 = (4.80, #3)
+  #2 Капучино    4.50   ┐
+  #1 Эспрессо    3.00   ┘ page 2 (page_size = 2) — this is what we return
+  #5 Зелёный чай 2.50    (next — page 3)
+
+OFFSET 2 LIMIT 2                     → server computed 4 rows, discarded 2 (costlier with depth)
+WHERE (base_price, id) < (4.80, #3)  → the index jumped to the cursor and read exactly 2
+```
+
+| | `LIMIT n OFFSET k` | keyset (`WHERE (cols) < cursor`) |
+|---|---|---|
+| How it advances | "skip `k` rows" | "give me the rows after the cursor" |
+| Deep-page cost | grows linearly (reads and discards `k`) | constant, if `ORDER BY` lands on an index |
+| Jump to page N | yes (just change `k`) | no — only "next" |
+| Under inserts/deletes | rows "shift" between pages | the cursor is tied to data, not a number |
+| When to use | first pages of a small set | "feed" / "show more", deep navigation |
+
 ## What our code shows
 
 Three queries in `query.sql`. The base query:
@@ -80,7 +106,12 @@ Output:
 
 ## The fence
 
-On five seed rows there's no speed difference — it shows on large tables and with the right index. What we simplified: keyset pagination is fast precisely when `ORDER BY` lands on an index — here that would be an index on `(base_price, id)`; without it the server sorts the whole table anyway and the advantage evaporates (indexes and reading plans — module 06). We also didn't show emitting a "total page count": a `count(*)` over a large filtered set is itself expensive, and in production you either cache it or replace it with "is there more" (request `LIMIT n+1` and check whether row `n+1` arrived). And `OFFSET` isn't "bad" — for the first few pages of a small set it's simpler and perfectly fine; keyset is for paging deep. In production the choice of pagination depends on whether you need jumps to an arbitrary page (then you can't avoid `OFFSET`/numbering) or "show more" is enough (then keyset).
+On five seed rows there's no speed difference — it shows on large tables and with the right index. What we simplified:
+
+- **Keyset is fast precisely when `ORDER BY` lands on an index** — here that would be an index on `(base_price, id)`. Without it the server sorts the whole table anyway and the advantage evaporates (indexes and reading plans — module 06).
+- **We didn't show a "total page count".** A `count(*)` over a large filtered set is itself expensive; in production you either cache it or replace it with "is there more" (request `LIMIT n+1` and check whether row `n+1` arrived).
+- **`OFFSET` isn't "bad".** For the first few pages of a small set it's simpler and perfectly fine; keyset is for paging deep.
+- **The choice depends on navigation.** Need jumps to an arbitrary page — you can't avoid `OFFSET`/numbering; "show more" is enough — use keyset.
 
 ## Takeaways
 

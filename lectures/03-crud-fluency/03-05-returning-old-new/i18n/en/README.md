@@ -23,6 +23,29 @@ The prefixes reveal a neat symmetry of the three commands through "is there a ro
 
 So `old`/`new` is a single language for "what was and what became" over any modifying command.
 
+## The old/new matrix: symmetry of the three commands
+
+Every row has two "versions" — before the command (`old`) and after (`new`). Which one exists is decided by the command itself:
+
+```
+            old.* (before)     new.* (after)
+          ┌────────────────┬────────────────┐
+ INSERT   │    ∅  none     │  the inserted  │  there was no "before" row
+          ├────────────────┼────────────────┤
+ UPDATE   │  the previous  │  the changed   │  both exist
+          ├────────────────┼────────────────┤
+ DELETE   │  the deleted   │    ∅  none     │  no "after" row remains
+          └────────────────┴────────────────┘
+              ▲                           ▲
+    no prefix on DELETE → old   no prefix on INSERT/UPDATE → new
+```
+
+| Command | `old.*` (before) | `new.*` (after) | Column with no prefix |
+|---|---|---|---|
+| `INSERT` | `NULL` (no "before" row) | the inserted row | = `new` |
+| `UPDATE` | the previous version | the changed version | = `new` |
+| `DELETE` | the deleted row | `NULL` (no "after" row) | = `old` |
+
 ## Why this unit has no sqlc
 
 The other CRUD units in the module are written with sqlc, but here sqlc gets in the way: its parser (version v1.30.0) doesn't yet know the PG18 `old.`/`new.` syntax and fails with `column "status" does not exist`. And the lesson is precisely about this feature. So the unit is an **escape-hatch**: we write the queries as strings and scan the result by hand via `pgx` (as in 00-03/00-05), with no `query.sql` and no generated `internal/db`. When a lesson needs a database capability the tool doesn't support yet, we choose the capability, not the tool.
@@ -84,7 +107,11 @@ Output:
 
 ## The fence
 
-`RETURNING old/new` gives "before and after" only for the rows **this command** touches, and only within its transaction — it's not a change log. When history must be stored independently of which code did the write (for an `UPDATE` from anywhere, and for direct edits in `psql`), you use an `AFTER` trigger with `OLD`/`NEW` writing into an audit table — that's module **09-05**, where we also discuss when logic belongs in the database and when not. What we simplified: `old`/`new` is a **PG18** feature; older versions don't have it, and the "before value" is obtained with a `SELECT` before the `UPDATE` (with a race risk) or with a trigger. And one practical point: `old`/`new` isn't yet understood by our code generator (sqlc v1.30.0) — so in production with sqlc such a query has to be written "raw" via `pgx` (as here) or wait for tool support.
+`RETURNING old/new` gives "before and after" only for the rows **this command** touches, and only within its transaction — it's not a change log. Hence the boundaries:
+
+- **It's not a substitute for an audit trail.** When history must be stored independently of which code did the write (for an `UPDATE` from anywhere, and for direct edits in `psql`), you use an `AFTER` trigger with `OLD`/`NEW` writing into an audit table — that's module **09-05**, where we also discuss when logic belongs in the database and when not.
+- **`old`/`new` is a PG18 feature.** Older versions don't have it: the "before value" is obtained with a `SELECT` before the `UPDATE` (with a race risk) or with a trigger.
+- **sqlc (v1.30.0) doesn't yet understand it** — so in production with sqlc such a query has to be written "raw" via `pgx` (as here) or wait for tool support.
 
 ## Takeaways
 

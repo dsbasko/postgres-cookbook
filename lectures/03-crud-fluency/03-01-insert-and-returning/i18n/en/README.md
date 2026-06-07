@@ -72,7 +72,12 @@ ID  CARD_NO
 
 ## The fence
 
-`RETURNING` returns as much data as you ask for — don't drag back `RETURNING *` when you only need the `id`: the extra columns travel over the wire for nothing. What we simplified: to insert a **variable** number of rows from a Go slice in one command you don't use a multi-row `VALUES` (its arity is fixed) but `INSERT ... SELECT ... FROM unnest($1::bigint[])` — unfolding an array into rows; and for **bulk** loading (tens of thousands of rows and more) an `INSERT` of any shape loses to the `COPY` protocol (`CopyFrom` in pgx), which we'll cover in **09-01**. Here both cards are given explicitly so the output is reproducible. And one more thing: `RETURNING` hands back the rows of the same command in the same transaction — it's not a substitute for an audit trail (triggers, a separate history table) needed when history must be stored independently of which code did the write (we return to this in **03-05** and module 09).
+What we simplified — four production concerns around `RETURNING`:
+
+- **Don't drag back `RETURNING *` when you only need the `id`.** `RETURNING` returns as many columns as you ask for — the extras travel over the wire for nothing.
+- **A variable number of rows — via `unnest`, not a multi-row `VALUES`.** The arity of `VALUES (...), (...)` is fixed; to insert a Go slice of arbitrary length in one command you use `INSERT ... SELECT ... FROM unnest($1::bigint[])` — unfolding an array into rows. Here both cards are given explicitly so the output is reproducible.
+- **Bulk loading is `COPY`, not `INSERT`.** On tens of thousands of rows and more an `INSERT` of any shape loses to the `COPY` protocol (`CopyFrom` in pgx); we'll cover it in **09-01**.
+- **`RETURNING` is not an audit trail.** It hands back the rows of the same command in the same transaction; when history must be stored independently of which code did the write, you need a trigger with a separate history table (we return to this in **03-05** and module 09).
 
 ## Takeaways
 

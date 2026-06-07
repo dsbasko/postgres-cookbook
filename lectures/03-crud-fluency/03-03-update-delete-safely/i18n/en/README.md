@@ -16,6 +16,29 @@ Knowing the blast radius is little use if the change is already on disk. So a ri
 
 In Go that's `pool.Begin(ctx)` → `tx`; the sqlc-generated methods bind to the transaction via `queries.WithTx(tx)`, so all queries inside go in one transaction. `tx.Rollback(ctx)` rolls back. A handy trick is `defer tx.Rollback(ctx)` right after `Begin`: if the function exits early (an error, a panic), the transaction is guaranteed to roll back; the explicit `Commit`/`Rollback` below simply decides its fate.
 
+## The undo window: a transaction timeline
+
+`BEGIN` opens a "draft": the command runs, but until `COMMIT` no one sees it and it isn't on disk. Between the command and `COMMIT` there's a window where you can check the blast radius and reconsider:
+
+```
+BEGIN  ── "draft": changes aren't on disk and aren't visible to other sessions
+  │
+  ▼
+UPDATE price_lab SET price = price + 50      ← no WHERE: hit the WHOLE table
+  │
+  ▼
+check: RowsAffected = 5                       ← expected 3, got 5 — something's wrong
+  │
+  ├──────────────┬──────────────────
+  ▼              ▼
+ROLLBACK       COMMIT
+as if no        changes committed,
+rows changed    visible to all
+(our choice)
+```
+
+Until `COMMIT` other sessions see the previous data; `ROLLBACK` puts everything back as it was, as if the command never happened. That window is the safety net: a forgotten `WHERE` in it is an observation, not a catastrophe.
+
 ## What our code shows
 
 The queries in `query.sql` are two "blast radii" and one catastrophe. A targeted `UPDATE` with `RETURNING`:
@@ -83,7 +106,12 @@ Output:
 
 ## The fence
 
-Here we roll back the catastrophe **ourselves**, because we know in advance it will happen. In production you won't always notice a forgotten `WHERE` — so people rely not on vigilance but on barriers: review of migrations and write scripts, a run on staging, and for interactive `psql` a mode where the transaction doesn't auto-commit (in `psql` that's `\set AUTOCOMMIT off`, and then every `UPDATE`/`DELETE` waits for an explicit `COMMIT`). What we simplified: `price_lab` is tiny, and a whole-table `UPDATE`/`DELETE` is instant; on a large table a mass write is also a long row lock (other transactions wait) and bloat (an `UPDATE` in MVCC creates new row versions), covered in module 05 and `VACUUM`. And `RETURNING` on a mass `UPDATE` drags all changed rows into the app — on a million rows that's a lot of traffic; then you use `:execrows` (just the count) or work in batches. In production dangerous `DELETE`s are often replaced with "soft delete" (a `deleted_at` flag) so data can be brought back.
+Here we roll back the catastrophe **ourselves**, because we know in advance it will happen. In production you won't always notice a forgotten `WHERE` — so people rely not on vigilance but on barriers:
+
+- **Barriers instead of attentiveness.** Review of migrations and write scripts, a run on staging, and for interactive `psql` a non-auto-commit mode (`\set AUTOCOMMIT off`, and then every `UPDATE`/`DELETE` waits for an explicit `COMMIT`).
+- **Our blast radius is a toy.** `price_lab` is tiny, and a whole-table `UPDATE`/`DELETE` is instant; on a large table a mass write is also a long row lock (other transactions wait) and bloat (an `UPDATE` in MVCC creates new row versions), covered in module 05 and `VACUUM`.
+- **`RETURNING` on a mass write is traffic.** It drags all changed rows into the app; on a million rows you use `:execrows` (just the count) or work in batches.
+- **Dangerous `DELETE`s are often replaced with "soft delete"** (a `deleted_at` flag) so data can be brought back.
 
 ## Takeaways
 
