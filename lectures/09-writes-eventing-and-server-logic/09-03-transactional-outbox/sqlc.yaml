@@ -1,0 +1,27 @@
+# sqlc.yaml — КАНОНИЧЕСКИЙ конфиг sqlc для всех юнитов курса (копия эталона из
+# 00-01; при копировании меняется, как правило, ничего).
+#
+# Конвейер урока: query.sql пишем РУКАМИ (протагонист), затем `make gen`
+# (sqlc generate) превращает его в типизированный pgx-код в internal/db/ —
+# который мы КОММИТИМ. Так SQL остаётся в центре урока, а boilerplate
+# сканирования строк генерируется.
+#
+# schema: всегда перечисляет И baseline-канон (../../../schema/brew.sql), И
+# добавки юнита (schema.sql), чтобы sqlc видел все таблицы. Относительный путь к
+# schema/brew.sql — ровно три уровня вверх от каталога юнита.
+version: "2"
+sql:
+  - engine: postgresql
+    queries: query.sql
+    schema:
+      - ../../../schema/brew.sql
+      - schema.sql
+    gen:
+      go:
+        package: db
+        out: internal/db
+        sql_package: pgx/v5
+        emit_json_tags: true
+        emit_interface: true
+        emit_empty_slices: true
+        emit_exact_table_names: false

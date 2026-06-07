@@ -364,26 +364,46 @@ modules:
         duration: 20m
         tags: [grouping-sets, rollup, cube, sqlc]
 
-  # ── Модули 09–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 09-writes-eventing-and-server-logic
+    title: { ru: Запись, события и серверная логика, en: Writes, eventing, and server logic }
+    description:
+      ru: |
+        Продвинутая запись и логика на стороне БД: MERGE и COPY, очередь задач через SKIP LOCKED,
+        transactional outbox, LISTEN/NOTIFY, триггеры и волатильность функций (IMMUTABLE/STABLE/
+        VOLATILE) — с явной секцией «когда НЕ класть логику в БД».
+      en: |
+        Advanced writes and database-side logic: MERGE and COPY, a job queue via SKIP LOCKED, the
+        transactional outbox, LISTEN/NOTIFY, triggers and function volatility (IMMUTABLE/STABLE/
+        VOLATILE) — with an explicit "when NOT to put logic in the database" section.
+    lessons:
+      - slug: 09-01-merge-and-copy
+        title: { ru: MERGE и COPY, en: MERGE and COPY }
+        duration: 25m
+        tags: [merge, copy, bulk-load, escape-hatch]
+      - slug: 09-02-skip-locked-job-queue
+        title: { ru: Очередь задач на SKIP LOCKED, en: A job queue on SKIP LOCKED }
+        duration: 25m
+        tags: [skip-locked, job-queue, concurrency, escape-hatch]
+      - slug: 09-03-transactional-outbox
+        title: { ru: Transactional outbox, en: Transactional outbox }
+        duration: 25m
+        tags: [outbox, events, cdc, skip-locked, sqlc]
+      - slug: 09-04-listen-notify
+        title: { ru: LISTEN / NOTIFY, en: LISTEN / NOTIFY }
+        duration: 20m
+        tags: [listen-notify, pg-notify, triggers, escape-hatch]
+      - slug: 09-05-triggers-and-volatility
+        title: { ru: Триггеры и волатильность функций, en: Triggers and function volatility }
+        duration: 25m
+        tags: [triggers, volatility, plpgsql, audit, escape-hatch]
+
+  # ── Модуль 10 запаркован до фазы 3 ──────────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 09–10 уже написаны и ждут здесь:
-  # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
-  # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 09-writes-eventing-and-server-logic
-  #     title: { ru: Запись, события и серверная логика, en: Writes, eventing, and server logic }
-  #     description:
-  #       ru: |
-  #         Продвинутая запись и логика на стороне БД: MERGE и COPY, очередь задач через SKIP LOCKED,
-  #         transactional outbox, LISTEN/NOTIFY, триггеры и волатильность функций (IMMUTABLE/STABLE/
-  #         VOLATILE) — с явной секцией «когда НЕ класть логику в БД».
-  #       en: |
-  #         Advanced writes and database-side logic: MERGE and COPY, a job queue via SKIP LOCKED, the
-  #         transactional outbox, LISTEN/NOTIFY, triggers and function volatility (IMMUTABLE/STABLE/
-  #         VOLATILE) — with an explicit "when NOT to put logic in the database" section.
-  #     lessons: []
+  # инкрементально). Описание модуля 10 уже написано и ждёт здесь:
+  # раскомментируй блок, когда в нём появится первый урок, и добавь его
+  # lessons[] (см. per-unit рецепт в docs/plans).
   #
   #   - id: 10-use-cases
   #     title: { ru: Use cases, en: Use cases }

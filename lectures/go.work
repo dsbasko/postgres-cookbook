@@ -78,3 +78,11 @@ use ./08-analytical-and-lateral/08-03-lag-lead-and-frames
 use ./08-analytical-and-lateral/08-05-lateral-joins
 
 use ./08-analytical-and-lateral/08-06-grouping-sets-rollup-cube
+
+use ./09-writes-eventing-and-server-logic/09-01-merge-and-copy
+
+use ./09-writes-eventing-and-server-logic/09-02-skip-locked-job-queue
+
+use ./09-writes-eventing-and-server-logic/09-03-transactional-outbox
+
+use ./09-writes-eventing-and-server-logic/09-04-listen-notify
