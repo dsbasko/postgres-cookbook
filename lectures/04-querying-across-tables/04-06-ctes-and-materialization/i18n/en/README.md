@@ -24,6 +24,18 @@ FROM per_customer p JOIN customers c ON c.id::text = p.customer_id
 ORDER BY p.spent DESC;
 ```
 
+Each step is a separate named block, and the result flows top to bottom into the next:
+
+```
+WITH order_totals AS (...)    step 1 · each order's total from line items
+         │
+         ▼
+     per_customer AS (...)    step 2 · collapse orders per customer
+         │
+         ▼
+   SELECT … JOIN customers    step 3 · substitute the customer name
+```
+
 The main value of a `CTE` for an application is readability and reuse of an intermediate result — not "speedup." A `CTE` on its own doesn't make a query faster.
 
 ## Materialization: a fence vs inlining
@@ -34,6 +46,13 @@ Here's the subtlety. Postgres can treat a `CTE` in two ways:
 - **Materialize (fence)** — compute the `CTE` separately, once, store the result in a temporary buffer, and read from it afterwards. The optimizer doesn't peek behind that "fence."
 
 Since PG12 the default rule is: if a `CTE` is referenced **once** — it's inlined; if **more than once** (or it contains a write/`VOLATILE` function) — it's materialized (logically: computing once and reusing is cheaper than twice). These defaults can be overridden with keywords: `AS MATERIALIZED` forces the fence, `AS NOT MATERIALIZED` forces inlining.
+
+|   | inline | materialize (fence) |
+|---|---|---|
+| what it does | the `CTE`'s body is substituted into the main query | the `CTE` is computed separately, once, into a buffer |
+| optimizer | sees the whole query, pushes filters in | doesn't peek behind the "fence" |
+| default (PG12+) | the `CTE` is referenced once | referenced more than once (or a write/`VOLATILE`) |
+| force | `AS NOT MATERIALIZED` | `AS MATERIALIZED` |
 
 Our second query references `order_totals` twice — in `FROM` and in a scalar subquery for the grand total — so it's materialized (we wrote `AS MATERIALIZED` explicitly, but even without the keyword the default would be the same).
 
@@ -87,7 +106,11 @@ Output:
 
 ## The fence
 
-What we simplified. The key point: the difference between inlining and materialization is visible not in the result (it's the same) but in the **plan** — a materialized `CTE` puts up a "fence" the optimizer won't push filters through, and on large data a stray `AS MATERIALIZED` sometimes hurts (the server computes the whole `CTE` even though only a couple of rows are needed outside). You can see this only via `EXPLAIN` — that's module 06, so here we only name the levers (`MATERIALIZED` / `NOT MATERIALIZED`) without measuring them. Further: a `CTE` is about readability, not speed; the belief "I'll rewrite the subquery into a `WITH` and it'll be faster" is a myth (before PG12 materialization was always on and sometimes even hurt). And a recursive `CTE` (`WITH RECURSIVE`) is a separate big topic: traversing trees and graphs; unit 08-04 is devoted to it.
+What we simplified.
+
+- The difference between inlining and materialization is visible not in the result (it's the same) but in the **plan**: a materialized `CTE` puts up a "fence" the optimizer won't push filters through, and on large data a stray `AS MATERIALIZED` sometimes hurts (the server computes the whole `CTE` even though only a couple of rows are needed outside). You can see this only via `EXPLAIN` — that's module 06, so here we only name the levers without measuring them.
+- A `CTE` is about readability, not speed. The belief "I'll rewrite the subquery into a `WITH` and it'll be faster" is a myth (before PG12 materialization was always on and sometimes even hurt).
+- A recursive `CTE` (`WITH RECURSIVE`) is a separate big topic: traversing trees and graphs; unit 08-04 is devoted to it.
 
 ## Takeaways
 

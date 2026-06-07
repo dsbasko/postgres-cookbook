@@ -22,9 +22,28 @@ The average is computed once, and the comparison is against that number. If such
 
 For "is among," `IN` and `EXISTS` usually give the same result, and the planner often turns one into the other. The difference surfaces on **negation** (`NOT IN` vs `NOT EXISTS`) when the subquery can return `NULL`.
 
-Postgres expands `x NOT IN (a, b, NULL)` as `NOT (x=a OR x=b OR x=NULL)`. The term `x=NULL` is always `NULL` (not `false`!). If `x` equals neither `a` nor `b`, you get `NOT (false OR false OR NULL)` = `NOT (NULL)` = `NULL` — and a row with a `NULL` condition does **not** pass the filter. A single `NULL` in the set is enough to make `NOT IN` return empty for everyone.
+Postgres expands `x NOT IN (a, b, NULL)` as `NOT (x=a OR x=b OR x=NULL)`. The term `x=NULL` is always `NULL` (not `false`!). If `x` equals neither `a` nor `b`, you get `NOT (false OR false OR NULL)` = `NOT (NULL)` = `NULL` — and a row with a `NULL` condition does **not** pass the filter. A single `NULL` in the set is enough to make `NOT IN` return empty for everyone:
+
+```
+finding drinks NOT on promo; promos (featured_drink_id) = {1, NULL}
+
+  d.id NOT IN (1, NULL)
+       = NOT ( d.id = 1  OR  d.id = NULL )
+                                └── comparing with NULL → NULL, not false
+
+  drink #4 (not in any promo):
+       NOT ( false OR NULL ) = NOT (NULL) = NULL   → row fails the filter
+
+  one NULL in the set → NOT IN drops EVERYONE → answer 0 (though there are 4)
+```
 
 `NOT EXISTS` doesn't break this way: it asks "is there no matching row," and a subquery row with `NULL` matches nothing (`NULL` equals nothing) — so it excludes nobody extra. Hence the simple rule: **for "not among," use `NOT EXISTS`** (or `NOT IN` with a guaranteed non-`NULL` subquery).
+
+| form | question | what it returns / how it behaves |
+|---|---|---|
+| scalar `(SELECT …)` | "which single value?" | one value; more than one row → runtime error |
+| `IN (subquery)` | "is the value in the set?" | reliable; but `NOT IN` breaks if a `NULL` is in the set |
+| `EXISTS (subquery)` | "is there at least one row?" | the fact of existence (`SELECT 1`); `NOT EXISTS` is `NULL`-safe |
 
 ## What our code shows
 
@@ -77,7 +96,11 @@ Output:
 
 ## The fence
 
-What we simplified. The `NOT IN` + `NULL` trap isn't rare: a subquery over a nullable column (and schemas have plenty) will sooner or later return `NULL`, and `NOT IN` will silently lie; so in production "not among" is written with `NOT EXISTS` or `NULL` is filtered out explicitly (`... WHERE featured_drink_id IS NOT NULL`). Performance: on our data there's no difference, but on large tables `EXISTS`/`NOT EXISTS` is usually friendlier to indexes (stops at the first match), and an `IN` with a huge list of values from the application is better replaced by `= ANY($1::bigint[])` — a separate discussion in 10-03. And a scalar subquery must return exactly one value: return several and it's a production error, not a silent bug (at least it's loud here).
+What we simplified.
+
+- The `NOT IN` + `NULL` trap isn't rare: a subquery over a nullable column (and schemas have plenty) will sooner or later return `NULL`, and `NOT IN` will silently lie. So in production "not among" is written with `NOT EXISTS` or `NULL` is filtered out explicitly (`... WHERE featured_drink_id IS NOT NULL`).
+- Performance: on our data there's no difference, but on large tables `EXISTS`/`NOT EXISTS` is usually friendlier to indexes (stops at the first match), and an `IN` with a huge list of values from the application is better replaced by `= ANY($1::bigint[])` — a separate discussion in 10-03.
+- A scalar subquery must return exactly one value: return several and it's a production error, not a silent bug (at least it's loud here).
 
 ## Takeaways
 
@@ -87,4 +110,4 @@ What we simplified. The `NOT IN` + `NULL` trap isn't rare: a subquery over a nul
 - For "not among," use `NOT EXISTS` (or `NOT IN` with a guaranteed non-`NULL` subquery).
 - `EXISTS`/`NOT EXISTS` is usually friendlier to indexes; a giant `IN` list from the application is a candidate for `= ANY($1::type[])` (10-03).
 
-Next up — the **04-06 "CTEs and materialization"** unit: we'll pull subqueries out into named steps (`WITH`), assemble a readable pipeline from them, and unpack when Postgres "materializes" a CTE versus inlining it into the main query.
+Subqueries solve "a question inside a question," but nest them two or three levels deep and the query stops being readable. You can pull them out into named steps with `WITH` and assemble a top-down pipeline — far clearer than nesting. Next up — the **04-06 "CTEs and materialization"** unit: we'll assemble a readable pipeline from steps and unpack when Postgres "materializes" a CTE into an intermediate table versus inlining it into the main query.

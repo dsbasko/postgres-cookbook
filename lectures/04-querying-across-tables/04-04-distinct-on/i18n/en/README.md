@@ -18,6 +18,18 @@ ORDER BY o.customer_id, o.created_at DESC, o.id DESC;
 
 `DISTINCT ON (o.customer_id)` — one row per customer. `ORDER BY o.customer_id` (the mandatory start) groups a customer's rows together, and `created_at DESC` puts the freshest order first in the group — that's the one `DISTINCT ON` keeps. `id DESC` is the tie-break in case of equal `created_at` (two rows with the same date — otherwise "first" is undefined).
 
+First `ORDER BY` lays the rows out, then `DISTINCT ON` walks top to bottom and takes the first in each group, skipping the rest of that group:
+
+```
+orders sorted by ORDER BY (o.customer_id, o.created_at DESC, o.id DESC):
+
+  customer_id   created_at    id      DISTINCT ON (o.customer_id)
+  ──────────────────────────────     ───────────────────────────
+  1 · Alice     2025-01-16   #3  ◀──  first for customer 1 → keep
+  1 · Alice     2025-01-15   #1       customer 1 already taken → skip
+  2 · Boris     2025-01-15   #2  ◀──  first for customer 2 → keep
+```
+
 By changing the `ORDER BY` tail to `amount DESC`, the same construct gives the most **expensive** order per customer. The selection criterion lives in `ORDER BY` — that's what makes `DISTINCT ON` flexible.
 
 ## DISTINCT ON vs the alternatives
@@ -27,6 +39,12 @@ The same task is solved by other tools too, and it's useful to know when to use 
 - **`GROUP BY` + `max()`** gives an aggregate (date/amount) but not the whole row. To return the entire order you need a repeated join — extra and fragile.
 - **Window functions** (`ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY created_at DESC)` plus a `= 1` filter) — the standard, portable way; it also does "top-3 per customer," not just top-1. That's unit 08-02.
 - **`DISTINCT ON`** — the shortest when you need exactly **one** row per group and the project is already on Postgres.
+
+| technique | returns | rows per group | portability |
+|---|---|---|---|
+| `GROUP BY` + `max()` | an aggregate (date/amount), not the row — other columns need a repeated join | — | standard SQL |
+| `DISTINCT ON (k)` | the whole row, one per `k` | exactly one | Postgres only |
+| `ROW_NUMBER() … = 1` | the whole row; a `<= N` condition gives top-N | one or N | standard SQL (08-02) |
 
 `DISTINCT ON` ≠ `DISTINCT`: plain `DISTINCT` removes fully duplicate rows, `DISTINCT ON (col)` keeps one row per value of `col`.
 
@@ -77,7 +95,12 @@ Output:
 
 ## The fence
 
-What we simplified. `DISTINCT ON` depends on the whole `ORDER BY`: without an explicit tie-break (`id DESC`), with two orders sharing the same `created_at`, the "first" row is undefined — and the result would "float" between runs; in production that's a source of unstable reports, so a tie-break on a unique column is mandatory. Next, `DISTINCT ON` is non-standard: porting to another DBMS means rewriting it to window functions, so portable code sometimes reaches straight for `ROW_NUMBER()` (08-02). And on large tables `DISTINCT ON`'s efficiency hinges on an index for the `ORDER BY` — without one the server sorts the whole set (a plan question — module 06). Finally, if you need the "last N" rows per group rather than the last one, `DISTINCT ON` no longer fits — that's window functions.
+What we simplified.
+
+- `DISTINCT ON` depends on the whole `ORDER BY`. Without an explicit tie-break (`id DESC`), with two orders sharing the same `created_at`, the "first" row is undefined — the result would "float" between runs. In production that's a source of unstable reports, so a tie-break on a unique column is mandatory.
+- `DISTINCT ON` is non-standard: porting to another DBMS means rewriting it to window functions — portable code sometimes reaches straight for `ROW_NUMBER()` (08-02).
+- On large tables `DISTINCT ON`'s efficiency hinges on an index for the `ORDER BY` — without one the server sorts the whole set (a plan question — module 06).
+- If you need the "last N" rows per group rather than the last one, `DISTINCT ON` no longer fits — that's window functions again.
 
 ## Takeaways
 
@@ -87,4 +110,4 @@ What we simplified. `DISTINCT ON` depends on the whole `ORDER BY`: without an ex
 - `DISTINCT ON` ≠ `DISTINCT`: the former is one row per key, the latter removes fully duplicate rows.
 - Need portability or "top-N per group" → window functions (08-02); `DISTINCT ON` is about "exactly one per group" in Postgres.
 
-Next up — the **04-05 "Subqueries: EXISTS vs IN"** unit: scalar/IN/EXISTS subqueries and, again, that `NOT IN`-with-a-`NULL`-in-the-list trap — this time as the argument in favor of `EXISTS`.
+`DISTINCT ON` and aggregates answered "which row" and "how many." But often the question is about the **existence of a link**: "which drinks have never been ordered?", "which customers have already bought something?". Those are subqueries — and there that same `NOT IN`-with-a-`NULL`-in-the-list trap waits (the teaser from 01-02, unpacked in 03-06): it silently returns empty. Next up — the **04-05 "Subqueries: EXISTS vs IN"** unit, where that trap becomes the main argument for `EXISTS`.

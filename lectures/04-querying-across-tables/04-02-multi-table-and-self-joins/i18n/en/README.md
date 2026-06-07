@@ -1,12 +1,23 @@
 # 04-02 — Multi-table and self-joins
 
-A Brew order receipt isn't one table. The order number lives in `orders`, the customer name in `customers`, the line items in `order_items`, the drink names in `drinks`. To print a human-readable receipt ("order #1, Alice, cappuccino ×1") you have to assemble rows from all four — in one query, not four round-trips to the database.
+Last lesson you brought Karina back into the report — but "customer and order count" is a summary. The moment support opens a specific order to answer a customer, a summary isn't enough: you need a **receipt** — what was ordered, at what price, under whose name. And a raw `orders` row is useless to a human: `customer_id` sits in it as a string identifier, and what's inside the order isn't in `orders` at all. The order number is in `orders`, the customer name in `customers`, the line items in `order_items`, the drink names in `drinks`. To print "order #1, Alice, cappuccino ×1" you have to assemble rows from all four tables — in one query, not four round-trips to the database.
 
 And a separate, initially counterintuitive technique: a table can be joined **to itself**. It sounds odd until you meet a hierarchy: a barista has a manager, and a manager is just another employee from the same `staff` table. To show the manager's name next to the employee's, you join `staff` twice — that's a self-join.
 
 ## A JOIN chains through any number of tables
 
 `JOIN` isn't limited to two tables: each additional `JOIN` attaches one more via its key. The chain `orders → customers → order_items → drinks` links the order to the customer (`c.id::text = o.customer_id`), the order to its items (`oi.order_id = o.id`), and the item to the drink (`d.id = oi.drink_id`). The order of `JOIN`s doesn't affect the result of an `INNER` chain (the planner picks how to join them), but it reads more easily "along the thread": from the order to its details.
+
+`orders` here is the trunk: the customer hangs off it by `customer_id`, the line items by `order_id`, and each item's drink by `drink_id`.
+
+```
+orders ──┬─▶ customers      c.id::text = o.customer_id   → customer name
+(order)  │
+         └─▶ order_items     oi.order_id = o.id           → what was ordered
+                  └─▶ drinks  d.id = oi.drink_id           → drink name
+```
+
+One order yields as many receipt rows as it has items: that's why order #1 with two items unfolds into two rows.
 
 We compute the line total (`quantity × price`) right in SQL: `oi.quantity * oi.unit_price`. The price is `BIGINT` (cents, see 01-01), the quantity is `INT`; we cast the product to `::bigint` so it's `int64` in Go too (without the cast sqlc would infer the type from the first operand — `int32` — which could overflow on large totals).
 
@@ -19,7 +30,22 @@ FROM staff e
 LEFT JOIN staff m ON m.id = e.manager_id
 ```
 
-`e.manager_id = m.id` "unfolds" the reference: for an employee's row we find their manager's row in the same table and take the name from there. The `LEFT JOIN` matters here: the most senior person (Anna) has `manager_id = NULL`, and the `INNER` variant would drop her, while `LEFT` keeps her with an empty manager.
+`e.manager_id = m.id` "unfolds" the reference: for an employee's row we find their manager's row in the same table and take the name from there. The same `staff` table is read twice — on the left as "employees," on the right as "managers":
+
+```
+one staff table, read under two aliases:
+
+  employee (e)               manager (m)
+  e.name   e.manager_id  ─▶  m.id   m.name
+  Boris         1             1      Anna
+  Vera          1             1      Anna
+  Gleb          1             1      Anna
+  Anna        NULL            —      no reference → LEFT JOIN yields NULL
+```
+
+The `LEFT JOIN` matters here: the most senior person (Anna) has `manager_id = NULL`, and the `INNER` variant would drop her, while `LEFT` keeps her with an empty manager.
+
+The employee Boris in this hierarchy is a **namesake of the customer Boris Petrov** from the `customers` directory: they're different people — one makes the coffee, the other buys it. Names recur in Brew, as in life; what tells them apart is the table the row lives in.
 
 This unfolds exactly one level — "an employee and their direct manager." To walk the hierarchy to any depth (the manager's manager and so on) a self-join isn't enough — you need a recursive CTE (unit 08-04).
 
@@ -72,11 +98,15 @@ Output:
    → у Анны руководителя нет (manager = NULL) — LEFT JOIN её не выкинул.
 ```
 
-(The demo prints in Russian.) One query returned a receipt from four tables (note: order #1 is two rows, one per drink). The second joined `staff` to itself and unfolded `manager_id` into the manager's name.
+(The demo prints in Russian.) Read the output. The receipt unfolded the orders into line rows: order #1 gave two rows (cappuccino 4.50 and cold brew 5.20), order #3 — latte 4.80 ×2 = 9.60. The `JOIN` to `drinks` substituted drink names for `drink_id`, the `JOIN` to `customers` — a name for the string `customer_id`; the total 22.30 is the sum of all `line_total`s. The second query joined `staff` to itself: Boris, Vera, and Gleb have Anna in the manager column, and Anna herself has "— (старший)" because her `manager_id` is empty and the `LEFT JOIN` substituted `NULL` without dropping the row.
 
 ## The fence
 
-What we simplified. The multi-table `JOIN` here is on several keys at once, and each of them wants an index on large data — otherwise the planner joins tables by brute force; in the canon there's already an index under the FK `order_items.order_id` (`order_items_order_id_idx`), but `c.id::text = o.customer_id` is a cast, and a plain index on `customer_id` won't help it (indexing an expression — module 06). We deliberately keep the four-`INNER JOIN` chain short: in production such reports quickly grow to a dozen tables, and then "in what order and by what method to join" is decided not by readability but by the query plan. And a self-join unfolds the hierarchy exactly one level — for arbitrary depth you need a recursive CTE (08-04), and stacking N self-joins "just in case" is an anti-pattern.
+What we simplified.
+
+- The multi-table `JOIN` runs on several keys at once, and each wants an index on large data — otherwise the planner joins tables by brute force. There's already an index under the FK `order_items.order_id` in the canon (`order_items_order_id_idx`); but `c.id::text = o.customer_id` is a `JOIN` on an expression, and a plain index on `customer_id` won't speed it up (how to index an expression and how the server picks a join method — module 06).
+- We keep the four-`INNER JOIN` chain short on purpose. In production such reports quickly grow to a dozen tables, and then "in what order and by what method to join" is decided not by readability but by the query plan.
+- A self-join unfolds the hierarchy exactly one level. For arbitrary depth you need a recursive CTE (08-04); stacking N self-joins "just in case" is an anti-pattern.
 
 ## Takeaways
 
@@ -86,4 +116,4 @@ What we simplified. The multi-table `JOIN` here is on several keys at once, and 
 - A self-join unfolds an "employee → manager" hierarchy by one level; `LEFT JOIN` keeps the top (the one with no manager).
 - Arbitrary hierarchy depth is a recursive CTE (08-04), not a stack of self-joins.
 
-Next up — the **04-03 "Aggregation, GROUP BY/HAVING"** unit: we'll collapse rows into summaries (counts, sums, averages) and unpack the treacherous difference between `count(*)` and `count(column)`.
+The receipt unfolded an order into separate rows — one per drink. But the business more often asks the reverse: not "what's in each order" but "how many orders does a customer have," "for what amount," "what's the average." That means collapsing rows into a summary — and here a trap waits: `count(*)` and `count(column)` count different things, and on a `LEFT JOIN` the difference quietly skews the report (that same orderless Karina will be on the edge again). That's the **04-03 "Aggregation, GROUP BY/HAVING"** unit.

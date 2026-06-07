@@ -21,11 +21,31 @@ On `customers LEFT JOIN orders` the difference surfaces on a customer with no or
 
 `sum(o.amount)` over a group with no orders returns `NULL` (not 0!) — so we wrap it in `COALESCE(..., 0)`, or Karina would have an empty revenue instead of zero.
 
+All four forms on the very same Karina row (`LEFT JOIN`, no orders) give different results — and each difference is easy to mistake for a data bug, though it's behavior by definition:
+
+| on Karina's row | gives | why |
+|---|---|---|
+| `count(*)` | `1` | counts rows; the `LEFT JOIN` left one row with `NULL` |
+| `count(o.id)` | `0` | counts only non-`NULL`; `o.id` is empty |
+| `sum(o.amount)` | `NULL` → `0` via `COALESCE` | no addends — that's `NULL`, not `0` |
+| `avg(o.amount)` | `NULL` | an empty group has nothing to average |
+
 ## HAVING filters groups, not rows
 
 `WHERE` removes rows **before** grouping; `HAVING` removes **finished groups** — by an aggregate's value. "Customers with two or more orders" can't be written as `WHERE count(o.id) >= 2`: at the `WHERE` stage the aggregate isn't computed yet. `HAVING count(o.id) >= 2` does it — it applies after `GROUP BY`, when each group's count is already known.
 
-The order of logical steps: `FROM`/`JOIN` → `WHERE` (row filter) → `GROUP BY` → aggregates → `HAVING` (group filter) → `ORDER BY`.
+The query's steps run in a strict logical order, and where `WHERE` sits versus `HAVING` explains everything:
+
+```
+FROM / JOIN   →  collect rows from the tables
+WHERE         →  drop rows                 (ROW filter, before grouping)
+GROUP BY      →  slice into groups
+aggregates    →  count / sum / min / max / avg per group
+HAVING        →  drop finished groups      (GROUP filter, by an aggregate)
+ORDER BY      →  order the result
+```
+
+`WHERE` still sees individual rows, `HAVING` sees already-computed groups; that's why `count(o.id) >= 2` lives only in `HAVING`.
 
 ## What our code shows
 
@@ -84,7 +104,12 @@ Output:
 
 ## The fence
 
-What we simplified. First, `count(*)` and `count(column)` aren't "style" but different questions: "how many rows" vs "how many non-empty values"; reports confuse them most often, and the bug is silent — the numbers look plausible. Second, we rounded the `numeric` average to whole cents deliberately — in production an "average ticket" to the hundredth of a kopeck is usually pointless, but you must round explicitly, not rely on display. And we computed revenue from `orders.amount` (as in the canon), not by recomputing from the `order_items` lines — that's a different source and, in general, a different total; in a real report it matters to pin down what exactly counts as revenue, or two "correct" figures won't agree. On large tables the grouping itself wants suitable indexes and sometimes hits memory limits sorting groups — but that's plan territory (module 06).
+What we simplified.
+
+- `count(*)` and `count(column)` aren't "style" but different questions: "how many rows" vs "how many non-empty values." Reports confuse them most often, and the bug is silent — the numbers look plausible.
+- We rounded the `numeric` average to whole cents deliberately. In production an "average ticket" to the hundredth of a kopeck is usually pointless, but you must round explicitly, not rely on display.
+- We computed revenue from `orders.amount` (the order's recorded header total), not by recomputing from the `order_items` lines — that's a different source and, in general, a different total (the header legitimately drifts from the sum of lines). In a real report it matters to pin down what exactly counts as revenue, or two "correct" figures won't agree.
+- On large tables the grouping itself wants suitable indexes and sometimes hits memory limits sorting groups — but that's plan territory (module 06).
 
 ## Takeaways
 
@@ -94,4 +119,4 @@ What we simplified. First, `count(*)` and `count(column)` aren't "style" but dif
 - `sum`/`avg` over an empty group give `NULL`, not 0 — wrap in `COALESCE` if you need zero.
 - `WHERE` filters rows before grouping, `HAVING` filters finished groups by an aggregate's value.
 
-Next up — the **04-04 "DISTINCT ON"** unit: we'll fetch exactly one row per group (each customer's latest order) with one concise technique that's specific to Postgres.
+Aggregates collapsed each group into one number — how many, for how much, on average. But the business often needs not a figure but a specific row from the group: not "how many orders Alice has" but her **latest** order in full — date, amount, status. Fetching exactly one row per group with one concise technique that's specific to Postgres is the **04-04 "DISTINCT ON"** unit.
