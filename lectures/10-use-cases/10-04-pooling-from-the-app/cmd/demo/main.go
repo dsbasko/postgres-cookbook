@@ -236,6 +236,9 @@ func showListenNotify(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 	_, err = waitNotify(ctx, other, 500*time.Millisecond)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
 	missed := errors.Is(err, context.DeadlineExceeded)
 	fmt.Printf("   коннект без LISTEN (как при пересадке пулом): услышал что-то %t (таймаут — ничего)\n", !missed)
 	return nil
