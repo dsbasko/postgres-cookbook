@@ -1,32 +1,76 @@
 # 04-01 — JOIN: inner / left / right / full
 
-In Brew the data lives apart: customers in `customers`, orders in `orders`. Each on its own is useless for the business question "which customers ordered, and how much." To answer it you must **connect** the tables on a shared key — that's a `JOIN`.
+Marketing dreamed up a "we miss you" campaign: send a promo code to everyone who created a Brew account but hasn't ordered even once. They need a list of customers with their order counts. You write the obvious thing: join `customers` to `orders` by customer, count the rows, hand it over. The list goes to marketing, ticket closed.
 
-The most common beginner trap: use a plain (`INNER`) `JOIN` for a "all customers and their orders" report — and not notice that customers who haven't ordered yet silently dropped out. Brew has exactly such a customer — Karina: she signed up but hasn't placed an order. Which `JOIN` makes her disappear and which keeps her (with an empty order) is exactly what this unit is about.
+The next day a question lands: "Where's Karina? She signed up last week, she's in the admin panel, but she's not in your list." You open it — and indeed she isn't. The query didn't fail and didn't raise an error. It silently dropped exactly the people the campaign was for — customers with no orders at all. The report didn't lie in its numbers. It lied by omission: the row that shouldn't have been missing simply wasn't there.
 
-An important canon detail: `customers.id` is `BIGINT`, while `orders.customer_id` is `TEXT` (by design: in the real CDC stream orders and the customer directory travel independently). So we connect them with an explicit cast `c.id::text = o.customer_id` — that's fine and irrelevant to our `JOIN` discussion.
+It's not the whole query — it's one word in it: which `JOIN` you picked. There are four ways to connect two tables, and they differ precisely in whom they keep and whom they throw away. Karina dropped because we used the kind that keeps only matched pairs. Now all four in turn, on the same pair `customers` and `orders`, swapping one word at a time.
 
 ## INNER JOIN — matches only
 
-`INNER JOIN` (or just `JOIN`) keeps rows that have a pair **on both sides**. A customer with no orders and an order with no customer don't make it into the result. It's the right choice when you want exactly the matched pairs — "orders together with customer data." But for an "all customers" report it's treacherous: it silently drops those who haven't ordered yet.
+`INNER JOIN` (you can write just `JOIN`) keeps rows that found a pair on both sides at once. A customer with no order and an order with no customer don't make it through. It's the right choice when you want exactly the matched pairs — "orders together with the data of the customer who placed them." But for an "all customers" report it's treacherous: those who haven't ordered yet it silently removes.
+
+One detail about the join condition. `customers.id` is `BIGINT`, while `orders.customer_id` is `TEXT` (that's the Brew canon: in the real CDC stream orders and the customer directory travel independently, and an order holds the customer id as a string). So we bring the keys together with an explicit cast `c.id::text = o.customer_id`. The key type doesn't matter for the `JOIN` discussion — what matters is only that the condition links a customer to their order.
+
+On the Brew canon Alice has two orders, Boris one: they matched and made it into the result. Karina has no orders, nothing to match — INNER throws her out. That's why the marketing list "lost" exactly her: INNER answers "show the pairs that exist," not "show all customers."
 
 ## LEFT JOIN — all of the left, the right if present
 
-`LEFT JOIN` keeps **all** rows of the left table and fills in a match from the right, or `NULL` if there's no pair. `customers LEFT JOIN orders` is "all customers, and their orders if any." Karina stays in the result with `order_id = NULL` and `status = NULL`. This is the most common `JOIN` in applications: "show the entity and its related data without losing entities that have no relations."
+The report was supposed to answer a different question: "all customers, and orders — if any." That's `LEFT JOIN`. It keeps all rows of the left table and fills in either a pair or `NULL` on the right when there's no pair.
 
-`LEFT JOIN` + an `IS NULL` check on the right side is the standard "find rows without a pair" technique (an anti-join): `... LEFT JOIN orders o ON ... WHERE o.id IS NULL` returns customers with no orders at all.
+`customers LEFT JOIN orders` reads as "all customers, and their orders for those who have them." Karina comes back into the result — with `order_id = NULL` and `status = NULL`. This is the most common `JOIN` in applications: "show the entity and its related data without losing entities that have no relations."
+
+That property gives a handy trick. `LEFT JOIN` plus an `IS NULL` check on the right side is "find rows with no pair at all" (it's called an anti-join). The query `... LEFT JOIN orders o ON ... WHERE o.id IS NULL` returns only customers with no orders — the very list for the campaign the lesson opened with, assembled in a single query.
 
 ## RIGHT JOIN — the same, mirrored
 
-`RIGHT JOIN` is `LEFT JOIN` flipped: it keeps all rows of the **right** table. `orders RIGHT JOIN customers` gives exactly the same as `customers LEFT JOIN orders`: all customers, orders if any. That's why `RIGHT` is almost never written in code: any `RIGHT` turns into a `LEFT` by swapping the tables, and `LEFT` reads left-to-right more naturally. You need to know it to read others' SQL, but in your own you almost always pick `LEFT`.
+`RIGHT JOIN` is `LEFT` flipped: it keeps all rows of the right table. Put orders on the left, customers on the right — `orders RIGHT JOIN customers` — and you get exactly what `customers LEFT JOIN orders` gives: all customers, orders if any, Karina with `NULL`.
+
+That's why `RIGHT` is almost never written in code. Any `RIGHT` turns into a `LEFT` by swapping the tables, and `LEFT` reads left-to-right more naturally: "take all customers, glue on the orders." You need to know `RIGHT` to read others' SQL; in your own you almost always pick `LEFT`.
 
 ## FULL JOIN — mismatches on both sides
 
-`FULL JOIN` keeps unmatched rows **on both sides at once**: left rows with no pair and right rows with no pair. You can't show it honestly on the Brew canon — every order references an existing customer, so there are no "orphan" rows on the right, and `FULL` would degenerate into `LEFT`. So we use a lab example — reconciling two stock-count sheets: the floor counted drinks `{1, 2}`, storage counted `{2, 4}`. A `FULL JOIN` on `drink_id` shows everything: a drink only on the floor (`storage = NULL`), only in storage (`floor = NULL`), and counted in both. It's the classic "merge two sources and highlight the discrepancies" task.
+`FULL JOIN` keeps unmatched rows on both sides at once: left ones with no pair and right ones with no pair.
+
+Let's be honest: you can't show it on the Brew canon. Every order is tied to an existing customer, there are no "orphan" orders on the right — and `FULL` would degenerate into a plain `LEFT`. In application code it's rare too: within one normalized schema data is linked directionally, and `LEFT` is almost always enough. You can work a year and not write a single `FULL JOIN`.
+
+But one scenario justifies it: when you reconcile two independent sources, and each may have "its own" rows the other doesn't. Take an end-of-day stock count. The floor recounted drinks and turned in sheet `{1, 2}`, storage turned in `{2, 4}`. Drink 2 is in both, drink 1 only on the floor, drink 4 only in storage. A `FULL JOIN` on `drink_id` merges both sheets into one table: what's in both, what's only on the floor (`storage = NULL`), what's only in storage (`floor = NULL`). That's its job — merge two sources and highlight where they diverged.
+
+## What each JOIN keeps
+
+All four are the same pair of sets under different rules. The left table, the right one, and the zone where they intersect; the `JOIN` decides which of the three zones make it into the result:
+
+```
+      left only            intersection        right only
+   ┌─────────────────┐ ┌──────────────┐ ┌───────────────────┐
+   │     Karina      │ │ Alice, Boris │ │   order with       │
+   │ (customer with  │ │  (matched:   │ │   no customer      │
+   │  no order)      │ │  a pair)     │ │ (none on canon)    │
+   └─────────────────┘ └──────────────┘ └───────────────────┘
+```
+
+INNER takes only the middle zone. LEFT — the middle plus the left (there's Karina). RIGHT — the middle plus the right. FULL — all three at once. Any side that's taken but unmatched arrives in the result as `NULL`:
+
+| JOIN | keeps | where `NULL` | use when |
+|------|-------|-------------|----------|
+| `INNER` | the intersection only | nowhere (pairs guaranteed) | you want exactly the matched pairs |
+| `LEFT` | left zone + intersection | in right columns with no pair | "all entities, related data if any" — the most common |
+| `RIGHT` | right zone + intersection | in left columns with no pair | almost never: write `LEFT` by swapping tables |
+| `FULL` | all three zones | on either side with no pair | reconciling two independent sources |
 
 ## What our code shows
 
-Four queries in `query.sql`. The first three differ by exactly one word (`JOIN` / `LEFT JOIN` / `RIGHT JOIN`) on the same pair of tables:
+`query.sql` has four queries. The first three — over `customers` and `orders` — differ by exactly one word. Here's `INNER`:
+
+```sql
+-- name: InnerCustomersOrders :many
+SELECT c.name AS customer, o.id AS order_id, o.status
+FROM customers c
+JOIN orders o ON o.customer_id = c.id::text
+ORDER BY c.id, o.id;
+```
+
+Change `JOIN` to `LEFT JOIN` — and nothing else:
 
 ```sql
 -- name: LeftCustomersOrders :many
@@ -36,7 +80,22 @@ LEFT JOIN orders o ON o.customer_id = c.id::text
 ORDER BY c.id, o.id;
 ```
 
-sqlc sees that after a `LEFT JOIN` the `orders` columns can be `NULL` and types them as `pgtype.Int8` / `pgtype.Text` (whereas in the `INNER` variant the same columns are plain `int64` / `string`: a match is guaranteed). The fourth query is the `FULL JOIN` of the count sheets; the drink name comes from `drinks` via `COALESCE(f.drink_id, s.drink_id)` (the key exists on at least one side).
+Same columns, same pair of tables, same `ON` — the difference is one word, and the result changes: Karina comes back. The `RIGHT` variant is even shorter in spirit — it's `FROM orders o RIGHT JOIN customers c ...`, the same tables swapped.
+
+A subtlety visible only in Go: sqlc notices that after a `LEFT JOIN` the `orders` columns can become `NULL` and types them as nullable — `pgtype.Int8` and `pgtype.Text`. In the `INNER` variant the same columns arrive as plain `int64` and `string`: there a match is guaranteed. One word in SQL changes even the types in the generated code.
+
+The fourth query is the `FULL JOIN` of the two count sheets; the drink name comes from `drinks` via `COALESCE(f.drink_id, s.drink_id)` (the key exists on at least one side):
+
+```sql
+-- name: ReconcileFull :many
+SELECT d.name AS drink, f.qty AS floor_qty, s.qty AS storage_qty
+FROM count_floor f
+FULL JOIN count_storage s ON s.drink_id = f.drink_id
+JOIN drinks d ON d.id = COALESCE(f.drink_id, s.drink_id)
+ORDER BY d.id;
+```
+
+`cmd/demo/main.go` is thin glue: it calls the typed methods from `internal/db/` and lays the rows out into columns. All the logic is in `query.sql`.
 
 ## Running it
 
@@ -81,18 +140,22 @@ Output:
    → строки есть с обеих сторон: только в зале, только на складе, в обоих.
 ```
 
-(The demo prints in Russian.) INNER gave 3 rows (Karina dropped), LEFT and RIGHT gave 4 each (Karina stayed with `NULL`), FULL merged the two sheets with discrepancies on the edges. The same dataset, four `JOIN`s — four different answers.
+(The demo prints in Russian.) Read the output in order. INNER gave three rows: Alice's two orders and Boris's one. Karina isn't in it — exactly the loss the lesson opened with. LEFT and RIGHT gave four rows each: the same three plus Karina with `order_id` and `status` as `NULL`. The set of customers is the same, but now no one dropped. FULL merged the two count sheets: Cappuccino landed in both (5 and 3), Espresso was counted only on the floor, Cold Brew only in storage, and each discrepancy showed up as "—", i.e. `NULL` on the side where the drink is missing. The same dataset, four `JOIN`s — four different answers to "whom to keep."
 
 ## The fence
 
-What we simplified. First, the `ON` condition here is on an unindexed pair (`c.id::text = o.customer_id`), and on five rows that doesn't matter; but on large tables a `JOIN` without a suitable index on the join key is either a hash join that scans the whole table or a nested loop, and the cost grows fast (how exactly the server picks a join method and why an index on the key matters — module 06). Second, the `c.id::text` cast in `ON` is a consequence of `customer_id` being deliberately `TEXT` in the canon; in your own schema it's best to keep join keys of the same type (better still — a real foreign key), so the index lands and no cast is needed. And `FULL JOIN` is rare in applications — it's almost always a sign of "I'm merging two independent sources"; within one normalized schema data is usually linked directionally and `LEFT` is enough.
+What we simplified.
+
+- On five rows an `ON` over an unindexed pair is invisible, but on large tables a `JOIN` without an index on the join key is either a hash join (builds a hash table on one side) or a nested loop (for each left row scans for a right match), and the cost grows fast. How the server picks a join method and why an index on the key matters — module 06.
+- The `c.id::text` cast in `ON` is needed only because `customer_id` is deliberately `TEXT` in the canon. In your own schema keep join keys of the same type, better still a real foreign key: then the index lands and no cast is needed.
+- A `FULL JOIN` within one normalized schema is almost always a sign the data should have been linked directionally and `LEFT` would have done. Its honest place is the seam between two independent sources, each with "its own" rows.
 
 ## Takeaways
 
-- `INNER JOIN` keeps only pairs matched on both sides — for an "all entities" report it silently loses rows without a pair.
-- `LEFT JOIN` keeps all rows of the left table; no pair on the right → its columns are `NULL` (sqlc types them as nullable).
+- `INNER JOIN` keeps only pairs matched on both sides; for an "all entities" report it silently loses rows without a pair.
+- `LEFT JOIN` keeps all rows of the left table; no pair on the right → its columns arrive `NULL` (sqlc types them as nullable).
 - `LEFT JOIN ... WHERE right.key IS NULL` is the standard anti-join "find rows without a pair."
 - `RIGHT JOIN` is the mirror of `LEFT`; in code you almost always write `LEFT` by swapping the table order.
 - `FULL JOIN` keeps mismatches on both sides — it's a tool for reconciling two sources, not an everyday `JOIN` within a schema.
 
-Next up — the **04-02 "Multi-table and self-joins"** unit: we'll assemble an order receipt from four tables at once and learn to join a table with itself (a coffee-shop staff hierarchy).
+Karina is back in the report: one word, `LEFT` instead of `JOIN`, returned the row INNER kept losing without any error. But "customers and their orders" is just two tables. The moment the business asks what exactly is in an order, at what price, and in which shop, `order_items`, `drinks`, and `shops` get pulled toward `orders` — a whole receipt from several tables at once. And sometimes a table has to be joined to itself: to lay out who manages whom on a shift, say. That's the next unit, **04-02 "Multi-table and self-joins."**
