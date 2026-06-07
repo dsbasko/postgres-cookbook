@@ -1,0 +1,74 @@
+# 07-02 — when NOT to use jsonb
+
+In 07-01 `jsonb` looked almost free: store a document, read a field. A couple of sprints later Brew's whole drink card had moved into a single `doc jsonb` column — "it's more flexible, no schema changes." Then the oddities started: a drink's price went negative and nobody knew when; updating one flag in the card suddenly got write-heavy; an analyst couldn't put a simple `CHECK` on the price. Flexibility came with a bill, and that bill has two parts.
+
+The goal of this unit is to see both prices of `jsonb` in numbers: the **physical** one (write amplification — changing one field rewrites the whole document) and the **semantic** one (inside `jsonb` there's no type, no `CHECK`, no `NOT NULL` on an individual field). This is a "stop" unit: not "how to do it with `jsonb`," but "where you shouldn't."
+
+## Physics: one field — yet the whole document rewritten
+
+In Postgres rows are immutable: any `UPDATE` writes a brand-new version of the entire row (that's MVCC, see 05-02). But `jsonb` adds its own multiplier on top: a document is stored as a single value, and you can't change one key "in place" — `jsonb_set` builds and writes a **new full document**. If the price lives in a plain `bigint` column, the change touches 8 bytes. If the same price is a key inside a half-kilobyte card, then for the sake of one number the entire half-kilobyte document goes to disk (and to WAL, and to replication). On a hot table with frequent point updates that's write amplification: you write many times more than you change. And if the document grows past ~2 KB it moves to TOAST, and an update drags de/compression along too.
+
+## Semantics: no constraints inside jsonb
+
+A column is a contract: the type rejects `'banana'` in a numeric field, `CHECK (price_cents > 0)` rejects a negative price, `NOT NULL` rejects an omission, a foreign key rejects a dangling reference. Inside `jsonb` none of these guarantees exist. `doc || '{"price": -5}'` writes a negative price silently; `'{"price": "banana"}'` writes a string instead of a number, and the database won't object. You can't require "key `price` is mandatory and positive" in one line: you'd either drag in `CHECK (doc ? 'price' AND (doc->>'price')::numeric > 0)` (fragile, won't catch nested, easy to bypass) or validate in the application — which is exactly the work the schema used to do for you. A field with an invariant wants to be a column.
+
+## What our code shows
+
+A lab table `menu_doc_lab`: one drink card where the price exists BOTH as a separate `price_cents` column (type + `CHECK`) AND as a `price` key inside `doc`. A `psql` demonstration (escape-hatch: `sqlc` isn't needed here — we look at bytes and `SQLSTATE`):
+
+```sql
+-- 1) how many bytes "changing one field" costs
+SELECT pg_column_size(price_cents), pg_column_size(doc) FROM menu_doc_lab;
+SELECT pg_column_size(jsonb_set(doc, '{price}', '999')) FROM menu_doc_lab;  -- a new FULL document
+
+-- 2) the column rejects garbage (we print SQLSTATE), 3) jsonb swallows it
+INSERT INTO menu_doc_lab (price_cents, doc) VALUES (-5, '{}');        -- 23514 (CHECK)
+INSERT INTO menu_doc_lab (price_cents, doc) VALUES ('banana', '{}');  -- 22P02 (type)
+UPDATE menu_doc_lab SET doc = doc || '{"price": "banana"}';           -- passes silently
+```
+
+## Running it
+
+```sh
+docker compose up -d
+make lecture L=07-jsonb-arrays-and-search/07-02-when-not-to-use-jsonb T=db-reset
+make lecture L=07-jsonb-arrays-and-search/07-02-when-not-to-use-jsonb
+```
+
+Output:
+
+```
+== 1) write-amplification: байты на одно поле — колонка против jsonb ==
+ price_column_bytes | doc_bytes 
+--------------------+-----------
+                  8 |       531
+
+ doc_after_one_field_change_bytes 
+----------------------------------
+                              531
+
+
+== 2) потеря ограничений: колонка отбивает мусор, jsonb — нет ==
+колонка price_cents = -5      → SQLSTATE 23514 (CHECK price_cents > 0)
+колонка price_cents = banana  → SQLSTATE 22P02 (invalid input for bigint)
+
+== 3) тот же мусор ВНУТРИ jsonb проходит молча (ни типа, ни CHECK) ==
+ doc_price_now | column_price_still 
+---------------+--------------------
+ banana        |                450
+```
+
+The column costs 8 bytes, the document 531, and `jsonb_set` returned another 531-byte document for the sake of one field: that's the cost of a point update inside `jsonb`. And only the column could reject garbage: `-5` was caught by the `CHECK` (23514), `banana` by the type (22P02), whereas the same values inside `doc` were written silently, and the card now carries a `banana` price next to an honest column price of `450`.
+
+## The fence
+
+`jsonb` is an excellent tool for exactly one job: **genuinely shapeless, sparse data on which you don't enforce invariants and rarely do point updates** (incoming webhooks, snapshots of external APIs, user settings "as is"). The moment a field gains an invariant (mandatory, range, reference), a frequent point `UPDATE`, or a regular filter/join — that's a signal to lift it into a column. In production a "fat `jsonb` we keep tweaking a little" turns into table and WAL bloat, autovacuum pressure, and loss of control over the data — and your DBA will ask you to normalize exactly the fields your logic rests on. A hybrid schema (stable fields as columns, the truly shapeless tail as one `jsonb`) almost always beats the extremes.
+
+## Takeaways
+
+- Write amplification: an `UPDATE` of one key rewrites the **whole** document (`jsonb_set` returns a new full `jsonb`); a column costs bytes, a document costs hundreds of bytes and TOAST.
+- Inside `jsonb` there are no types, `CHECK`, `NOT NULL`, or foreign keys on individual fields — garbage is written silently.
+- A field with an invariant / frequent point update / regular filter wants to be a **column**, not a key in `jsonb`.
+- `jsonb` fits the shapeless and sparse; a hybrid schema (columns + one `jsonb` tail) beats both extremes.
+
+Next up — **07-03 "SQL/JSON path and building"**: since the shapeless stuff did end up in `jsonb`, we'll learn to extract from it by path expressions (`jsonb_path_query`), patch it precisely (`jsonb_set`), and build documents (`jsonb_build_object`/`jsonb_agg`) — and note that `JSON_TABLE` arrived in PG17.

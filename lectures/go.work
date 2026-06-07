@@ -58,3 +58,13 @@ use ./04-querying-across-tables/04-06-ctes-and-materialization
 use ./05-transactions-and-mvcc/05-01-transactions-and-acid
 
 use ./05-transactions-and-mvcc/05-05-retry-on-40001
+
+use ./07-jsonb-arrays-and-search/07-01-jsonb-access-and-containment
+
+use ./07-jsonb-arrays-and-search/07-03-sql-json-path-and-building
+
+use ./07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table
+
+use ./07-jsonb-arrays-and-search/07-05-full-text-search
+
+use ./07-jsonb-arrays-and-search/07-06-pg-trgm-fuzzy

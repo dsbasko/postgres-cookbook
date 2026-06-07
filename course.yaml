@@ -289,27 +289,51 @@ modules:
         duration: 20m
         tags: [create-index-concurrently, locks, migrations, escape-hatch]
 
-  # ── Модули 07–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 07-jsonb-arrays-and-search
+    title: { ru: "JSONB, массивы и поиск", en: "JSONB, arrays, and search" }
+    description:
+      ru: |
+        Полуструктурированные данные и поиск внутри БД: доступ и containment в jsonb (-> ->> @> ?),
+        когда jsonb не нужен, SQL/JSON path и сборка, массивы vs junction-таблица, полнотекстовый
+        поиск (tsvector + GIN) и нечёткий поиск через pg_trgm — с матрицей выбора FTS/trgm/движок.
+      en: |
+        Semi-structured data and in-database search: jsonb access and containment (-> ->> @> ?),
+        when not to use jsonb, SQL/JSON path and building, arrays vs a junction table, full-text
+        search (tsvector + GIN), and fuzzy search via pg_trgm — with an FTS/trgm/engine decision
+        matrix.
+    lessons:
+      - slug: 07-01-jsonb-access-and-containment
+        title: { ru: Доступ к jsonb и containment, en: jsonb access and containment }
+        duration: 25m
+        tags: [jsonb, containment, operators, sqlc]
+      - slug: 07-02-when-not-to-use-jsonb
+        title: { ru: Когда не нужен jsonb, en: When not to use jsonb }
+        duration: 20m
+        tags: [jsonb, write-amplification, constraints, escape-hatch]
+      - slug: 07-03-sql-json-path-and-building
+        title: { ru: "SQL/JSON path и сборка", en: "SQL/JSON path and building" }
+        duration: 25m
+        tags: [jsonb, jsonpath, jsonb-set, jsonb-agg, sqlc]
+      - slug: 07-04-arrays-vs-junction-table
+        title: { ru: Массивы против таблицы-связки, en: Arrays vs a junction table }
+        duration: 25m
+        tags: [arrays, junction-table, gin, sqlc]
+      - slug: 07-05-full-text-search
+        title: { ru: Полнотекстовый поиск, en: Full-text search }
+        duration: 25m
+        tags: [full-text-search, tsvector, ts-rank, gin, sqlc]
+      - slug: 07-06-pg-trgm-fuzzy
+        title: { ru: Нечёткий поиск через pg_trgm, en: Fuzzy search with pg_trgm }
+        duration: 20m
+        tags: [pg-trgm, similarity, fuzzy, gin, sqlc]
+
+  # ── Модули 08–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 07–10 уже написаны и ждут здесь:
+  # инкрементально). Описания модулей 08–10 уже написаны и ждут здесь:
   # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
   # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 07-jsonb-arrays-and-search
-  #     title: { ru: JSONB, массивы и поиск, en: JSONB, arrays, and search }
-  #     description:
-  #       ru: |
-  #         Полуструктурированные данные и поиск внутри БД: доступ и containment в jsonb (-> ->> @> ?),
-  #         когда jsonb не нужен, SQL/JSON path и сборка, массивы vs junction-таблица, полнотекстовый
-  #         поиск (tsvector + GIN) и нечёткий поиск через pg_trgm — с матрицей выбора FTS/trgm/движок.
-  #       en: |
-  #         Semi-structured data and in-database search: jsonb access and containment (-> ->> @> ?),
-  #         when not to use jsonb, SQL/JSON path and building, arrays vs a junction table, full-text
-  #         search (tsvector + GIN), and fuzzy search via pg_trgm — with an FTS/trgm/engine decision
-  #         matrix.
-  #     lessons: []
   #
   #   - id: 08-analytical-and-lateral
   #     title: { ru: Аналитика, оконные функции и LATERAL, en: Analytics, window functions, and LATERAL }
