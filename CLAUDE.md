@@ -109,6 +109,79 @@ ignores it). The reference escape-hatch unit is
 **Invariant:** every unit — sqlc or escape-hatch — exposes a `make run` target.
 For escape-hatch units `run` is an alias onto the main demo or session.
 
+**sqlc v1.30.0 can't parse some PG18 / advanced SQL — and several lessons are
+*about* exactly those features**, so they go escape-hatch (choose the feature,
+not the tool). Confirmed gaps that forced it while authoring: `RETURNING old.*
+/ new.*` (03-05, 10-02), `GENERATED … VIRTUAL` (02-05), temporal `PRIMARY KEY
+(… WITHOUT OVERLAPS)` and `EXCLUDE USING gist` (10-02), `MERGE … RETURNING
+merge_action()` (09-01), the recursive-CTE `CYCLE` clause (08-04), and
+multi-array `unnest($1::int[], $2::text[])` (03-01 — use a multi-row `VALUES`
+instead). `LISTEN`/`NOTIFY` and `CopyFrom` have no sqlc surface at all (09-04,
+09-01). A parser error on a feature the lesson teaches is the signal to drop
+sqlc — record the reason in the README fence.
+
+**Escape-hatch `db-reset`** runs psql directly against
+`../../../schema/{brew,seed}.sql` (there is no `internal/brew` when the unit
+carries no Go). Quiet the NOTICEs with `PGOPTIONS=client_min_messages=warning`.
+`go build ./...` from the workspace root does *not* work across the per-unit
+modules — `make build` (a `go list -m` loop) is the canonical build, and it
+only touches `go.mod` units that are in `go.work`.
+
+## Determinism (so `make run` matches the README)
+
+The `## Запуск` block pastes the *real* stdout of `make run`, and the gate
+checks it byte-for-byte — so a demo must print only reproducible things:
+
+- **Never print** `now()` / timestamps, uuid values, a transaction id (`xid`),
+  or a backend `pid`. Print a *fact about* them instead — a boolean
+  (`created_set`, `ctid_changed`, `xmin_changed`), a count, or a derived
+  property (a uuid's *version* and monotonicity, not its value).
+- **Errors:** print the `SQLSTATE` (e.g. `23505`, `23514`, `40001`, `42P17`),
+  not the message text (locale/build-dependent). Raw error text, NOTICEs and
+  WARNINGs go to **stderr**; stdout stays clean.
+- **Reseed up front:** `TRUNCATE … RESTART IDENTITY CASCADE` (or a lab-table
+  `DROP`+`CREATE`) plus a fixed seed at the start of `run`, so ids start at 1
+  and a re-run is bit-identical.
+- **EXPLAIN:** `EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, BUFFERS OFF)` +
+  `SET max_parallel_workers_per_gather = 0`, and build lab data with
+  `generate_series` (never `random()`). Discuss timing/buffers in prose with a
+  hardware caveat.
+- **psql output:** `-q`, `\pset footer off`, `\x`, `\set VERBOSITY terse` for
+  clean, stable tables.
+- **Inherently concurrent demos** (SKIP LOCKED workers, two psql sessions): the
+  interleaving / worker split is non-deterministic — print *invariants* (total
+  claimed, distinct, duplicates = 0) and make `run` the deterministic
+  single-session demo. Two-session scripts can be pinned with `\prompt` (holds a
+  transaction open until Enter).
+
+## Authoring patterns (learned building the course)
+
+- **Lab tables.** Demos that need throwaway tables name them `*_lab` and
+  `DROP`+`CREATE` (or `TRUNCATE`) them inside `run`, so the run is idempotent and
+  the Brew canon is never touched. Modern idioms (uuidv7, virtual generated
+  columns, custom enums, extensions) live on these or on the RICH tables.
+- **Per-unit DDL from a sqlc demo.** `go:embed` can't reach a sibling
+  `schema.sql` from `cmd/demo/`; read it via `runtime.Caller` and apply with
+  `brew.Apply(ctx, pool, ddl)` (canon → unit DDL → seed). The committed
+  `internal/db/` is still generated from `schema.sql` at `make gen` time.
+- **Extensions** (`btree_gist` for 10-02, `pg_trgm` for 07-06) are created in the
+  unit's DDL, idempotent via `CREATE EXTENSION IF NOT EXISTS`.
+- **Capstones (module 10)** are raw-pgx Go units with a `cmd/demo/main_test.go`
+  of asserted integration tests that **skip when the DB is down** (`t.Skip`), so
+  `go test ./...` is green without the sandbox; byte-compat is guarded by a
+  DB-free token test.
+- **Gotchas:**
+  - A multi-statement string sent *with bind args* fails with `42601` (extended
+    protocol = one command per query). Split DDL into separate no-arg `Exec`
+    calls, or run the parameterized statement on its own.
+  - A trivial `sql` function gets inlined and *loses* its volatility label; write
+    `plpgsql` when the lesson depends on the label surviving (09-05).
+  - `go vet` flags a `%`-bearing literal (e.g. `'%presso%'`) passed to `Println`;
+    move it to a `%s` argument of `Printf`.
+  - The README-TOC generator truncates each lesson label at the first comma — the
+    embedded TOC between the `<!-- generated … -->` markers reproduces verbatim,
+    so `make web-generate-readme-toc` stays diff-stable.
+
 ## The Brew canon and the byte-compatibility rule
 
 `schema/brew.sql` has two groups of tables:

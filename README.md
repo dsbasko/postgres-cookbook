@@ -238,6 +238,61 @@ working pipeline — "SQL by hand → sqlc generate → typed pgx code" — that
 builds on.
 
 - [00-01 — Client](lectures/00-getting-connected/00-01-client-server-and-sandbox/i18n/en/README.md)
+- [00-02 — psql survival kit](lectures/00-getting-connected/00-02-psql-survival-kit/i18n/en/README.md)
+- [00-03 — Connecting from Go](lectures/00-getting-connected/00-03-connecting-from-go/i18n/en/README.md)
+- [00-04 — Typed queries via sqlc](lectures/00-getting-connected/00-04-typed-queries-with-sqlc/i18n/en/README.md)
+- [00-05 — Connection lifecycle and pooling](lectures/00-getting-connected/00-05-connection-lifecycle-and-pooling/i18n/en/README.md)
+
+### 01 — Data types
+
+Which type to pick and why: numeric vs float for money, text/boolean/null, timestamptz for
+time, uuid and PG18 uuidv7, enums/arrays, and an intro to jsonb. The right type up front
+removes a whole class of production bugs.
+
+- [01-01 — Numbers and money](lectures/01-data-types/01-01-numbers-and-money/i18n/en/README.md)
+- [01-02 — text](lectures/01-data-types/01-02-text-boolean-and-null-teaser/i18n/en/README.md)
+- [01-03 — Date](lectures/01-data-types/01-03-date-time-timestamptz/i18n/en/README.md)
+- [01-04 — uuid and uuidv7](lectures/01-data-types/01-04-uuid-and-uuidv7/i18n/en/README.md)
+- [01-05 — enums](lectures/01-data-types/01-05-enums-arrays-and-jsonb-intro/i18n/en/README.md)
+
+### 02 — Schema
+
+Identity vs serial, NOT NULL, primary and foreign keys, UNIQUE/CHECK, generated columns and
+domains (PG18 virtual vs stored), and a migration mindset — which ALTERs are instant and
+which rewrite the table and block writes.
+
+- [02-01 — identity and defaults](lectures/02-schema-and-constraints/02-01-identity-and-defaults/i18n/en/README.md)
+- [02-02 — NOT NULL, PK, natural vs surrogate key](lectures/02-schema-and-constraints/02-02-not-null-pk-natural-vs-surrogate/i18n/en/README.md)
+- [02-03 — Foreign keys (CASCADE/SET NULL)](lectures/02-schema-and-constraints/02-03-foreign-keys/i18n/en/README.md)
+- [02-04 — UNIQUE and CHECK (NULLS NOT DISTINCT)](lectures/02-schema-and-constraints/02-04-unique-and-check/i18n/en/README.md)
+- [02-05 — Generated columns and domains](lectures/02-schema-and-constraints/02-05-generated-columns-and-domains/i18n/en/README.md)
+- [02-06 — ALTER TABLE: a migration mindset](lectures/02-schema-and-constraints/02-06-alter-table-migration-mindset/i18n/en/README.md)
+
+### 03 — CRUD fluency
+
+Confident CRUD: INSERT ... RETURNING, SELECT with WHERE/ORDER/LIMIT and keyset pagination,
+safe UPDATE/DELETE, upsert via ON CONFLICT, PG18 RETURNING old/new, and sober NULL semantics
+(the NOT IN + NULL trap, COALESCE/NULLIF/IS DISTINCT FROM).
+
+- [03-01 — INSERT and RETURNING](lectures/03-crud-fluency/03-01-insert-and-returning/i18n/en/README.md)
+- [03-02 — SELECT: WHERE/ORDER/LIMIT and keyset](lectures/03-crud-fluency/03-02-select-where-order-limit/i18n/en/README.md)
+- [03-03 — UPDATE/DELETE safely](lectures/03-crud-fluency/03-03-update-delete-safely/i18n/en/README.md)
+- [03-04 — upsert via ON CONFLICT](lectures/03-crud-fluency/03-04-upsert-on-conflict/i18n/en/README.md)
+- [03-05 — RETURNING old/new](lectures/03-crud-fluency/03-05-returning-old-new/i18n/en/README.md)
+- [03-06 — Sober NULL semantics](lectures/03-crud-fluency/03-06-null-semantics-reckoning/i18n/en/README.md)
+
+### 04 — Querying across tables
+
+Tying data together: joins (inner/left/right/full), self-joins, aggregation with
+GROUP BY/HAVING, DISTINCT ON (the latest order per customer), EXISTS vs IN subqueries, and
+CTEs with materialization. This is where data turns into answers to business questions.
+
+- [04-01 — JOIN: inner/left/right/full](lectures/04-querying-across-tables/04-01-joins-inner-left-right-full/i18n/en/README.md)
+- [04-02 — Multi-table and self-joins](lectures/04-querying-across-tables/04-02-multi-table-and-self-joins/i18n/en/README.md)
+- [04-03 — Aggregation: GROUP BY/HAVING](lectures/04-querying-across-tables/04-03-aggregation-group-by-having/i18n/en/README.md)
+- [04-04 — DISTINCT ON](lectures/04-querying-across-tables/04-04-distinct-on/i18n/en/README.md)
+- [04-05 — Subqueries: EXISTS vs IN](lectures/04-querying-across-tables/04-05-subqueries-exists-vs-in/i18n/en/README.md)
+- [04-06 — CTEs and materialization](lectures/04-querying-across-tables/04-06-ctes-and-materialization/i18n/en/README.md)
 
 ### 05 — Transactions
 
@@ -245,7 +300,77 @@ How Postgres behaves under concurrency: ACID and transactions, an MVCC mental mo
 (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
 40001, and deadlocks with advisory locks.
 
+- [05-01 — Transactions and ACID](lectures/05-transactions-and-mvcc/05-01-transactions-and-acid/i18n/en/README.md)
 - [05-02 — The MVCC mental model](lectures/05-transactions-and-mvcc/05-02-mvcc-mental-model/i18n/en/README.md)
+- [05-03 — Row locks and lost updates](lectures/05-transactions-and-mvcc/05-03-row-locks-and-lost-updates/i18n/en/README.md)
+- [05-04 — Isolation levels for developers](lectures/05-transactions-and-mvcc/05-04-isolation-levels-for-devs/i18n/en/README.md)
+- [05-05 — Retrying on 40001](lectures/05-transactions-and-mvcc/05-05-retry-on-40001/i18n/en/README.md)
+- [05-06 — Deadlocks and advisory locks](lectures/05-transactions-and-mvcc/05-06-deadlocks-and-advisory-locks/i18n/en/README.md)
+
+### 06 — Indexing and EXPLAIN
+
+Performance through reading plans: EXPLAIN ANALYZE with buffers (on by default in PG18),
+B-tree and column order (PG18 skip-scan), when indexes don't help (expression index),
+partial/covering/unique and Index-Only Scan, GIN for jsonb/arrays, CREATE INDEX CONCURRENTLY.
+
+- [06-01 — Reading EXPLAIN ANALYZE](lectures/06-indexing-and-explain/06-01-reading-explain-analyze-buffers/i18n/en/README.md)
+- [06-02 — B-tree and column order](lectures/06-indexing-and-explain/06-02-btree-and-composite-column-order/i18n/en/README.md)
+- [06-03 — When indexes don't help](lectures/06-indexing-and-explain/06-03-when-indexes-dont-help/i18n/en/README.md)
+- [06-04 — Partial, covering, and unique](lectures/06-indexing-and-explain/06-04-partial-covering-and-unique/i18n/en/README.md)
+- [06-05 — GIN for jsonb and arrays](lectures/06-indexing-and-explain/06-05-gin-for-jsonb-and-arrays/i18n/en/README.md)
+- [06-06 — CREATE INDEX CONCURRENTLY](lectures/06-indexing-and-explain/06-06-create-index-concurrently/i18n/en/README.md)
+
+### 07 — JSONB, arrays, and search
+
+Semi-structured data and in-database search: jsonb access and containment (-> ->> @> ?),
+when not to use jsonb, SQL/JSON path and building, arrays vs a junction table, full-text
+search (tsvector + GIN), and fuzzy search via pg_trgm — with an FTS/trgm/engine decision
+matrix.
+
+- [07-01 — jsonb access and containment](lectures/07-jsonb-arrays-and-search/07-01-jsonb-access-and-containment/i18n/en/README.md)
+- [07-02 — When not to use jsonb](lectures/07-jsonb-arrays-and-search/07-02-when-not-to-use-jsonb/i18n/en/README.md)
+- [07-03 — SQL/JSON path and building](lectures/07-jsonb-arrays-and-search/07-03-sql-json-path-and-building/i18n/en/README.md)
+- [07-04 — Arrays vs a junction table](lectures/07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table/i18n/en/README.md)
+- [07-05 — Full-text search](lectures/07-jsonb-arrays-and-search/07-05-full-text-search/i18n/en/README.md)
+- [07-06 — Fuzzy search with pg_trgm](lectures/07-jsonb-arrays-and-search/07-06-pg-trgm-fuzzy/i18n/en/README.md)
+
+### 08 — Analytics
+
+Analytics right inside SQL: window functions (running total, ranking, top-N per group),
+lag/lead and frames (day-over-day, moving average), recursive CTEs (a category tree),
+LATERAL joins (top-3 per customer — the N+1 killer), and grouping sets/rollup/cube.
+
+- [08-01 — Window functions: the basics](lectures/08-analytical-and-lateral/08-01-window-basics-partition-order/i18n/en/README.md)
+- [08-02 — Ranking and top-N per group](lectures/08-analytical-and-lateral/08-02-ranking-and-top-n-per-group/i18n/en/README.md)
+- [08-03 — lag/lead and window frames](lectures/08-analytical-and-lateral/08-03-lag-lead-and-frames/i18n/en/README.md)
+- [08-04 — Recursive CTEs](lectures/08-analytical-and-lateral/08-04-recursive-ctes/i18n/en/README.md)
+- [08-05 — LATERAL joins: top-N and the N+1 killer](lectures/08-analytical-and-lateral/08-05-lateral-joins/i18n/en/README.md)
+- [08-06 — GROUPING SETS, ROLLUP, and CUBE](lectures/08-analytical-and-lateral/08-06-grouping-sets-rollup-cube/i18n/en/README.md)
+
+### 09 — Writes
+
+Advanced writes and database-side logic: MERGE and COPY, a job queue via SKIP LOCKED, the
+transactional outbox, LISTEN/NOTIFY, triggers and function volatility (IMMUTABLE/STABLE/
+VOLATILE) — with an explicit "when NOT to put logic in the database" section.
+
+- [09-01 — MERGE and COPY](lectures/09-writes-eventing-and-server-logic/09-01-merge-and-copy/i18n/en/README.md)
+- [09-02 — A job queue on SKIP LOCKED](lectures/09-writes-eventing-and-server-logic/09-02-skip-locked-job-queue/i18n/en/README.md)
+- [09-03 — Transactional outbox](lectures/09-writes-eventing-and-server-logic/09-03-transactional-outbox/i18n/en/README.md)
+- [09-04 — LISTEN / NOTIFY](lectures/09-writes-eventing-and-server-logic/09-04-listen-notify/i18n/en/README.md)
+- [09-05 — Triggers and function volatility](lectures/09-writes-eventing-and-server-logic/09-05-triggers-and-volatility/i18n/en/README.md)
+
+### 10 — Use cases
+
+End-to-end capstones with integration tests that tie the whole course into working apps:
+building the Brew schema, a price-and-promo engine (PG18 temporal), an app anti-patterns
+clinic, pooling from the app (pgbouncer caveats), and the CDC seam — a byte-compatible
+handoff into kafka-cookbook.
+
+- [10-01 — Capstone: build the Brew schema](lectures/10-use-cases/10-01-build-the-brew-schema-capstone/i18n/en/README.md)
+- [10-02 — Price-and-promo engine](lectures/10-use-cases/10-02-price-and-promo-engine/i18n/en/README.md)
+- [10-03 — App anti-patterns clinic](lectures/10-use-cases/10-03-app-anti-patterns-clinic/i18n/en/README.md)
+- [10-04 — Pooling from the app](lectures/10-use-cases/10-04-pooling-from-the-app/i18n/en/README.md)
+- [10-05 — The CDC seam: handoff to kafka-cookbook](lectures/10-use-cases/10-05-the-cdc-seam-handoff/i18n/en/README.md)
 
 <!-- end generated -->
 
