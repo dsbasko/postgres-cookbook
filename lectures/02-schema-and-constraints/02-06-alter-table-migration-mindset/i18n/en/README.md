@@ -21,6 +21,31 @@ Adding a `CHECK` (or `FOREIGN KEY`) the ordinary way means scanning the whole ta
 
 So "add a rule" stops being an emergency brake: the hot phase is instant, and the long check doesn't hold the app.
 
+## The lock queue and the cost of ALTER
+
+A migration's main trap isn't the "rewrite" but the **lock queue**: even an instant `ALTER` briefly takes `ACCESS EXCLUSIVE`, and if a long transaction hangs ahead of it — it stalls, and all traffic stalls behind it:
+
+```
+time →
+T1  long SELECT over orders    ╞════════ holds ACCESS SHARE ════════╡
+T2  migration: ALTER ADD COLUMN     ╞···· waits for ACCESS EXCLUSIVE ····╡══╡
+T3  ordinary INSERT into orders           ╞······ stuck behind the migration ······╡
+                                          ▲
+                      even the "instant" ALTER queued behind T1 —
+                      and the whole write stream (T3) queued behind ALTER
+```
+
+And here's how the operations themselves compare by cost:
+
+| `ALTER` | What happens | Cost |
+|---|---|---|
+| `ADD COLUMN ... DEFAULT <constant>` | metadata edit (since PG11) | instant |
+| `ADD CONSTRAINT ... NOT VALID` | metadata; old rows not scanned | instant (brief lock) |
+| `VALIDATE CONSTRAINT` | scans the old rows | background, `SHARE UPDATE EXCLUSIVE` (doesn't block writes) |
+| `ALTER COLUMN ... TYPE` (representation change) | rewrites every row | long `ACCESS EXCLUSIVE` |
+| `ADD COLUMN ... DEFAULT now()` (volatile) | rewrites the table | long `ACCESS EXCLUSIVE` |
+| `ADD COLUMN ... NOT NULL` (no valid CHECK) | scans the whole table | lock for the duration of the scan |
+
 ## What our code shows
 
 The lesson is in `demo.sql`, on a 1000-row lab table (we don't touch the canon). Before each `ALTER` we capture `relfilenode`, after — compare:
@@ -79,7 +104,13 @@ Output:
 
 ## The fence
 
-What we simplified: `relfilenode` is a good "rewrote / didn't" indicator, but not the whole picture, and beyond it lies territory your DBA holds. First, **the lock matters more than the rewrite**: even an instant `ADD COLUMN` takes `ACCESS EXCLUSIVE`, and if a long transaction hangs ahead of it, the lock queue will stall writes out of nowhere — so migrations run with a short `lock_timeout` and retries, not "dry." Second, a big rewrite (`ALTER TYPE` on a hot table) isn't done head-on in production: you add a new column, backfill data in batches in the background, then swap it atomically — or use online tools (`pg_repack`, orchestrators like Reshape). Third, version nuances: `ADD COLUMN` with a **volatile** default (`now()`, a function) already rewrites; adding `NOT NULL` historically scans the table (PG12 can skip the scan if a valid `CHECK (col IS NOT NULL)` exists). The course boundary: orchestrating zero-downtime migrations leans toward DBA/DevOps; your job as a developer is to **recognize a dangerous `ALTER` in a migration review** and not ship a hot-table rewrite during business hours.
+What we simplified: `relfilenode` is a good "rewrote / didn't" indicator, but not the whole picture, and beyond it lies territory your DBA holds:
+
+- **The lock matters more than the rewrite.** Even an instant `ADD COLUMN` takes `ACCESS EXCLUSIVE`, and if a long transaction hangs ahead of it, the lock queue will stall writes out of nowhere — so migrations run with a short `lock_timeout` and retries, not "dry."
+- **A big rewrite isn't done head-on.** `ALTER TYPE` on a hot table is split into steps in production: you add a new column, backfill data in batches in the background, then swap it atomically — or use online tools (`pg_repack`, orchestrators like Reshape).
+- **Version nuances.** `ADD COLUMN` with a **volatile** default (`now()`, a function) already rewrites; adding `NOT NULL` historically scans the table (PG12 can skip the scan if a valid `CHECK (col IS NOT NULL)` exists).
+
+The course boundary: orchestrating zero-downtime migrations leans toward DBA/DevOps; your job as a developer is to **recognize a dangerous `ALTER` in a migration review** and not ship a hot-table rewrite during business hours.
 
 ## Takeaways
 

@@ -6,13 +6,25 @@ This unit has two constraints and one trap. `UNIQUE` forbids a repeated value �
 
 ## UNIQUE and the treachery of NULL
 
-`UNIQUE (slot)` promises: no two rows will share the same `slot`. But `NULL` in SQL means "unknown," and two unknowns aren't equal (`NULL = NULL` → `unknown`, not `true`). So a standard `UNIQUE` treats all `NULL`s as **distinct** and lets through as many as you like. Often that's exactly right: `NULL` means "unset / not applicable," and there can be many such rows (dozens of drinks with no promo slot). Non-null values are still unique, though: a second `'A'` is a duplicate (`SQLSTATE 23505`).
+`UNIQUE (slot)` promises: no two rows will share the same `slot`. But `NULL` in SQL means "unknown," and two unknowns aren't equal (`NULL = NULL` → `unknown`, not `true`). That's one facet of `NULL`'s three-valued logic — 03-06 works it out in full; here we take only the consequence for uniqueness. So a standard `UNIQUE` treats all `NULL`s as **distinct** and lets through as many as you like. Often that's exactly right: `NULL` means "unset / not applicable," and there can be many such rows (dozens of drinks with no promo slot). Non-null values are still unique, though: a second `'A'` is a duplicate (`SQLSTATE 23505`).
 
 `UNIQUE NULLS NOT DISTINCT` (PG15+) flips this for `NULL`: now `NULL` is considered equal to `NULL`, and the second `NULL` is rejected with the same `23505`. You need this when `NULL` isn't "many N/A" but one specific state that there should be at most one of (the classic — "exactly one active record"). This invariant used to require a partial unique index `WHERE col IS NULL`; now it's a single clause in the declaration.
 
 ## CHECK: value validation in the schema
 
 `CHECK (price > 0)` and `CHECK (size IN ('small','medium','large'))` are validation baked into the table: any row violating the condition is rejected with `check_violation` (`23514`). An import with price `0` or size `XXL` simply can't "land" — regardless of which client and which code writes to the DB. That's the point of declarative constraints: the rule lives in one place, the schema, rather than smeared across every code path that inserts something.
+
+## Two UNIQUE modes
+
+The same `UNIQUE`, two behaviors for `NULL` — you choose by what an empty value means:
+
+| Axis | `UNIQUE` (default) | `UNIQUE NULLS NOT DISTINCT` (PG15+) |
+|---|---|---|
+| `NULL` comparison | `NULL ≠ NULL` (two unknowns aren't equal) | `NULL = NULL` |
+| How many `NULL`s pass | as many as you like | at most one |
+| Non-null duplicate | rejected (`23505`) | rejected (`23505`) |
+| Meaning of `NULL` | "many N/A": unset / not applicable | "exactly one active record" |
+| Replaces | — | the old partial-unique-index trick `WHERE col IS NULL` |
 
 ## What our code shows
 
@@ -63,7 +75,13 @@ Output:
 
 ## The fence
 
-What we hid under NOT NULL: `CHECK` **lets `NULL` through**. The condition is violated only if it evaluates to `false`; `NULL` yields `unknown`, and `unknown` ≠ `false` — so a row with `price = NULL` would sail right through `CHECK (price > 0)`. That's exactly why the columns in `check_drink` are marked `NOT NULL`: without it, `CHECK` catches "`-5`" but silently passes "nothing." In production this pair — `NOT NULL` alongside `CHECK` — is kept together deliberately. Two more things your DBA handles: adding a `CHECK`/`UNIQUE` to a large live table is a scan with a lock (so the constraint is first added `NOT VALID`, then validated separately — see 02-06); and complex business validation ("a discount no larger than the order total") shouldn't always be forced into a `CHECK` — it's harder to evolve than code and can't see other tables (for "across rows" you need an EXCLUDE constraint or a trigger). The rule: `UNIQUE`/`CHECK`/`NOT NULL` are for single-row, single-column invariants; they're cheap, declarative, and non-disableable — use them by default.
+What we hid under NOT NULL: `CHECK` **lets `NULL` through**. The condition is violated only if it evaluates to `false`; `NULL` yields `unknown`, and `unknown` ≠ `false` — so a row with `price = NULL` would sail right through `CHECK (price > 0)`. That's exactly why the columns in `check_drink` are marked `NOT NULL`: without it, `CHECK` catches "`-5`" but silently passes "nothing."
+
+- The pair — `NOT NULL` alongside `CHECK` — is kept together deliberately in production, otherwise the check is leaky on empty values.
+- Adding a `CHECK`/`UNIQUE` to a large live table is a scan with a lock, and your DBA watches it: the constraint is first added `NOT VALID`, then validated separately (see 02-06).
+- Complex business validation ("a discount no larger than the order total") shouldn't always be forced into a `CHECK` — it's harder to evolve than code and can't see other tables (for "across rows" you need an EXCLUDE constraint or a trigger).
+
+The rule: `UNIQUE`/`CHECK`/`NOT NULL` are for single-row, single-column invariants; they're cheap, declarative, and non-disableable — use them by default.
 
 ## Takeaways
 

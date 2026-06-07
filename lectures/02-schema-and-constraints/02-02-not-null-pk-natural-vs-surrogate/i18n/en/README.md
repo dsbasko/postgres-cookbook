@@ -16,6 +16,16 @@ A **natural key** is a business value that's already unique: a shop code, a book
 
 A **surrogate key** is a synthetic id (`GENERATED ALWAYS AS IDENTITY` from 02-01) that means nothing beyond "this particular row." The business code doesn't disappear — it lives in a separate column with `UNIQUE` (still convenient to look up by). Renaming the code now doesn't touch the id: foreign keys reference the stable id and don't break. The cost — an extra column and index. For most application tables this is the right default; a natural key is good where the value is truly immutable (an `ISO 3166` country code).
 
+## Which key to use
+
+| Axis | Natural key | Surrogate key |
+|---|---|---|
+| What it is | a business value as identity (code, ISBN, phone) | a synthetic `id`, meaningless |
+| On a business-value change | the key itself changes → drags FKs and caches along | `id` unchanged, only the `UNIQUE`-code attribute changes |
+| Extra column and index | no | yes (`id` + `UNIQUE` code) |
+| Where "real" uniqueness lives | on the key itself | on the `UNIQUE` code, not the `id` |
+| When to use | truly immutable values (country/currency codes), composite junction PKs | the default for most app tables |
+
 ## What our code shows
 
 Two tables (DDL in `schema.sql`): one on a natural key, the other on a surrogate with a `UNIQUE` code. Note: `NOT NULL` on `code` in `shop_natural` isn't written — `PRIMARY KEY` imposed it:
@@ -72,7 +82,11 @@ Output:
 
 ## The fence
 
-What we simplified: we presented the surrogate as an "almost always right default" but didn't finish the foreign-key story — no table here references our `code`/`id`, so the rename cascade stayed off-screen (we'll do it in 02-03). In production the choice of key is a trade-off your DBA and you both keep in mind: a surrogate decouples identity from the business value (the recommended default for app tables) but adds a column and an index and requires remembering that "real" uniqueness lives on the `UNIQUE` code, not the id. A natural key is good for genuinely immutable values (currency, country codes) and in many-to-many junction tables, where a composite natural PK is natural (our canon `inventory (shop_id, drink_id)` is exactly that). And always put `NOT NULL` explicitly on business-required fields: let the schema, not the code, ensure data doesn't arrive empty.
+What we simplified: we presented the surrogate as an "almost always right default" but didn't finish the foreign-key story — no table here references our `code`/`id`, so the rename cascade stayed off-screen (we'll do it in 02-03). In production the choice of key is a trade-off your DBA and you both keep in mind:
+
+- A surrogate decouples identity from the business value (the recommended default for app tables) but adds a column and an index and requires remembering that "real" uniqueness lives on the `UNIQUE` code, not the id.
+- A natural key is good for genuinely immutable values (currency, country codes) and in many-to-many junction tables, where a composite natural PK is natural (our canon `inventory (shop_id, drink_id)` is exactly that).
+- Always put `NOT NULL` explicitly on business-required fields: let the schema, not the code, ensure data doesn't arrive empty.
 
 ## Takeaways
 

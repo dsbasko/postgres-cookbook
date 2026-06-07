@@ -16,6 +16,28 @@ When a parent is deleted, each referencing FK has its own policy:
 - `ON DELETE SET NULL` — keep the child but null out the reference. Fits when the child is valuable on its own: a coffee review stays (its text is useful), it just becomes anonymous. Requires the FK column to be **NULLABLE** — otherwise `SET NULL` would violate `NOT NULL`.
 - the default `NO ACTION` / `RESTRICT` — forbid deleting the parent while it's referenced. This is the default guard: don't accidentally knock a menu drink out from under live orders. Want to delete it — deal with the references first.
 
+## Parent and children: three policies
+
+One `DELETE` of the parent — three different fates for the referencing children, decided by `ON DELETE`:
+
+```
+                       DELETE the parent
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+     CASCADE              SET NULL          NO ACTION / RESTRICT
+        │                     │                     │
+   children go          children stay,      deleting the parent
+   away cascading       reference := NULL   is forbidden while
+   with the parent      (FK NULLABLE)       children exist → 23503
+```
+
+| Policy | What it does to children | When to use |
+|---|---|---|
+| `CASCADE` | deletes them with the parent | "weak" entities meaningless without an owner (an order without a customer) |
+| `SET NULL` | keeps the child, nulls the reference (FK must be NULLABLE) | self-valuable data (a review's text is useful even anonymous) |
+| `NO ACTION` / `RESTRICT` (default) | forbids deleting the parent while references are live (`23503`) | the default guard: don't knock a row out from under live references |
+
 ## What our code shows
 
 One parent (`fk_customer`) and three children with different policies; plus a `fk_drink` ← `fk_orderitem` pair with a default FK (DDL in `schema.sql`):
@@ -61,7 +83,14 @@ Output:
 
 ## The fence
 
-What we simplified: `CASCADE` looks convenient — "deleted the customer, everything related cleaned itself up" — but in production it's a double-edged tool your DBA watches closely. A cascade can silently wipe far more than you expected (deleting one row drags tens of thousands in child tables — a long lock and bloated WAL), and it hurts auditing: data vanishes without a trace. Often it's safer to use `RESTRICT` + an explicit "soft delete" (`deleted_at`) in the app, so deletion is deliberate and reversible. With `SET NULL`, remember the NULLABLE column and that the app must now cope with an "orphaned" reference. And: an FK isn't free — it's checked on every insert/delete and needs an index on the referencing side, otherwise deleting a parent triggers a seq scan over the children (indexes under FKs — module 06). The rule: every `ON DELETE` policy is a recorded business decision; choose it deliberately, not by reflexively slapping `CASCADE` everywhere.
+What we simplified: `CASCADE` looks convenient — "deleted the customer, everything related cleaned itself up" — but in production it's a double-edged tool your DBA watches closely:
+
+- A cascade can silently wipe far more than you expected (deleting one row drags tens of thousands in child tables — a long lock and bloated WAL), and it hurts auditing: data vanishes without a trace.
+- Often it's safer to use `RESTRICT` + an explicit "soft delete" (`deleted_at`) in the app, so deletion is deliberate and reversible.
+- With `SET NULL`, remember the NULLABLE column and that the app must now cope with an "orphaned" reference.
+- An FK isn't free — it's checked on every insert/delete and needs an index on the referencing side, otherwise deleting a parent triggers a seq scan over the children (indexes under FKs — module 06).
+
+The rule: every `ON DELETE` policy is a recorded business decision; choose it deliberately, not by reflexively slapping `CASCADE` everywhere.
 
 ## Takeaways
 

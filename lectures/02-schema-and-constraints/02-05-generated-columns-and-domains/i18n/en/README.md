@@ -21,6 +21,20 @@ The choice is simple: a value you filter/sort by and read often → `STORED` (pa
 
 `CREATE DOMAIN positive_cents AS BIGINT CHECK (VALUE > 0)` is a new type, "a `BIGINT` that's always positive." A column `price positive_cents` automatically rejects `0` and negatives with the same `SQLSTATE 23514` as the plain `CHECK` from 02-04 — but the rule is written in one place and reused. When the rule changes, you edit the domain, not five tables.
 
+## STORED vs VIRTUAL: the axes
+
+The formula is one and the same — only the moment of computation and the cost differ:
+
+| Axis | `STORED` | `VIRTUAL` (PG18, the standard default) |
+|---|---|---|
+| When computed | on `INSERT`/`UPDATE` | on read (`SELECT`) |
+| On disk | stored (takes space) | not stored (zero space) |
+| Write cost | a bit more expensive | free |
+| Read cost | free (value is ready) | spends CPU |
+| Indexable | yes | no |
+| PK/FK, domain types | yes | no |
+| When to use | a value in `WHERE`/`ORDER BY`/an index | a cheap, rarely-read derived value |
+
 ## What our code shows
 
 The lesson is in `demo.sql`, on a lab table (we don't touch the canon). A table with two generated columns on one formula, and a domain:
@@ -78,7 +92,12 @@ psql:demo.sql:57: ERROR:  value for domain positive_cents violates check constra
 
 ## The fence
 
-What we simplified and where it bites in production (the part your DBA watches): `VIRTUAL` in PG18 is tempting as "free," but it has hard limits. It **can't be indexed**, can't be part of a primary/foreign key, and (as we saw while building this unit) doesn't work with user-defined types like domains. So `VIRTUAL` is for cheap derived values you read but don't search by; anything that lands in `WHERE`/`ORDER BY`/an index must be `STORED`. `STORED`, in turn, bloats the table and makes writes more expensive — for a heavy formula on a hot table that's noticeable. Domains are convenient, but changing the `CHECK` of an existing domain in production means validating all dependent columns under a lock (the same story as `ALTER` in 02-06), and some ORMs/tools introspect domains poorly and just see a `bigint`. And the key byte-compatibility rule: generated columns and domains go only on **new** tables (`gen_lab` here, `shops`/`order_items` in the canon), while the six CDC tables of Brew stay verbatim — otherwise the 10-05 handoff breaks.
+What we simplified and where it bites in production (the part your DBA watches):
+
+- `VIRTUAL` in PG18 is tempting as "free," but it has hard limits. It **can't be indexed**, can't be part of a primary/foreign key, and (as we saw while building this unit) doesn't work with user-defined types like domains. So `VIRTUAL` is for cheap derived values you read but don't search by; anything that lands in `WHERE`/`ORDER BY`/an index must be `STORED`.
+- `STORED`, in turn, bloats the table and makes writes more expensive — for a heavy formula on a hot table that's noticeable.
+- Domains are convenient, but changing the `CHECK` of an existing domain in production means validating all dependent columns under a lock (the same story as `ALTER` in 02-06), and some ORMs/tools introspect domains poorly and just see a `bigint`.
+- The key byte-compatibility rule: generated columns and domains go only on **new** tables (`gen_lab` here, `shops`/`order_items` in the canon), while the six CDC tables of Brew stay verbatim — otherwise the 10-05 handoff breaks.
 
 ## Takeaways
 
