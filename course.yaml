@@ -327,26 +327,50 @@ modules:
         duration: 20m
         tags: [pg-trgm, similarity, fuzzy, gin, sqlc]
 
-  # ── Модули 08–10 запаркованы до фазы 3 ──────────────────────────────────
+  - id: 08-analytical-and-lateral
+    title: { ru: Аналитика, оконные функции и LATERAL, en: Analytics, window functions, and LATERAL }
+    description:
+      ru: |
+        Аналитика прямо в SQL: оконные функции (running total, ранжирование, top-N на группу),
+        lag/lead и фреймы (day-over-day, скользящее среднее), рекурсивные CTE (дерево категорий),
+        LATERAL-join'ы (top-3 на клиента — убийца N+1) и grouping sets/rollup/cube.
+      en: |
+        Analytics right inside SQL: window functions (running total, ranking, top-N per group),
+        lag/lead and frames (day-over-day, moving average), recursive CTEs (a category tree),
+        LATERAL joins (top-3 per customer — the N+1 killer), and grouping sets/rollup/cube.
+    lessons:
+      - slug: 08-01-window-basics-partition-order
+        title: { ru: "Оконные функции: основы", en: "Window functions: the basics" }
+        duration: 25m
+        tags: [window-functions, partition-by, running-total, sqlc]
+      - slug: 08-02-ranking-and-top-n-per-group
+        title: { ru: Ранжирование и top-N на группу, en: Ranking and top-N per group }
+        duration: 25m
+        tags: [window-functions, row-number, rank, ntile, sqlc]
+      - slug: 08-03-lag-lead-and-frames
+        title: { ru: "lag/lead и оконные фреймы", en: "lag/lead and window frames" }
+        duration: 25m
+        tags: [window-functions, lag-lead, frames, rows-vs-range, sqlc]
+      - slug: 08-04-recursive-ctes
+        title: { ru: Рекурсивные CTE, en: Recursive CTEs }
+        duration: 25m
+        tags: [recursive-cte, tree, cycle, escape-hatch]
+      - slug: 08-05-lateral-joins
+        title: { ru: "LATERAL-join: top-N и убийца N+1", en: "LATERAL joins: top-N and the N+1 killer" }
+        duration: 25m
+        tags: [lateral, top-n, n-plus-1, sqlc]
+      - slug: 08-06-grouping-sets-rollup-cube
+        title: { ru: "GROUPING SETS, ROLLUP и CUBE", en: "GROUPING SETS, ROLLUP, and CUBE" }
+        duration: 20m
+        tags: [grouping-sets, rollup, cube, sqlc]
+
+  # ── Модули 09–10 запаркованы до фазы 3 ──────────────────────────────────
   # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
   # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
   # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описания модулей 08–10 уже написаны и ждут здесь:
+  # инкрементально). Описания модулей 09–10 уже написаны и ждут здесь:
   # раскомментируй блок модуля, когда в нём появится первый урок, и добавь
   # его lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 08-analytical-and-lateral
-  #     title: { ru: Аналитика, оконные функции и LATERAL, en: Analytics, window functions, and LATERAL }
-  #     description:
-  #       ru: |
-  #         Аналитика прямо в SQL: оконные функции (running total, ранжирование, top-N на группу),
-  #         lag/lead и фреймы (day-over-day, скользящее среднее), рекурсивные CTE (дерево категорий),
-  #         LATERAL-join'ы (top-3 на клиента — убийца N+1) и grouping sets/rollup/cube.
-  #       en: |
-  #         Analytics right inside SQL: window functions (running total, ranking, top-N per group),
-  #         lag/lead and frames (day-over-day, moving average), recursive CTEs (a category tree),
-  #         LATERAL joins (top-3 per customer — the N+1 killer), and grouping sets/rollup/cube.
-  #     lessons: []
   #
   #   - id: 09-writes-eventing-and-server-logic
   #     title: { ru: Запись, события и серверная логика, en: Writes, eventing, and server logic }

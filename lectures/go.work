@@ -68,3 +68,13 @@ use ./07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table
 use ./07-jsonb-arrays-and-search/07-05-full-text-search
 
 use ./07-jsonb-arrays-and-search/07-06-pg-trgm-fuzzy
+
+use ./08-analytical-and-lateral/08-01-window-basics-partition-order
+
+use ./08-analytical-and-lateral/08-02-ranking-and-top-n-per-group
+
+use ./08-analytical-and-lateral/08-03-lag-lead-and-frames
+
+use ./08-analytical-and-lateral/08-05-lateral-joins
+
+use ./08-analytical-and-lateral/08-06-grouping-sets-rollup-cube
