@@ -219,11 +219,12 @@ checks it byte-for-byte — so a demo must print only reproducible things:
 docker compose up -d                               # Postgres 18 + Adminer
 docker compose down -v                             # tear down + wipe data
 
-# Course (Go)
+# Course (Go) — these targets live in lectures/Makefile; run from lectures/ (or `make -C lectures …`)
 make list                                          # tree of units
 make lecture L=00-getting-connected/00-01-...      # run one unit (defaults to its `run`)
 make lecture L=<path> T=help                       # a unit's own help
-make build                                         # build all workspace modules (from lectures/)
+make build                                         # build all workspace modules
+make sync                                          # go work sync (after editing go.work)
 
 # Site
 pnpm install                                       # workspace install (root)

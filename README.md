@@ -111,10 +111,14 @@ development and does not face the network.
 Bring up the sandbox, then run a unit:
 
 ```sh
-docker compose up -d                                                        # start the sandbox
-make list                                                                   # tree of units
-make lecture L=00-getting-connected/00-01-client-server-and-sandbox          # run one
+docker compose up -d                                                        # start the sandbox (repo root)
+make -C lectures list                                                       # tree of units
+make -C lectures lecture L=00-getting-connected/00-01-client-server-and-sandbox  # run one
 ```
+
+The `list` / `lecture` / `build` targets live in `lectures/Makefile` — run them from
+`lectures/` (or via `make -C lectures …` as above); the repo-root `Makefile` carries only the
+`web-*` targets.
 
 `make lecture` delegates into the unit's own Makefile and defaults to its `run` target; pass
 `T=help` to see a unit's own help, `T=db-reset` to reset its schema, and so on. Every unit —
