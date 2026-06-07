@@ -16,6 +16,16 @@ An array (`text[]`, `int[]`, …) stores a list of same-typed values in one colu
 
 `jsonb` stores a JSON structure in a parsed binary form — it works with the operators `->` (extract as `jsonb`), `->>` (extract as `text`), and `?` (does the key exist; in SQL it's `jsonb_exists`). The key nuance up front: `->>` returns the value as text (`oat`), while `->` keeps it `jsonb` — with surrounding quotes (`"oat"`). `jsonb` is irreplaceable for genuinely flexible, sparse data. But this is an intro, and here the warning matters more: `jsonb` is not an excuse to skip normalization. Fields you filter, count, and join on should almost always be columns; `jsonb` is for what is shapeless by nature. The details and pitfalls are in module 07.
 
+## Which container to pick
+
+| Container | Stores | Access | When to pick | When to normalize |
+|---|---|---|---|---|
+| `enum` | a fixed ordered set | comparison on a scale (`<`, `>`) | stable scales (S/M/L, statuses) | a frequently changing reference → table with an FK |
+| array (`text[]`) | a list of same-typed simple values | `@>` "contains" (sped up by GIN — 06/07) | simple tags/labels with no attributes | a tag needs its own fields → junction table |
+| `jsonb` | a sparse/shapeless structure | `->`, `->>`, `?` | genuinely flexible, sparse data | you filter / count / join → a column |
+
+The right-hand column is the boundary: a container fits while the data is simple and handled "whole"; the moment you need to filter, count, or join on individual fields, it's time for columns and tables.
+
 ## What our code shows
 
 A dedicated `enum` type (in `schema.sql`) and three demonstrations. The enum order on literals; arrays and `jsonb` on the canon and literals:
@@ -66,7 +76,13 @@ ID  ЗАГОЛОВОК                   TAGS ([]string)
 
 ## The fence
 
-Three containers, three temptations. `enum` tempts you to add values "on the fly" — but in production that's an `ALTER TYPE` you have to ship as a migration, and you can't remove a value; for frequently changing reference data a separate table with an FK is better. An array lures you into putting things that are really entities with their own attributes — and then `@>` search and counts become painful; normalize into a junction table. `jsonb` is the most dangerous: it lets you skip designing a schema entirely, and the application quickly accretes "fields inside json" that can't be checked with `CHECK`, indexed without tricks, or joined. The rule is simple: **what you filter/count/join on is a column; `jsonb` is only for the truly shapeless**. When and how to do it right — module 07.
+Three containers, three temptations:
+
+- **`enum` tempts you to add values "on the fly".** In production that's an `ALTER TYPE` shipped as a migration, and you can't remove a value at all; for frequently changing reference data a separate table with an FK is better.
+- **An array lures you into stashing entities with their own attributes.** Then `@>` search and counts become painful — normalize into a junction table.
+- **`jsonb` is the most dangerous.** It lets you skip designing a schema entirely, and the application quickly accretes "fields inside json" that can't be checked with `CHECK`, indexed without tricks, or joined.
+
+The rule is simple: **what you filter / count / join on is a column; `jsonb` is only for the truly shapeless**. When and how to do it right — module 07.
 
 ## Takeaways
 

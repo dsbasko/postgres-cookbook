@@ -21,6 +21,18 @@ The key intuition: `NULL` means "the value is unknown." So **comparing with `NUL
 
 `NULL` appears in data naturally — for example, from a `LEFT JOIN`: for a customer with no orders, the columns from the right table are `NULL`. And that's the correct, type-safe way to express "there is no value": sqlc sees that a `LEFT JOIN` column is nullable and types it as `pgtype.Int8` (with a `Valid` field), not as a bare `int64`.
 
+## boolean and NULL: a cheat sheet
+
+| Expression | Result | What to remember |
+|---|---|---|
+| `base_price > 400` | `true` / `false` / `NULL` | a predicate is already a `boolean`, and it's three-valued |
+| `NULL = NULL` | `NULL` | "unknown = unknown" is also unknown, not `true` |
+| `col = NULL` | never `true` | test for absence with `IS NULL` / `IS NOT NULL` |
+| `count(*)` | all rows | rows are counted as they are |
+| `count(col)` | rows where `col` is not `NULL` | `NULL` is skipped — this is where Carol is lost |
+
+This is the everyday working minimum; the full three-valued logic (`NOT IN` with `NULL`, `COALESCE`, `IS DISTINCT FROM`) is covered in 03-06.
+
 ## What our code shows
 
 The first query is `NULL` in a comparison, on literals:
@@ -86,7 +98,11 @@ ID  НАЗВАНИЕ     IS_PREMIUM
 
 ## The fence
 
-This is only a teaser. The full `NULL` semantics — `NOT IN` with `NULL` (the classic hole that returns nothing), `COALESCE`/`NULLIF`/`IS DISTINCT FROM`, three-valued logic in `WHERE`/`CHECK`/unique indexes — are covered in 03-06. The one rule to internalize here: **test for the absence of a value only with `IS NULL` / `IS NOT NULL`, never `= NULL`**. As for `char(n)` — in production you'll almost never meet it for a good reason; if you see `char(n)` in someone else's schema, it's usually a historical mistake rather than a deliberate choice.
+This is only a teaser. The rest is in 03-06; here we hold three rules:
+
+- **The full `NULL` semantics are still ahead.** `NOT IN` with `NULL` (the classic hole that returns nothing), `COALESCE`/`NULLIF`/`IS DISTINCT FROM`, three-valued logic in `WHERE`/`CHECK`/unique indexes — all of it in 03-06.
+- **Absence of a value — only `IS NULL` / `IS NOT NULL`.** Never `= NULL`: such a condition won't become `true`.
+- **You'll almost never meet `char(n)` for a good reason in production.** If you see it in someone else's schema, it's usually a historical mistake rather than a deliberate choice.
 
 ## Takeaways
 

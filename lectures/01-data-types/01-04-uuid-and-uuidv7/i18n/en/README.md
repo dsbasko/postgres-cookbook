@@ -10,6 +10,28 @@ The goal of this unit is to choose a key deliberately. A numeric `IDENTITY` (whi
 
 `uuidv7()` (PG18) puts Unix time in milliseconds into the high bits and randomness into the rest. The version is 7, and it has an embedded timestamp you can extract with `uuid_extract_timestamp()` (for v4 it returns `NULL` — there's no time there). The key property: values generated later are numerically larger — the key is monotonic, inserts go "to the right" in the index, and sorting by the key matches creation order.
 
+## B-tree locality and the key choice
+
+Why "scattered" costs more than "to the tail": the index is a B-tree, and a new row's place is decided by its key.
+
+```
+B-tree by key — where does a NEW insert land?
+
+  uuid v4 (122 random bits)           uuidv7 (time in the high bits)
+  ┌──┬──┬──┬──┬──┐                    ┌──┬──┬──┬──┬──┐
+  │  │  │  │  │  │                    │  │  │  │  │▓▓│ ← all new ones here
+  └──┴──┴──┴──┴──┘                    └──┴──┴──┴──┴──┘
+   ↑   ↑   ↑   ↑                                    ↑
+  hit leaves all over                 one "hot" rightmost leaf
+  → page fragmentation                → dense packing, growth "to the tail"
+```
+
+| Key | Predictability | B-tree locality | Time-sortable | When to pick |
+|---|---|---|---|---|
+| `IDENTITY` (`BIGINT`) | low: reveals order and volume | excellent (grows "to the tail") | yes | narrow internal tables; compact and fast |
+| `uuid` v4 | high | poor (fragments) | no | a public id where sorting by the key isn't needed |
+| `uuidv7` | high in the tail, but leaks time | excellent (grows "to the tail") | yes | distributed inserts + a public sortable id |
+
 ## Why we show properties, not values
 
 A `uuid` is random in its tail by nature — specific values differ on every run, and you can't paste them into a README verbatim. So the demo checks **properties** that are deterministic: the version number (`4` vs `7`), the presence of embedded time (`NULL` for v4, non-`NULL` for v7), and monotonicity — whether the row order by the `uuidv7` key matches the insertion order.
@@ -67,7 +89,11 @@ Output:
 
 ## The fence
 
-What we simplified: the monotonicity of `uuidv7` is about **order**, not security. `uuidv7` doesn't hide the creation time (it's easy to extract), so if it matters that "when" stays private, this isn't the tool. Conversely, v4 reveals less but loses on index locality. In production the choice of key is a trade-off: `IDENTITY` (compact, fast, but reveals order/volume and merges poorly across databases), `uuidv7` (distribution-friendly, sortable, but larger and leaks time), `uuid` v4 (maximally unpredictable but fragments the index). For distributed inserts and public identifiers `uuidv7` is a good default; for narrow internal tables `IDENTITY` is often still better. The Brew canon deliberately stays on `BIGINT` for byte-compatibility with kafka-cookbook — we try new ideas on new tables.
+What we simplified:
+
+- **Monotonicity is about order, not security.** `uuidv7` doesn't hide the creation time (it's easy to extract) — if "when" must stay private, this isn't the tool. Conversely, v4 reveals less but loses on index locality.
+- **The key choice is a trade-off (see the table above).** For distributed inserts and public identifiers `uuidv7` is a good default; for narrow internal tables `IDENTITY` is often still better — more compact, faster, though it reveals order/volume and merges poorly across databases.
+- **The canon stays on `BIGINT`.** Deliberately, for byte-compatibility with kafka-cookbook — we try new ideas on new tables, not on the canon.
 
 ## Takeaways
 

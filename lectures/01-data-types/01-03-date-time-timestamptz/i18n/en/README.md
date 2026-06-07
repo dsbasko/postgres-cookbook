@@ -12,6 +12,26 @@ Despite the name, `timestamptz` ("timestamp with time zone") doesn't pack a zone
 
 `timestamp` (without `tz`) stores wall-clock date-time **without** zone information. Under `SET TIME ZONE` it doesn't shift — because it doesn't know which zone it was written in. For an event (when something happened) that's almost always a mistake: two services in different zones will read the same `09:00` as different moments. `timestamp` is appropriate only where the zone genuinely isn't needed (for example, "alarm time 08:00" as a local rule), and there are few such places in an ordinary application.
 
+## One moment, three renderings
+
+The database holds **one** point on the timeline; the session zone only decides how to show it:
+
+```
+one instant (in the DB, UTC)       how different zones render it
+                              ┌──►  UTC             09:00+00
+ 2025-01-15 09:00:00+00  ─────┼──►  Europe/Moscow   12:00+03
+                              └──►  America/New_York 04:00−05
+```
+
+The value doesn't change — only the projection does. A `timestamp` without a zone has no such projection: it has nothing to shift, so it "freezes" on the digits it was written with.
+
+| | `timestamptz` | `timestamp` (no zone) |
+|---|---|---|
+| What it stores | a moment (instant, normalized to UTC) | wall-clock date-time with no zone |
+| Under `SET TIME ZONE` | shifts on display | doesn't move — zone unknown |
+| For events | yes, the right choice | a trap: services read it differently |
+| In Go (pgx) | `time.Time` — an instant | `time.Time` with no zone attached |
+
 ## What our code shows
 
 `demo.sql` takes one real instant from the canon — `orders.created_at` of order #1 (`2025-01-15 09:00:00+00`) — and reads it under three zones, changing only `SET TIME ZONE`:
@@ -72,7 +92,11 @@ Output:
 
 ## The fence
 
-What we simplified: the zones here are chosen with a fixed winter offset (Moscow `+03` year-round since 2014, New York `-05` in winter) so the output reproduces verbatim. In reality there's daylight saving: in New York in summer it would be `-04`, and the same UTC instant would show an hour differently — Postgres accounts for this by the zone name (`America/New_York`), which is exactly why you should **store the zone name, not a numeric offset**, if the local date of a future event matters to you. And: in production, formatting time for the user lives in the presentation layer (their zone comes from the profile/`Accept-Language`/settings), while the DB and backend operate on UTC instants. We twist `SET TIME ZONE` by hand here only to see the mechanics — in an application you almost never do that.
+What we simplified:
+
+- **Daylight saving.** The zones here use a fixed winter offset (Moscow `+03` year-round since 2014, New York `-05` in winter) so the output reproduces verbatim. In reality there's DST: in New York in summer it would be `-04`, and the same UTC instant would show an hour differently. Postgres accounts for this by the zone name (`America/New_York`) — which is why you should **store the zone name, not a numeric offset**, if the local date of a future event matters.
+- **Presentation layer.** In production, formatting time for the user lives in the UI/report (their zone comes from the profile / `Accept-Language` / settings), while the DB and backend operate on UTC instants.
+- **`SET TIME ZONE` by hand — only for the demo.** In an application you almost never do that; here we twist the zone manually just to see the mechanics.
 
 ## Takeaways
 

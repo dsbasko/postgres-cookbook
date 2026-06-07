@@ -16,6 +16,16 @@ The third path — and usually the best one for an application — is to not sto
 
 The Brew canon keeps all prices this way: `drinks.base_price`, `order_items.unit_price` — `BIGINT` in cents. The report that didn't reconcile would be fixed by replacing the `float` sum with a `sum()` over integer cents.
 
+## Three representations: which to pick
+
+|  | Exactness | Speed | In Go | When to pick |
+|---|---|---|---|---|
+| `float8` | fractions inexact (`0.1+0.2≠0.3`) | fast | `float64` | measurements where error doesn't matter; for money — never |
+| `numeric` | exact, arbitrary precision | slower | `pgtype.Numeric` (unwrap) | fractional per-unit prices, taxes, intermediate math |
+| `BIGINT` cents | exact (integer) | fast | `int64`, native | money in an app: store, add, sum |
+
+Folded into one decision card: **money at the boundary — `BIGINT` in cents; a fractional per-gram price — `numeric`; `float` — never.**
+
 ## What our code shows
 
 Three queries in `query.sql`. The first is that very trap, on literals:
@@ -77,7 +87,14 @@ ID  НАЗВАНИЕ     ЦЕНТЫ  ЦЕНА
 
 ## The fence
 
-`numeric` is not a "bad" type: for money it's exact, and storing sums in `numeric(12,2)` is perfectly fine. We choose integer cents for two reasons: they map into Go `int64` without the `pgtype.Numeric` wrapper, and arithmetic over them is faster. What we simplified: real payment code has currencies (a dollar cent ≠ a ruble kopek — you need a currency code next to the amount), rounding rules (banker's rounding of halves), fractional per-unit prices and taxes where intermediate calculations still go through `numeric` and are folded into cents only at the final step. In production your billing module stores both the currency and the scale; here we keep a single currency and integer cents so the lesson doesn't drift. One thing is non-negotiable: **money is never computed in `float`**.
+`numeric` is not a "bad" type: for money it's exact, and storing sums in `numeric(12,2)` is perfectly fine. We choose integer cents because they map into Go `int64` without the `pgtype.Numeric` wrapper, and arithmetic over them is faster. What we simplified, and what your billing module adds in production:
+
+- **Currency.** A dollar cent ≠ a ruble kopek — you need a currency code next to the amount, or you'll add things that don't add.
+- **Rounding.** Banker's rounding of halves by a fixed rule, not "however it comes out" with `float`.
+- **Fractional prices and taxes.** A per-gram price, VAT and intermediate math go through `numeric` — and are folded into cents only at the final step.
+- **Scale.** The billing module stores both the currency and the number of decimal places; here we keep a single currency and integer cents so the lesson doesn't drift.
+
+One thing is non-negotiable: **money is never computed in `float`**.
 
 ## Takeaways
 
