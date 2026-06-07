@@ -26,9 +26,12 @@ ORDER BY id;
 
 `-- name: ListDrinksByCategory` задаёт имя метода. Суффикс — форму результата:
 
-- `:many` → срез строк (`[]ListDrinksByCategoryRow`);
-- `:one` → ровно одна строка (или `pgx.ErrNoRows`, если совпадения нет);
-- `:exec` → ничего не возвращает (для `INSERT`/`UPDATE`/`DELETE` без `RETURNING`).
+| Суффикс | Что возвращает метод | Когда брать |
+|---|---|---|
+| `:many` | `[]XxxRow` — срез строк (пустой, если совпадений нет) | `SELECT`, отдающий 0..N строк |
+| `:one` | `XxxRow` — одна строка (или `pgx.ErrNoRows`, если её нет) | `SELECT` ровно одной строки |
+| `:one` (скаляр) | сам тип колонки: `count(*)` → `int64`, без обёртки-структуры | одна колонка в одной строке |
+| `:exec` | только `error` | `INSERT`/`UPDATE`/`DELETE` без `RETURNING` |
 
 А `$1` — параметр из 00-03, но теперь о нём заботится sqlc. Глядя на схему, он видит, что `drinks.category` — это `text`, и генерирует метод с аргументом `category string`. Имя параметра он берёт из колонки в условии — поэтому метод читается как `ListDrinksByCategory(ctx, category string)`, а не `(ctx, arg1 string)`.
 

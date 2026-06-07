@@ -21,6 +21,20 @@ The pool is **lazy**: after `NewPool` there are no connections yet (`MinConns=0`
 
 The key correspondence: **one connection in the pool = one backend on the server**. The application's pool size is exactly the number of processes it occupies on Postgres. That's why the pool's `MaxConns` and the server's `max_connections` are two sides of the same arithmetic.
 
+The same idea as a picture:
+
+```
+   app pool (MaxConns=4)            server (postgres)
+   ┌────────────────────┐
+   │ slot 1  ▣ acquired │──▶ backend 1  ─┐
+   │ slot 2  ▣ acquired │──▶ backend 2   │  one pool slot =
+   │ slot 3  ▢ idle     │──▶ backend 3   │  one backend on the server
+   │ slot 4  ▢ idle     │──▶ backend 4  ─┘
+   └────────────────────┘
+     Acquire: ▢ idle → ▣ acquired   (none free, under limit → open; at limit → wait)
+     Release: ▣ acquired → ▢ idle   (the backend is NOT closed — it sits idle, ready for Acquire)
+```
+
 ## What our code shows
 
 The demo creates a small pool (`MaxConns=4`) and traces the connection lifecycle, cross-checking against what the server itself sees. The connections are tagged with `application_name` so we can filter exactly our own backends in `pg_stat_activity`:
@@ -49,7 +63,15 @@ for _, c := range conns {
 }
 ```
 
-`pool.Stat()` before the acquire, after the acquire, and after the return — three snapshots that show the whole cycle.
+`pool.Stat()` before the acquire, after the acquire, and after the return — three snapshots that show the whole cycle:
+
+| Moment | `TotalConns` (total) | `AcquiredConns` (in use) | `IdleConns` (idle) |
+|---|---|---|---|
+| after `NewPool` — pool is lazy | 0 | 0 | 0 |
+| 4×`Acquire` — pool opened backends | 4 | 4 | 0 |
+| 4×`Release` — returned, not closed | 4 | 0 | 4 |
+
+The last row is the whole point of the pool: in use is 0, yet total is 4. The connections didn't vanish — they sit idle, waiting for the next `Acquire`.
 
 ## Running it
 

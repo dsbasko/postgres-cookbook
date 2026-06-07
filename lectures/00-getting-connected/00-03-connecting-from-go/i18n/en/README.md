@@ -43,6 +43,21 @@ SELECT ... FROM drinks WHERE category = '' OR 1=1 --'
 
 The quote closed early, `OR 1=1` made the condition always true, and `--` commented out the tail. The filter is bypassed, the table leaks. With the `$1` parameter, the same input is simply the string category value `' OR 1=1 --`, which isn't in the menu: zero rows. That's the whole mechanism: keep code and data separate.
 
+Drawn as it goes to the server:
+
+```
+   string gluing — ONE envelope, the data is pasted into the query text:
+
+     "… WHERE category = '" + input + "'"   ─▶  one SQL text  ─▶  parser
+        input = ' OR 1=1 --  becomes part of the query ──────────────┘  (became code)
+
+   the $1 parameter — TWO envelopes, the value travels past the parser:
+
+     envelope 1 (text):   "… WHERE category = $1"   ─▶  parser ─▶ plan with a $1 hole
+     envelope 2 (value):  "coffee"  ───────────────────────────▶ bound into the plan
+                                                                 (never goes through the parser)
+```
+
 `pgx` nudges you onto the right path by design — it has no API for "run this glued string with the data inside it", only query-with-placeholders + arguments. To shoot yourself in the foot, you have to assemble the injection by hand deliberately (which is what we do in the anti-demo — on a safe, read-only sandbox).
 
 ## What our code shows

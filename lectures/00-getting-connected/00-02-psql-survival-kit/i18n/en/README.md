@@ -8,6 +8,13 @@ The goal of this unit is narrow: not to learn all of psql, but to assemble a "fi
 
 psql takes two kinds of input. Plain SQL (`SELECT ...;`) goes to the server and is executed there. Commands starting with a backslash (`\dt`, `\d`, `\x`) are **meta-commands**: psql processes them on the client, before and instead of sending anything to the server. They aren't part of SQL and don't work from the driver in your application — they're a tool for interactive, hands-on work.
 
+```
+   you type…                         where it is handled
+   ─────────────────────────────────────────────────────────────────────
+   \dt   \d   \x   \timing    ──▶  psql (CLIENT) runs it itself, never hits the server
+   SELECT … ;   INSERT … ;    ──▶  psql forwards it ──▶ postgres (SERVER) runs it
+```
+
 That's exactly why this is an escape-hatch lesson: you can't "write a meta-command into `query.sql` and generate it with sqlc." Yet for a single character they give you what would otherwise take a clunky query against the system catalogs (`information_schema`, `pg_catalog`).
 
 Connect to the sandbox:
@@ -39,6 +46,21 @@ Three commands answer "what's even here" at three levels of nesting.
 `\i <file>` executes a SQL file — exactly how our `make db-reset` applies `schema/brew.sql` and `seed.sql`. Handy for repeatable scripts: instead of pasting a query into the prompt, keep it in a file under version control.
 
 `\?` — help for all meta-commands (there are dozens). `\h <command>` — help on SQL syntax: `\h INSERT` recalls the `INSERT` grammar with all its options without leaving the terminal. Two commands that make memorizing the rest optional.
+
+The whole kit in one table:
+
+| Command | What it does | Where it runs |
+|---|---|---|
+| `\l` | databases on the server | psql (client) |
+| `\dt` | tables of the current database (`\dv`/`\di`/`\ds`/`\dn`/`\df` — by object type) | psql (client) |
+| `\d <name>` | object structure: columns, types, PK, indexes, FK both ways | psql (client) |
+| `\x` | "into columns" output (`\x auto` — by result width) | psql (client) |
+| `\timing` | per-query timing (a rough signal, not profiling) | psql (client) |
+| `\i <file>` | run SQL from a file | psql (client) |
+| `\?` / `\h` | help: on meta-commands / on SQL syntax | psql (client) |
+| `SELECT … ;` | plain SQL — goes to the server and is executed there | postgres (server) |
+
+The last row is for contrast: everything with `\` stays on the client, plain SQL goes to the server (the same boundary as in the diagram above).
 
 ## What our code shows
 

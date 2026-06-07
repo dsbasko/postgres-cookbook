@@ -26,9 +26,12 @@ ORDER BY id;
 
 `-- name: ListDrinksByCategory` sets the method name. The suffix sets the result shape:
 
-- `:many` → a slice of rows (`[]ListDrinksByCategoryRow`);
-- `:one` → exactly one row (or `pgx.ErrNoRows` if there's no match);
-- `:exec` → returns nothing (for `INSERT`/`UPDATE`/`DELETE` without `RETURNING`).
+| Suffix | What the method returns | When to use |
+|---|---|---|
+| `:many` | `[]XxxRow` — a slice of rows (empty if no match) | `SELECT` returning 0..N rows |
+| `:one` | `XxxRow` — one row (or `pgx.ErrNoRows` if there's none) | `SELECT` of exactly one row |
+| `:one` (scalar) | the column's own type: `count(*)` → `int64`, no wrapper struct | a single column in a single row |
+| `:exec` | only `error` | `INSERT`/`UPDATE`/`DELETE` without `RETURNING` |
 
 And `$1` is the parameter from 00-03, but now sqlc takes care of it. Looking at the schema, it sees that `drinks.category` is `text` and generates a method with the argument `category string`. It takes the parameter's name from the column in the condition — so the method reads as `ListDrinksByCategory(ctx, category string)`, not `(ctx, arg1 string)`.
 

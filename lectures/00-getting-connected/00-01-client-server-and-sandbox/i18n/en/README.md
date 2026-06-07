@@ -8,6 +8,19 @@ That's the whole plot of this unit. No SQL heroics — connect, ask the server i
 
 Postgres is a server process. It owns the data files, and nothing except it touches those files. Everything in your hands — `psql`, the `pgx` driver in Go, the Adminer web UI — is a client. A client opens a connection, sends the query text over the network (TCP on port 5432, or a local unix socket), and reads rows back. The protocol between them is fixed — the Postgres wire protocol — but you don't need to know it: the driver speaks it for you.
 
+One connection, two ends:
+
+```
+   N clients                                                one server process
+   (send SQL, read rows back)                               (does all the work)
+
+   psql ──┐
+   pgx ───┼──▶  connection over a socket (TCP :5432 / unix) ──▶  postgres
+   Adminer┘     wire protocol                                     • parses SQL, builds a plan
+                                                                  • executes, runs MVCC and locks
+                                                                  • owns the data files — only it
+```
+
 Why this matters to a developer, not just an admin. Every word that comes up later — "connection", "pool", "timeout", "the connection dropped" — is about this very socket. The server does the work: it parses SQL, builds a plan, executes it, runs MVCC and locking. The client only sends the query and collects the result. One server serves many clients at once — and the whole concurrency story (module 05) grows from exactly this: several connections, one set of data.
 
 The practical takeaway for today is simple: to do anything with data you need a connection. Let's open one and confirm there really is a live Postgres 18 on the other end.
@@ -93,6 +106,12 @@ ID  SKU     НАЗВАНИЕ     КАТЕГОРИЯ  ЦЕНА
 ```
 
 (The demo prints in Russian; the menu is Brew's seed data.) Your version line may differ in its tail — `aarch64` vs `x86_64`, the gcc version — that depends on the architecture the `postgres:18-alpine` image was built for. What matters is the `PostgreSQL 18.x` at the start: on the other end of the socket is exactly the version this course targets. The menu table reproduces verbatim — ids, prices, and order are fixed by the seed data.
+
+## The fence
+
+- The sandbox is `docker compose` on your laptop. In production a DBA runs and owns the server: the Postgres version and upgrades, `max_connections`, memory, disk, backups — their turf, not yours. You're on the other end of the socket, a client, not the server's operator.
+- `sslmode=disable` is for the local stand only. In production connections are encrypted (TLS), and the password comes from a secrets manager — it doesn't sit in a `DATABASE_URL` under version control.
+- One shared `brew` database for the whole course is a teaching simplification. In a real project environments live in separate databases and instances, and you never run `make db-reset` (a `TRUNCATE` under the hood) against live data.
 
 ## Takeaways
 
