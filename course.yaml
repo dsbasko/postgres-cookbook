@@ -397,24 +397,36 @@ modules:
         duration: 25m
         tags: [triggers, volatility, plpgsql, audit, escape-hatch]
 
-  # ── Модуль 10 запаркован до фазы 3 ──────────────────────────────────────
-  # Движок @dsbasko/cookbook-engine требует у КАЖДОГО объявленного модуля
-  # непустой lessons[]. Поэтому course.yaml перечисляет только модули, в
-  # которых уже есть хотя бы один доведённый юнит (курс публикуется
-  # инкрементально). Описание модуля 10 уже написано и ждёт здесь:
-  # раскомментируй блок, когда в нём появится первый урок, и добавь его
-  # lessons[] (см. per-unit рецепт в docs/plans).
-  #
-  #   - id: 10-use-cases
-  #     title: { ru: Use cases, en: Use cases }
-  #     description:
-  #       ru: |
-  #         Сквозные капстоны с integration-тестами, связывающие весь курс в работающие приложения:
-  #         сборка схемы Brew, движок цен и промо (PG18 temporal), клиника анти-паттернов приложения,
-  #         пулинг из приложения (pgbouncer caveats) и CDC-шов — байт-совместимый handoff в kafka-cookbook.
-  #       en: |
-  #         End-to-end capstones with integration tests that tie the whole course into working apps:
-  #         building the Brew schema, a price-and-promo engine (PG18 temporal), an app anti-patterns
-  #         clinic, pooling from the app (pgbouncer caveats), and the CDC seam — a byte-compatible
-  #         handoff into kafka-cookbook.
-  #     lessons: []
+  - id: 10-use-cases
+    title: { ru: Use cases, en: Use cases }
+    description:
+      ru: |
+        Сквозные капстоны с integration-тестами, связывающие весь курс в работающие приложения:
+        сборка схемы Brew, движок цен и промо (PG18 temporal), клиника анти-паттернов приложения,
+        пулинг из приложения (pgbouncer caveats) и CDC-шов — байт-совместимый handoff в kafka-cookbook.
+      en: |
+        End-to-end capstones with integration tests that tie the whole course into working apps:
+        building the Brew schema, a price-and-promo engine (PG18 temporal), an app anti-patterns
+        clinic, pooling from the app (pgbouncer caveats), and the CDC seam — a byte-compatible
+        handoff into kafka-cookbook.
+    lessons:
+      - slug: 10-01-build-the-brew-schema-capstone
+        title: { ru: "Капстон: собери схему Brew", en: "Capstone: build the Brew schema" }
+        duration: 40m
+        tags: [capstone, constraints, explain, retry, integration-test]
+      - slug: 10-02-price-and-promo-engine
+        title: { ru: Движок цен и промо, en: Price-and-promo engine }
+        duration: 35m
+        tags: [temporal, without-overlaps, exclude, returning-old-new, pg18]
+      - slug: 10-03-app-anti-patterns-clinic
+        title: { ru: Клиника анти-паттернов приложения, en: App anti-patterns clinic }
+        duration: 35m
+        tags: [n-plus-1, keyset, non-sargable, any-array, anti-patterns]
+      - slug: 10-04-pooling-from-the-app
+        title: { ru: Пулинг из приложения, en: Pooling from the app }
+        duration: 30m
+        tags: [pooling, pgbouncer, advisory-lock, listen-notify, prepared-statements]
+      - slug: 10-05-the-cdc-seam-handoff
+        title: { ru: "Шов CDC: эстафета в kafka-cookbook", en: "The CDC seam: handoff to kafka-cookbook" }
+        duration: 35m
+        tags: [cdc, logical-replication, publication, replica-identity, debezium]

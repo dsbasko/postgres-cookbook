@@ -86,3 +86,13 @@ use ./09-writes-eventing-and-server-logic/09-02-skip-locked-job-queue
 use ./09-writes-eventing-and-server-logic/09-03-transactional-outbox
 
 use ./09-writes-eventing-and-server-logic/09-04-listen-notify
+
+use ./10-use-cases/10-01-build-the-brew-schema-capstone
+
+use ./10-use-cases/10-02-price-and-promo-engine
+
+use ./10-use-cases/10-03-app-anti-patterns-clinic
+
+use ./10-use-cases/10-04-pooling-from-the-app
+
+use ./10-use-cases/10-05-the-cdc-seam-handoff
