@@ -44,6 +44,14 @@ LIMIT 1;
 
 `SKIP LOCKED` means "don't wait on locked rows — skip them and take the next free one." Ten workers running the same query will pick up ten **different** jobs; nobody waits on anybody and nobody processes someone else's job. This is the idiomatic job queue on plain Postgres (we'll come back to it in 09-02).
 
+The three fixes in one table — from the most common to the most special:
+
+| Fix | How | Competitor on the same row | When to reach for it |
+|---|---|---|---|
+| **Atomic `UPDATE`** (`SET x = x - 1`) | read and write in one command, implicit row lock | waits for the command, computes off the fresh value | by default: the computation fits in SQL |
+| **`SELECT … FOR UPDATE`** | explicit row lock at the read, held until `COMMIT` | waits for your `COMMIT`, reads the updated value | read-modify-write is unavoidable: logic between read and write |
+| **`FOR UPDATE SKIP LOCKED`** | skips locked rows, takes the next free one | doesn't wait — takes a different row | job queue: N workers split the work with no duplicates |
+
 ## What our code shows
 
 `demo.sql` (the `run` target) reproduces the lost-update arithmetic in a single session: two "workers" capture stock `10` into psql variables **before** any write (simulating simultaneity), both write `9` — and we see the loss. Then the same two sales through an atomic `UPDATE` give the correct stock `8`, and `FOR UPDATE` shows the explicit lock.
@@ -142,7 +150,11 @@ After the demo, restore the canon: `make ... T=db-reset` (the `job_queue` table 
 
 ## The fence
 
-The step order in the two-session scenario is held by `\prompt` — without them it would be a race, and who "outran" whom would depend on the scheduler. In a real queue the workers genuinely compete, and `SKIP LOCKED` exists for exactly that. What we simplified: a row lock lives **until the end of the transaction** — so holding a transaction open while the app calls an external service is dangerous: the hot row is locked, competitors pile up, and a long transaction also holds back the visibility horizon (bloat — see 05-02). So a critical section under `FOR UPDATE` is kept as short as possible. There's a second risk we didn't touch here — the deadlock: two transactions lock rows in opposing order and seize up; that's 05-06. And remember: `FOR UPDATE` locks rows, it doesn't prevent every anomaly — write-skew (when transactions read and write *different* rows) isn't cured by it; for that you need `SERIALIZABLE` (05-04).
+The step order in the two-session scenario is held by `\prompt` — without them it would be a race, and who "outran" whom would depend on the scheduler. In a real queue the workers genuinely compete, and `SKIP LOCKED` exists for exactly that. Here's what we simplified:
+
+- **A row lock lives until the end of the transaction.** Holding a transaction open while the app calls an external service is dangerous: the hot row is locked, competitors pile up, and a long transaction also holds back the visibility horizon (bloat — see 05-02). Keep a critical section under `FOR UPDATE` as short as possible.
+- **We didn't touch the deadlock here.** Two transactions locking rows in opposing order seize up — that's 05-06.
+- **`FOR UPDATE` locks rows, it doesn't prevent every anomaly.** Write-skew (when transactions read and write *different* rows) isn't cured by it — for that you need `SERIALIZABLE` (05-04).
 
 ## Takeaways
 

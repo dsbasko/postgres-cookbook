@@ -22,6 +22,15 @@ While a transaction is open, its changes aren't visible to other sessions and ca
 
 In this unit we observe **A** and **C** directly; **I** and **D** come later in the module and at the server level.
 
+The four letters as a map — what each guarantees and where you see it:
+
+| Letter | Guarantees | In our demo | Covered |
+|---|---|---|---|
+| **A** — atomicity | all or nothing, no halves | step 3: the debit on `#1` rolled back in full | here |
+| **C** — consistency | invariants hold (`CHECK`/`FK`/`UNIQUE`) | step 4: account total `150.00` unchanged | here |
+| **I** — isolation | concurrent transactions don't see each other's in-between | — | 05-02 → 05-04 |
+| **D** — durability | after `COMMIT`, data survives a crash (WAL) | — | server level |
+
 ## What our code shows
 
 The queries in `query.sql` are the building blocks of a transfer: debit, credit, and a sum that's the system's invariant.
@@ -84,7 +93,11 @@ Step 2 is the successful transfer: 30.00 moved from `#1` to `#2`. Step 3 is the 
 
 ## The fence
 
-We turn "no such recipient" into an error and roll back ourselves. In production a failure is rarely that polite: a transaction dies on a driver error, a timeout, a dropped connection — and the rollback must happen in every one of those cases. That's why `defer tx.Rollback(ctx)` goes **immediately** after `Begin`: even if the function exits on a panic or an early `return`, the transaction won't be left hanging open (and an open transaction holds locks and the visibility horizon — see 05-02). We also simplified the business logic itself: a real money transfer isn't two `UPDATE`s but double-entry ledger postings, idempotency keyed on the operation id (so a retried request doesn't debit twice), and an audit trail; here we only care about the "together or not at all" mechanics. And remember: a transaction guarantees atomicity **inside the database**. If after `COMMIT` you still need to publish an event to Kafka or call a payment gateway, that's outside the DB transaction, and consistency there is achieved by other means (the transactional outbox — module 09).
+The demo turns "no such recipient" into an error and rolls back by hand. In production a failure is rarely that polite — and each of the demo's conveniences becomes a production concern:
+
+- **`defer tx.Rollback(ctx)` — right after `Begin`.** A transaction dies on a driver error, a timeout, a dropped connection, and the rollback must happen in every one of those cases. Placed right after `Begin`, the `defer` fires even on a panic or an early `return` — the transaction won't be left hanging open (and an open transaction holds locks and the visibility horizon — see 05-02).
+- **A real money transfer isn't two `UPDATE`s.** It's double-entry ledger postings, idempotency keyed on the operation id (so a retried request doesn't debit twice), and an audit trail. Here we only care about the "together or not at all" mechanics.
+- **Atomicity holds inside the database only.** If after `COMMIT` you need to publish an event to Kafka or call a payment gateway, that's outside the DB transaction, and consistency there is achieved by other means — the transactional outbox (module 09).
 
 ## Takeaways
 

@@ -1,6 +1,6 @@
 # 05-04 — Isolation levels for developers
 
-A Brew shift has an unwritten rule: at least one barista must always be on the floor — the room can't go empty. Right now two are on the floor, Alice and Boris. Both decide to step into the stockroom — **at the same time**. Each glances at the room: "there are two of us, I'll step away, one stays." Each reasons flawlessly. But they leave together — and the room empties. No `UPDATE` "clobbered" another (Alice changed her own row, Boris his own), the row locks from 05-03 are useless here: they touch **different** rows. And yet the invariant is broken.
+A Brew shift has an unwritten rule: at least one barista must always be on the floor — the room can't go empty. Right now two are on the floor — baristas Alice and Boris (namesakes of the customers Alice Ivanova and Boris Petrov from other modules: different people, shift staff). Both decide to step into the stockroom — **at the same time**. Each glances at the room: "there are two of us, I'll step away, one stays." Each reasons flawlessly. But they leave together — and the room empties. No `UPDATE` "clobbered" another (Alice changed her own row, Boris his own), the row locks from 05-03 are useless here: they touch **different** rows. And yet the invariant is broken.
 
 This is **write-skew** — an anomaly that neither `FOR UPDATE` (the rows differ) nor even the fixed snapshot of `REPEATABLE READ` catches. Only the strictest isolation level catches it — `SERIALIZABLE`. This unit is about the three isolation levels available to a developer, and what exactly sets the top one apart.
 
@@ -15,6 +15,14 @@ The SQL standard describes four levels; Postgres really distinguishes three (its
 - **SERIALIZABLE** — the strictest: the result of any group of concurrent transactions is guaranteed to match *some* serial order of them. It's implemented via SSI (Serializable Snapshot Isolation): the database tracks read/write dependencies and, on detecting a dangerous pair, aborts one transaction with error **40001** (`serialization_failure`). No extra locking — the price is that you must be ready to **retry** the transaction.
 
 The level is set per transaction: `BEGIN ISOLATION LEVEL SERIALIZABLE;` (or `SET TRANSACTION ...` right after `BEGIN`).
+
+The three levels and what each catches (there's no dirty read at any of them in Postgres):
+
+| Level | Snapshot | Non-repeatable read | Write-skew | Cost |
+|---|---|---|---|---|
+| **READ COMMITTED** (default) | per statement | slips through | slips through | cheap |
+| **REPEATABLE READ** | whole transaction | caught | slips through | cheap |
+| **SERIALIZABLE** | transaction + SSI | caught | **caught** (`40001`) | retries under load |
 
 ## Why write-skew is sneaky
 
@@ -122,7 +130,10 @@ A4) Транзакция A отменена целиком — её UPDATE не 
 
 ## The fence
 
-The commit order in the sessions is held by `\prompt` — in a real race "the second" could be either transaction, and the 40001 would land on an unpredictable one. That's why `SERIALIZABLE` can't be used without a **retry loop**: code that runs under it must be able to retry the transaction on 40001 (that's the next unit, 05-05). What we simplified: `SERIALIZABLE` is not a free "correctness mode." Under load it produces more serialization failures (and thus retries and wasted work), and you usually don't enable it across the whole database — it's applied selectively, to transactions with genuine write-skew risk (bookings, limits, on-call schedules). The alternative on `READ COMMITTED` is to close the specific anomaly by hand: materialize the conflict with `SELECT ... FOR UPDATE` on a "control" row, add a `CHECK`/unique index, or take an explicit lock. Which to pick depends on how often the conflict actually happens.
+The commit order in the sessions is held by `\prompt` — in a real race "the second" could be either transaction, and the 40001 would land on an unpredictable one. That's why `SERIALIZABLE` can't be used without a **retry loop**: code that runs under it must be able to retry the transaction on 40001 (that's the next unit, 05-05). Here's what else to keep in mind:
+
+- **`SERIALIZABLE` is not a free "correctness mode."** Under load it produces more serialization failures, and thus retries and wasted work. You usually don't enable it across the whole database — it's applied selectively, to transactions with genuine write-skew risk: bookings, limits, on-call schedules.
+- **The same anomaly can be closed on `READ COMMITTED` — by hand.** Materialize the conflict with `SELECT … FOR UPDATE` on a "control" row, add a `CHECK`/unique index, or take an explicit lock. Which to pick depends on how often the conflict actually happens.
 
 ## Takeaways
 

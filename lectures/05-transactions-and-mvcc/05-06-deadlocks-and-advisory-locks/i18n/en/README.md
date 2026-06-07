@@ -10,6 +10,16 @@ This is an escape-hatch unit (like 05-02): a deadlock is concurrent by nature, s
 
 A deadlock needs a "cross": two transactions grabbing the same resources in **opposite** order. Hence the main cure — a **single locking order**. If both return-processes always take the order first, then the item (say, by ascending id), no cycle forms: whoever took the order first will calmly take the item too, and the second waits and follows. Ninety percent of application deadlocks are cured by the discipline of "lock resources in the same order."
 
+```
+   Transaction A ──holds──▶ row #1
+       │                       ▲
+      wants                  wants
+       ▼                       │
+   row #2 ◀──holds── Transaction B
+```
+
+A holds `#1` and wants `#2`; B holds `#2` and wants `#1` — the "wants" arrows point into each other, and that's the deadlock "cross." Each waits for what the other holds, the cycle is closed → `40P01`. Make both transactions take resources in the same order (`#1` first, then `#2`) and the "wants" arrows no longer cross: no cycle.
+
 `40P01` is a transient error, just like `40001` from 05-04/05-05: the victim only needs to **retry** the transaction (the same retry loop). But unlike a serialization failure, a deadlock is almost always a sign of a broken locking order, not an inevitability; the retry saves you here and now, but the fix is the order.
 
 ## The advisory lock: a lock for logic, not for data
@@ -23,6 +33,14 @@ SELECT pg_advisory_unlock(42);    -- released
 ```
 
 Advisory locks come in two lifetimes: **session-level** (`pg_advisory_lock`/`pg_try_advisory_lock`) lives until an explicit unlock or the end of the connection, and **transaction-scoped** (`pg_advisory_xact_lock`) — released automatically on `COMMIT`/`ROLLBACK`. The second is safer: you can't forget to release it. And a single advisory lock used as a "gate" can also prevent our deadlock: if both transactions first take a shared `pg_advisory_xact_lock(returns_key)`, they line up and never clash on the rows at all.
+
+The three advisory-API functions — by waiting and lifetime:
+
+| Function | Waits if busy? | Lifetime | Released |
+|---|---|---|---|
+| `pg_advisory_lock(key)` | yes, blocks | session-level | by an explicit `pg_advisory_unlock` or end of connection |
+| `pg_try_advisory_lock(key)` | no — returns `t`/`f` at once | session-level | same |
+| `pg_advisory_xact_lock(key)` | yes, blocks | transaction | itself, on `COMMIT`/`ROLLBACK` |
 
 ## What our code shows
 
@@ -112,7 +130,12 @@ Postgres picked the victim on its own (here, A) and rolled back its transaction;
 
 ## The fence
 
-The step order in the sessions is held by `\prompt` — in a real race everything happens in milliseconds, and Postgres decides which transaction to make the victim (usually the one that's "cheaper" to roll back). What we simplified: the deadlock here is on row locks, but it's possible on any locks (unindexed foreign keys, escalation at the `ALTER TABLE` level, even advisory locks taken crosswise). Fight it with **prevention** (a single acquisition order, short transactions, indexes under FKs — see 06), and keep the `40P01` retry as insurance, not a strategy. And mind the difference: `40001` (05-04/05-05) is about *logical* serialization conflicts and can't be prevented by lock order; `40P01` is about a *physical* wait cycle, and that one is exactly what lock order cures. Advisory locks aren't free either: a session-level lock easily "leaks" (you forgot to unlock, or the connection returned to the pool with a lock still held) — so applications almost always take `pg_advisory_xact_lock`, which releases itself.
+The step order in the sessions is held by `\prompt` — in a real race everything happens in milliseconds, and Postgres decides which transaction to make the victim (usually the one that's "cheaper" to roll back). Here's what to keep in mind:
+
+- **A deadlock isn't limited to rows.** Unindexed foreign keys, escalation at the `ALTER TABLE` level, even advisory locks taken crosswise — anywhere there are locks.
+- **Fight it with prevention, not the retry.** A single acquisition order, short transactions, indexes under FKs (see 06). The `40P01` retry is insurance, not a strategy.
+- **`40001` and `40P01` are different in nature.** `40001` (05-04/05-05) is about *logical* serialization conflicts and can't be prevented by lock order. `40P01` is about a *physical* wait cycle, and that one is exactly what lock order cures.
+- **Advisory locks aren't free either.** A session-level lock easily "leaks" (you forgot to unlock, or the connection returned to the pool with a lock still held) — so applications almost always take `pg_advisory_xact_lock`, which releases itself.
 
 ## Takeaways
 
