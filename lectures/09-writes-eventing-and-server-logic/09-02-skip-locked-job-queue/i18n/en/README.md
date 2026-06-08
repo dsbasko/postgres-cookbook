@@ -50,6 +50,27 @@ nobody idles waiting on a neighbor. So in the output we print not the split (it
 jobs were claimed in total, how many were unique, and how many were duplicates.
 Those are what we check.
 
+## The race versus SKIP LOCKED, drawn
+
+The whole difference fits in one picture. A naive worker reads and writes in two
+steps, and in the gap between them another worker reads the same row:
+
+```
+Naive (SELECT, then UPDATE) — race window:
+  worker-1  ──SELECT job#1──┐
+  worker-2  ──SELECT job#1──┤  both read #1 BEFORE
+            UPDATE #1 ◄──────┘  anyone claimed it
+            UPDATE #1 ◄───────  → job#1 processed TWICE (two pushes to the client)
+
+FOR UPDATE SKIP LOCKED — "skip what's busy, don't wait":
+  worker-1  ─SELECT … SKIP LOCKED─►  #1 (locked) ─processed─ COMMIT
+  worker-2  ─SELECT … SKIP LOCKED─►  #1 busy → skipped → takes #2
+            nobody waits on a neighbor · nobody takes another's row
+```
+
+`FOR UPDATE` claims the row for a worker, `SKIP LOCKED` tells it to steer around
+others' locked rows — and both the race and the mutual blocking vanish at once.
+
 ## What our code shows
 
 This is a raw `pgx` unit: the lesson is about concurrency (several worker
@@ -111,25 +132,23 @@ how many" split is deliberately not shown: it changes from run to run.
 
 ## The fence
 
-A `SKIP LOCKED` queue is a workhorse, but it has edges. The worker's transaction
-must be **short**: while it is open the row is locked, and a long transaction also
-holds the visibility horizon (see 05-02) and accumulates bloat. Do not do heavy
-work (a call to an external API, sending an email) *inside* the transaction —
-claim the job, quickly commit the status change, and do the work outside it;
-otherwise one stuck worker stalls version cleanup across the whole database.
-
-`SKIP LOCKED` deliberately sacrifices strict ordering: by skipping busy rows, the
-workers drain jobs not strictly by `id` but "whoever got there first". If order
-is mandatory (strict FIFO per key) that is no longer a `SKIP LOCKED` job but a
-matter of partitioning the queue by key or one worker per partition.
-
-And the big one: a queue table in Postgres lives happily up to a point (tens to
-hundreds of thousands of jobs a day — no problem), but it is not Kafka or
-RabbitMQ. When the load outgrows what a single table under constant
-`UPDATE`/`DELETE` can take (which is already a question of autovacuum and bloat —
-your DBA's territory), it is time to look at a dedicated broker. Where exactly
-that line runs and how a DB queue hands off to a broker is a separate
-conversation; in our universe the sibling `kafka-cookbook` course handles it.
+- **Keep the worker's transaction short.** While it is open the row is locked, and
+  a long transaction also holds the visibility horizon (see 05-02) and accumulates
+  bloat. Do not do heavy work (a call to an external API, sending an email)
+  *inside* the transaction — claim the job, quickly commit the status change, and
+  do the work outside it; otherwise one stuck worker stalls version cleanup across
+  the whole database.
+- **`SKIP LOCKED` sacrifices strict ordering.** By skipping busy rows, the workers
+  drain jobs not strictly by `id` but "whoever got there first". If order is
+  mandatory (strict FIFO per key) that is no longer a `SKIP LOCKED` job but a
+  matter of partitioning the queue by key or one worker per partition.
+- **A queue table is a "before a broker" solution.** In Postgres it lives happily
+  up to a point (tens to hundreds of thousands of jobs a day — no problem), but it
+  is not Kafka or RabbitMQ. When the load outgrows what a single table under
+  constant `UPDATE`/`DELETE` can take (already a question of autovacuum and bloat —
+  your DBA's territory), it is time to look at a dedicated broker. Where exactly
+  that line runs and how a DB queue hands off to a broker — in our universe the
+  sibling `kafka-cookbook` course handles it.
 
 ## Takeaways
 

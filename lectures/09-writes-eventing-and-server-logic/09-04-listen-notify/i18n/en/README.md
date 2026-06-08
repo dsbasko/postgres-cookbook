@@ -40,7 +40,18 @@ transaction commits; if it rolls back, there is no notification at all. This is
 good news (no "phantom" signals about things that didn't happen in the database)
 but also a trap: the listener will see nothing while the writer keeps the
 transaction open. In the demo we insert a row inside a transaction, wait 400 ms —
-silence; we `COMMIT` — and only now does the payload arrive.
+silence; we `COMMIT` — and only now does the payload arrive. On a timeline:
+
+```
+Writer (one transaction)             Listener (LISTEN brew_events)
+  BEGIN
+  INSERT → trigger pg_notify  ····►   held back, not visible yet
+  ... 400 ms ...                      waits... silence
+  COMMIT ─────────────────────────►   payload arrives INSTANTLY
+
+  and if a rollback instead of COMMIT:
+  ROLLBACK ───────────────────────►   no notification AT ALL
+```
 
 ## Caveat 2: at-most-once — no listener, lost signal
 
@@ -57,6 +68,17 @@ fleeting nudge "hey, take a look" that exists only while a listener is present. 
 they are often combined: `NOTIFY` wakes a relay/worker immediately, and `outbox`
 provides reliability — woken by the signal OR by a timer, it drains everything
 that has accumulated.
+
+Two columns side by side — when to use which:
+
+| Axis | `LISTEN`/`NOTIFY` | `outbox` (09-03) |
+|---|---|---|
+| Storage | not stored — a fleeting nudge | a row in a table, survives a restart |
+| Guarantee | at-most-once (no listener → loss) | at-least-once (the relay reads on) |
+| Transactionality | waits for `COMMIT`, rollback → no signal | fact and event commit atomically |
+| Latency | instant, no polling | one relay-cycle delay |
+| Size | payload ≤ 8000 bytes | row / jsonb size |
+| Role | "wake up" signal | reliable delivery |
 
 ## What our code shows
 
@@ -115,23 +137,21 @@ retrieve it.
 
 ## The fence
 
-Beyond the two caveats above — a few more edges. The `NOTIFY` payload is limited to
-**8000 bytes**; sending the whole object there is a bad idea — send an
-**identifier** ("order #42 changed") and let the subscriber read the body with a
-plain `SELECT`. Under load identical notifications collapse (Postgres dedupes
-identical payloads within a transaction), and in very high-throughput scenarios the
-`NOTIFY` bus itself serializes through a shared lock — it is not a replacement for a
-broker.
-
-And mind the connections: a listener keeps a connection **busy** for the entire
-wait, and under transaction pooling (PgBouncer, see 10-04) `LISTEN` breaks
-outright — notifications arrive on the wrong backend. So a listener needs a direct,
-session-mode connection to the database, not a connection from a transaction pool;
-how to arrange that in production is a question for your connection infrastructure.
-
-The practical rule: `NOTIFY` is a **"wake up" signal**, not a data-delivery
-channel. Build reliability on `outbox`/a table, and use `NOTIFY` to avoid polling it
-for nothing.
+- **Payload ≤ 8000 bytes.** Sending the whole object there is a bad idea — send an
+  **identifier** ("order #42 changed") and let the subscriber read the body with a
+  plain `SELECT`.
+- **Under load the bus serializes.** Identical notifications collapse (Postgres
+  dedupes identical payloads within a transaction), and in very high-throughput
+  scenarios the `NOTIFY` bus itself goes through a shared lock — it is not a
+  replacement for a broker.
+- **A listener keeps a connection busy** for the entire wait, and under
+  transaction pooling (PgBouncer, see 10-04) `LISTEN` breaks outright —
+  notifications arrive on the wrong backend. A listener needs a direct session-mode
+  connection to the database, not a connection from a transaction pool; how to
+  arrange that in production is a question for your connection infrastructure.
+- **The rule:** `NOTIFY` is a **"wake up" signal**, not a data-delivery channel.
+  Build reliability on `outbox`/a table, and use `NOTIFY` to avoid polling it for
+  nothing.
 
 ## Takeaways
 

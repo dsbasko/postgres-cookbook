@@ -29,7 +29,7 @@ reads unpublished `outbox` rows, sends them to the broker (or hands them to CDC)
 and marks them delivered. Delivery has become a separate, repeatable task: if the
 relay dies midway, it restarts and reads on; it doesn't promise "exactly once",
 but it does promise "at least once" (the consumer on the other side dedupes by
-`outbox_id` — the canon has `processed_outbox_ids` for exactly this).
+`outbox_id` (table `processed_outbox_ids`)).
 
 The `orders` and `outbox` tables here are **canonical**, from `schema/brew.sql`,
 byte-compatible with `kafka-cookbook`. That is no accident: this very pair travels
@@ -79,6 +79,42 @@ relay workers: they drain the events with no duplicates and no blocking on each
 other. Having delivered an event, the relay does `UPDATE outbox SET published_at =
 now()` in the same transaction — "claimed and marked" atomically.
 
+## The dual-write gap — and how outbox closes it
+
+The problem and the fix, side by side:
+
+```
+Naive: two places, a gap between them
+  ① INSERT order → Postgres ──COMMIT──►  order written
+        ╳ crash right HERE ──────────────►  event lost
+  ② publish event → broker ─────────────►  (never arrived)
+     net: order without event; or, if ① rolls back, event without order
+
+Outbox: one place, one transaction
+  BEGIN
+    INSERT order → orders                   ┐ both inserts are atomic:
+    INSERT event → outbox (published_at=∅)  ┘ either both or neither
+  COMMIT
+    relay: SELECT … WHERE published_at IS NULL  FOR UPDATE SKIP LOCKED
+           → delivered outside → UPDATE published_at = now()
+```
+
+Delivery is now a separate, repeatable relay task, not a second line next to the
+business write. As a guarantee that gives **at-least-once**:
+
+| Guarantee | What it means | Where in our scheme |
+|---|---|---|
+| at-most-once | at most once, loss possible | naive `publish` with no retry; `NOTIFY` (09-04) |
+| at-least-once | at least once, duplicates possible | outbox + relay with retry — **our case** |
+| exactly-once | exactly once | unreachable in delivery; emulated as at-least-once + an idempotent consumer: dedup by `outbox_id` (table `processed_outbox_ids`) |
+
+This is the watershed between the **two ways** to push changes outward:
+**09-03 outbox is application-level** (you write an event row and run the relay
+yourself), while **10-05 CDC is database-level** (Postgres hands its own WAL to
+logical replication, with no event table and no relay of your own; Debezium reads
+the canon directly). Not two steps of one process, but two different entry
+points — you pick one.
+
 ## What our code shows
 
 `query.sql` is the protagonist: `InsertOrder`/`InsertOutbox` (writing the pair),
@@ -124,26 +160,24 @@ sorted) and marked them published — nothing is left in the queue.
 
 ## The fence
 
-The outbox honestly solves the atomicity of fact and event, but you are still
-responsible for the delivery guarantee. The relay gives **at-least-once**, not
-exactly-once: if it died between `publish` and `UPDATE published_at`, the event
-goes out again after a restart. So the consumer side needs **idempotency** — dedup
-by key (the canon has `processed_outbox_ids` for this). Keep the write transaction
-short, and do the actual send to the broker in the relay outside the read
-transaction — otherwise a slow network to the broker will hold locks and the
-visibility horizon (see 05-02 and the 09-02 fence).
-
-The `outbox` table grows constantly and is cleaned just as constantly — a typical
-"high-churn" table and a source of bloat. In production it needs periodic cleanup
-(deleting long-published rows) and attention to autovacuum — but that is
-operations, your DBA's territory, and we don't touch it here.
-
-And the fork: you can write the relay by hand (as here — read `outbox` and
-publish), or write no relay at all and instead feed `outbox`/canon into **logical
-replication** and pick the events up via CDC (Debezium). The second path is
-exactly capstone 10-05: `REPLICA IDENTITY FULL` on the CDC sources + `CREATE
-PUBLICATION`, and Debezium from `kafka-cookbook` reads our tables without
-rewriting the schema.
+- **At-least-once, not exactly-once.** You are still responsible for the delivery
+  guarantee: if the relay died between `publish` and `UPDATE published_at`, the
+  event goes out again after a restart. So the consumer side needs
+  **idempotency** — dedup by `outbox_id` (table `processed_outbox_ids`).
+- **Keep the write transaction short.** Do the actual send to the broker in the
+  relay outside the read transaction — otherwise a slow network to the broker will
+  hold locks and the visibility horizon (see 05-02 and the 09-02 fence).
+- **`outbox` is a high-churn table, a source of bloat.** It grows constantly and
+  is cleaned just as constantly. In production it needs periodic cleanup (deleting
+  long-published rows) and attention to autovacuum — but that is operations, your
+  DBA's territory, and we don't touch it here.
+- **The relay-versus-CDC fork.** You can write the relay by hand (as here — read
+  `outbox` and publish), or write no relay at all: feed the canon into **logical
+  replication** and pick the changes up via CDC (Debezium). The second path is
+  capstone 10-05 (`REPLICA IDENTITY FULL` on the CDC sources + `CREATE
+  PUBLICATION`); there CDC works at the database level and is presented as an
+  **alternative** to the hand-written outbox relay, not its continuation. Debezium
+  from `kafka-cookbook` reads our tables without rewriting the schema.
 
 ## Takeaways
 

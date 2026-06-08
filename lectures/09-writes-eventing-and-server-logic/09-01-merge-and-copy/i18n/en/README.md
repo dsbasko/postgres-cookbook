@@ -56,6 +56,22 @@ The order of `RETURNING` rows from a `MERGE` is undefined, so in the demo we
 collect them into a slice and sort by `SKU` in Go — otherwise the output would
 drift between runs.
 
+## MERGE or ON CONFLICT — when to use which
+
+`MERGE` and `INSERT ... ON CONFLICT` (03-04) both "insert or update", but they
+solve **different** problems — a quick fork so you don't confuse them:
+
+| Question | `MERGE` | `INSERT ... ON CONFLICT` (03-04) |
+|---|---|---|
+| What it does | reconciles source with target, `INSERT`/`UPDATE`/`DELETE` branches | inserts, and on a key conflict updates or skips |
+| Strength | batch reconciliation of two sets in one pass | atomic upsert of a row by unique key |
+| Under concurrency | **not** race-safe: two `MERGE`s → both `NOT MATCHED` → both `INSERT` → duplicate or error | atomic on the unique index |
+| `DELETE` branch | yes (`WHEN MATCHED ... THEN DELETE`) | no |
+| When to use | nightly reconcile of staging into stock (our case) | concurrent upsert by key |
+
+Easy to remember: **`MERGE` is batch reconciliation of two sets, `ON CONFLICT` is
+a concurrent upsert by key**.
+
 ## What our code shows
 
 This is a raw `pgx` unit; the heart is two operations in `main.go`. First,
@@ -127,23 +143,22 @@ new quantities — all in a single command.
 
 ## The fence
 
-The main trap: **`MERGE` is not race-safe** as an upsert. Under concurrency two
-parallel `MERGE` commands can both fail to find a row (`NOT MATCHED`), both go
-down the `INSERT` branch — and one fails on a uniqueness violation, or, with no
-key, you get duplicates. `MERGE` does not do for you what `INSERT ... ON CONFLICT`
-(03-04) does: that atomically catches a conflict on a unique index and decides
-"insert or update" itself. So the rule: for a **concurrent upsert by key** reach
-for `ON CONFLICT`, and use `MERGE` for **batch reconciliation** of two sets (our
-typical case: nightly syncing a staging table into the stock), where you control
-that there are no parallel merges into the same table.
-
-About `COPY`: it is fast, but it barely validates data on the fly and loads it
-"as is". So the production pattern is to `COPY` into a **staging** table (here
-`supplier_feed_lab`) and from there move into the live table with checks and a
-`MERGE`/`INSERT ... SELECT` reconciliation. `COPY`ing straight into a table laden
-with constraints and triggers loses both speed and predictability. Fine-tuning
-`COPY` (formats, `FREEZE`, dropping indexes during a massive load) is work at the
-seam with your DBA, and we don't touch it here.
+- **`MERGE` is not race-safe as an upsert.** Under concurrency two parallel
+  `MERGE` commands can both fail to find a row (`NOT MATCHED`), both go down the
+  `INSERT` branch — and one fails on a uniqueness violation, or, with no key, you
+  get duplicates. `MERGE` does not do for you what `INSERT ... ON CONFLICT`
+  (03-04) does: that atomically catches a conflict on a unique index and decides
+  "insert or update" itself. So for a **concurrent upsert by key** reach for
+  `ON CONFLICT`, and use `MERGE` for **batch reconciliation** of two sets (our
+  case: nightly syncing a staging table into the stock), where there are no
+  parallel merges into the same table.
+- **`COPY` loads "as is".** It is fast, but it barely validates data on the fly.
+  The production pattern is to `COPY` into a **staging** table (here
+  `supplier_feed_lab`) and from there move into the live table with checks and a
+  `MERGE`/`INSERT ... SELECT` reconciliation. `COPY`ing straight into a table
+  laden with constraints and triggers loses both speed and predictability.
+- **Fine-tuning `COPY`** (formats, `FREEZE`, dropping indexes during a massive
+  load) is work at the seam with your DBA, and we don't touch it here.
 
 ## Takeaways
 

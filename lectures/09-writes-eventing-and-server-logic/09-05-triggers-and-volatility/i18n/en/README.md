@@ -55,17 +55,23 @@ An important asymmetry: `INSERT` has no `OLD` (there was nothing), `DELETE` has 
 catches them on the database side and writes them regardless of who fired the
 `UPDATE` or from where.
 
+```
+What a trigger has by TG_OP:
+  INSERT   OLD = ∅            NEW = {new row}      the row didn't exist before
+  UPDATE   OLD = {as it was}  NEW = {as it became} both versions present
+  DELETE   OLD = {as it was}  NEW = ∅              the row won't remain
+```
+
 ## Volatility: a promise to the planner
 
-Every function in Postgres has a **volatility** label — how predictable it is:
+Every function in Postgres carries a **volatility** label — a promise to the
+planner about how predictable it is:
 
-- `IMMUTABLE` — the same inputs always yield the same output (pure arithmetic,
-  `lower()`). The planner can evaluate it once and substitute the result as a
-  constant.
-- `STABLE` — doesn't change **within a single query**, but may between queries
-  (`now()`, reading tables). Within a query it can be called less often.
-- `VOLATILE` — may return something different on every call (`random()`, writing
-  to a table). No optimizations. This is the **default** if you give no label.
+| Label | Promise | Examples | What it gives the planner |
+|---|---|---|---|
+| `IMMUTABLE` | same inputs → always the same output | `lower()`, pure arithmetic | evaluate once and substitute as a constant |
+| `STABLE` | doesn't change within a single query | `now()`, reading tables | call it less often within a query |
+| `VOLATILE` | may return something different on every call | `random()`, writing to a table | nothing (this is the **default**) |
 
 The label is a promise the planner leans on; lying in it is dangerous (see the
 fence). The most visible consequence: only `IMMUTABLE` functions are allowed in an
@@ -137,28 +143,27 @@ with code `42P17`.
 
 ## The fence: when NOT to put logic in the database
 
-Triggers are powerful, and that is exactly why they are dangerous: the logic
-becomes **invisible**. A plain `UPDATE` quietly drags along an audit write, an
-`updated_at` bump, maybe a `NOTIFY` (09-04) — a developer reading the application
-code won't know until they hit an unexpected effect. Triggers are hard to test,
-hard to version alongside the code, and a cascade of "trigger fires trigger" is
-painful to debug. So we keep them for **data invariants** (updated_at, auditing,
-integrity checks that must hold regardless of which service writes), and leave the
-**business logic** (compute a discount, decide whether an order can ship, call a
-payment gateway) in the application: there it is visible, easy to test, and it
-doesn't block writes to the table during its execution. A rule of thumb:
-"mandatory for EVERYONE who touches this table, and about integrity" → fine in the
-DB; "depends on the scenario, calls outward, changes often" → in the application.
-
-About volatility: lying in the label shoots you in the foot, just not right away.
-Mark a function `IMMUTABLE` but read a table inside it — the planner caches the
-first result and keeps handing back a stale one; such a bug doesn't reproduce "out
-of nowhere" and takes days to find. The rule: the label must be honest; a function
-that reads data is at most `STABLE`, one that writes or is nondeterministic is
-`VOLATILE`. And the depth of PL/pgSQL itself (cursors, exceptions, dynamic SQL,
-the performance of server-side functions) is a separate large topic at the seam
-with your DBA; in a course for developers we keep server-side logic at "medium"
-depth.
+- **The logic becomes invisible.** A plain `UPDATE` quietly drags along an audit
+  write, an `updated_at` bump, maybe a `NOTIFY` (09-04) — a developer reading the
+  application code won't know until they hit an unexpected effect. Triggers are
+  hard to test, hard to version alongside the code, and a cascade of "trigger fires
+  trigger" is painful to debug.
+- **The boundary: invariants in the DB, business logic in the app.** Keep triggers
+  for **data invariants** (updated_at, auditing, integrity checks that must hold
+  regardless of which service writes). Leave the **business logic** (compute a
+  discount, decide whether an order can ship, call a payment gateway) in the
+  application: there it is visible, easy to test, and it doesn't block writes to
+  the table during execution. A rule of thumb: "mandatory for EVERYONE who touches
+  this table, and about integrity" → fine in the DB; "depends on the scenario,
+  calls outward, changes often" → in the application.
+- **Don't lie in the volatility label.** Mark a function `IMMUTABLE` but read a
+  table inside it — the planner caches the first result and keeps handing back a
+  stale one; such a bug doesn't reproduce "out of nowhere" and takes days to find.
+  The label must be honest: a function that reads data is at most `STABLE`, one
+  that writes or is nondeterministic is `VOLATILE`.
+- **The depth of PL/pgSQL** (cursors, exceptions, dynamic SQL, the performance of
+  server-side functions) is a separate large topic at the seam with your DBA; in a
+  course for developers we keep server-side logic at "medium" depth.
 
 ## Takeaways
 
