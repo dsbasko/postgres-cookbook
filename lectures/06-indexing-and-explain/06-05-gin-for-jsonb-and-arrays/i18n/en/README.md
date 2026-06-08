@@ -25,6 +25,29 @@ For arrays, GIN serves `@>` (contains all), `<@` (is contained in), `&&` (overla
 
 > ⚠️ GIN reads great but is **more expensive to write**: inserting one row touches the index once per element/key inside the value. So for workloads with frequent jsonb updates, GIN has a `fastupdate` parameter (deferred batch insertion) — but that's tuning your DBA holds. The developer takeaway: GIN is for "read by content a lot, write moderately."
 
+## GIN is a subject index
+
+A B-tree indexes the value **as a whole** and answers "equals/greater/less." GIN is the opposite: it decomposes each value into its parts (jsonb keys and values, array elements) and keeps, for each part, a list of the rows it appears in — like the subject index at the back of a book:
+
+```
+B-tree: row → whole value                    (=, <, >, prefix)
+  row 7 → {"milk":"oat","gift":true}   you can ask "does all of this equal" — but not "is there a gift"
+
+GIN: part → list of rows that contain it     (inverted index)
+  "milk"=oat   → [3, 7, 11, 15, …]
+  "gift"=true  → [7, 200, 400, …]   ← attrs @> '{"gift":true}' = grab this ready-made list
+  tag=coffee   → [1, 2, 3, …]
+  tag=limited  → [200, 400, 600, …] ← tags @> ARRAY['limited'] = grab this list
+```
+
+That's why containment `@>` flies via GIN (`Bitmap Index Scan`), while a B-tree falls back to a `Seq Scan` on it. GIN operators and opclasses:
+
+| Column type | Operators | Opclass |
+|---|---|---|
+| `jsonb` | `@>` (contains), `?` (has key), `?|` / `?&` (any / all keys) | `jsonb_ops` (default) — all of the above |
+| `jsonb`, `@>` only | `@>` | `jsonb_path_ops` — smaller and faster, but no `?` |
+| `text[]` (array) | `@>` (contains all), `<@` (contained in), `&&` (overlaps) | `array_ops` (default) |
+
 ## What our code shows
 
 `demo.sql` builds `drink_specs_lab` (200,000 rows: `jsonb attrs` + `text[] tags`, the rare flags `gift`/`limited` on 0.5%) and explains two containment queries twice — before and after GIN:
@@ -94,7 +117,14 @@ Output:
 
 ## The fence
 
-What we simplified. First, GIN is about **content search** (`@>`, `?`, `&&`); if you need an equality search on a specific scalar in a jsonb field (`attrs->>'milk' = 'oat'`), that's again an ordinary B-tree, but on an **expression** (`(attrs->>'milk')`, like in 06-03), not GIN. You pick the index type for the query shape, not the column type. Second, we took a selective flag (0.5% of rows) — there GIN clearly wins; on a flag present in half the rows the planner will deliberately fall back to a `Seq Scan` (the same selectivity lesson as 06-01). Third, GIN has its own write and maintenance cost (`fastupdate`, bloat, rebuild) — that's load tuning, DBA territory. And fourth, jsonb is a powerful but not free modeling tool: when a flexible jsonb schema is justified versus when a field belongs in a normal column with a constraint is a separate conversation in 07-02. Here the developer takeaway is one: **for containment search over jsonb/arrays, use GIN and check the plan in `EXPLAIN`**.
+What we simplified:
+
+- **GIN is for content search** (`@>`, `?`, `&&`). If you need an equality search on a scalar in a jsonb field (`attrs->>'milk' = 'oat'`), that's a B-tree again — but on an **expression** (`(attrs->>'milk')`, like in 06-03), not GIN. You pick the index type for the query shape, not the column type.
+- **We took a selective flag** (0.5% of rows) — there GIN clearly wins. On a flag present in half the rows the planner will deliberately fall back to a `Seq Scan` (the same selectivity lesson as 06-01).
+- **GIN has its own write and maintenance cost** (`fastupdate`, bloat, rebuilds) — that's load tuning, DBA territory.
+- **jsonb is powerful but not free.** When a flexible jsonb schema is justified and when a field belongs in a normal column with a constraint — that's a separate conversation in 07-02.
+
+The developer takeaway is one: **for containment search over jsonb/arrays, use GIN and check the plan in `EXPLAIN`**.
 
 ## Takeaways
 

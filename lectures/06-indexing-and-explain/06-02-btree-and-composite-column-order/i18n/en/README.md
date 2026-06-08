@@ -22,6 +22,28 @@ You can spot skip-scan by the **`Index Searches`** field in `EXPLAIN ANALYZE`: f
 
 > ⚠️ Skip-scan **softens** the left-prefix rule but doesn't repeal it. It pays off only with **low** cardinality of the leading column: iterating 4 categories is cheap, but 100,000 customers is already more expensive than a `Seq Scan`. The planner decides on cost; betting on "PG18 will figure it out" instead of the right column order is a bad bet.
 
+## How a composite index is laid out
+
+The index `(category, price)` is physically sorted by `category` first, and only within the same category — by `price`. That's the whole mechanic of the left prefix:
+
+```
+Index (category, price): rows sorted by category (alphabetical),
+and within one category — by price.
+
+  bakery │  1, 2, …, 503     ┐
+  coffee │  1, 2, …, 503     │  WHERE category=… → one whole block       ✓ left prefix
+  cold   │  1, 2, …, 503     │  WHERE price=250  → one row 250 in each
+  tea    │  1, 2, …, 503     ┘  block, scattered across the whole index  ✗
+```
+
+This is the "dictionary by word length": words are grouped by length (`category`), and only within a length — alphabetically (`price`). Know the length — you open the right block at once; know only the letter (`price`) but not the length — you have to leaf through every block. The three query forms against an index `(a, b)`:
+
+| Query against `(a, b)` | What the index `(category, price)` does | `Index Searches` |
+|---|---|---|
+| `WHERE a = … AND b = …` | descend by `category`, then by `price`; both in `Index Cond` | 1 |
+| `WHERE a = …` (left prefix) | rows with that `category` sit contiguously; `Index Cond` on `category` | 1 |
+| `WHERE b = …` (second only) | rows scattered across each `category`; classically `Seq Scan`, in PG18 skip-scan iterates the leader's values | > 1 (9 here) |
+
 ## What our code shows
 
 `demo.sql` builds a lab table `menu_lab` (200,000 rows, 4 categories, prices `1..503` — independent of category) with an index on `(category, price)` and explains three queries:
@@ -84,7 +106,13 @@ Output:
 
 ## The fence
 
-What we simplified. First, we put `category` first **for the sake of demonstrating skip-scan** (it needs a low-cardinality leader), but in production column order is chosen for the real queries: first goes the column you almost always filter by equality; a range column (`price > X`, `created_at BETWEEN ...`) goes last, because after a range the index "fans out" and the following columns no longer narrow the search. Second, skip-scan is a nice safety net, not a replacement for design: at high leader cardinality it loses to a `Seq Scan`, and you shouldn't rely on it instead of a dedicated index on `(price)`. Third, a composite index has a write and storage cost: every extra index slows down `INSERT`/`UPDATE` and takes disk, so "an index for every case" isn't free (on maintenance cost and `CREATE INDEX CONCURRENTLY` — see 06-06). Which indexes a cluster actually needs under real load, how to catch unused ones (`pg_stat_user_indexes`) and duplicates — that's your DBA's dashboard; your job as a developer is to **pick the column order for your queries and verify it in `EXPLAIN`**.
+What we simplified:
+
+- **`category` first — for the demo.** We made it the leader because skip-scan needs a low-cardinality leader. In production column order is chosen for the real queries: first goes the column you almost always filter by equality; a range column (`price > X`, `created_at BETWEEN ...`) goes last — after a range the index "fans out" and the following columns no longer narrow the search.
+- **Skip-scan is a safety net, not a replacement for design.** At high leader cardinality it loses to a `Seq Scan`. You shouldn't rely on it instead of a dedicated index on `(price)`.
+- **An index has a write and storage cost.** Every extra index slows down `INSERT`/`UPDATE` and takes disk, so "an index for every case" isn't free (on maintenance cost and `CREATE INDEX CONCURRENTLY` — see 06-06).
+
+Which indexes a cluster actually needs under real load, how to catch unused ones (`pg_stat_user_indexes`) and duplicates — that's your DBA's dashboard; your job as a developer is to **pick the column order for your queries and verify it in `EXPLAIN`**.
 
 ## Takeaways
 

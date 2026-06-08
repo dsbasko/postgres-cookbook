@@ -28,6 +28,27 @@ The key is `customer_id` (we search and sort by it), `total` rides along. The qu
 
 A unique index (`CREATE UNIQUE INDEX`, or what Postgres builds under a `UNIQUE` constraint and `PRIMARY KEY`) serves two goals at once: it **guarantees uniqueness** (inserting a duplicate fails with `23505`) and at the same time **speeds up equality search** — it's an ordinary B-tree that an `Index Scan` runs over. So `UNIQUE (email)` isn't only an integrity rule from module 02, but also a ready-made index for `WHERE email = ?`; a separate index on `email` alongside it would be a duplicate.
 
+## One step or two: where the index goes
+
+A regular `Index Scan` works in two steps; a covering index removes the second:
+
+```
+A regular Index Scan — two steps:
+  [ index (key) ] —find rows→ [ table (heap) ] —read the remaining columns→ answer
+
+Index-Only Scan — all needed columns are already in the index, the second step is gone:
+  [ index: key + INCLUDE ] —answer assembled right here→ ✓   Heap Fetches: 0
+  we do NOT go to the heap, if the page is all-visible by the visibility map (VACUUM sets it)
+```
+
+Three index forms — each takes exactly as much as needed:
+
+| Index | What it does | When to use | Plan signal |
+|---|---|---|---|
+| **Partial** `… WHERE condition` | indexes only the rows implying the condition | the query always looks at a narrow subset (pending queue, active) | `Index Scan`, index many times smaller |
+| **Covering** `… INCLUDE (cols)` | carries the readable columns in the index itself | `SELECT` takes just a couple of columns by key | `Index Only Scan`, `Heap Fetches: 0` |
+| **Unique** `UNIQUE` / `PK` | guarantees uniqueness + speeds up equality search | the column must be unique (`email`, `sku`) | `Index Scan`; inserting a dup → `23505` |
+
 ## What our code shows
 
 `demo.sql` builds `orders_lab` (200,000 orders, 1% in `pending`) and shows:
@@ -81,7 +102,14 @@ Output:
 
 ## The fence
 
-What we simplified. First, `Heap Fetches: 0` rests on a fresh `VACUUM`: in a live table, between vacuums some pages are "dirty," and an Index-Only Scan still dips into the heap — the win is real but not absolute, and it depends on the autovacuum frequency your DBA tunes. Second, `INCLUDE` bloats the index (carries extra columns) — that trades disk and write speed for the speed of one query; you shouldn't dump everything into `INCLUDE`. Third, a partial index pays off only if queries really look into its subset; if the index condition and the query condition diverge even slightly, the index won't be used, and that's worth checking in `EXPLAIN`. And fourth, "which index actually earns its keep under load," catching unused ones (`pg_stat_user_indexes`), the "extra index vs write speed" balance in a large system — that's maintenance your DBA runs; your job as a developer is to **match the index shape to the query shape**: a narrow subset → partial, "I only need a couple of columns" → covering, "it must be unique" → unique.
+What we simplified:
+
+- **`Heap Fetches: 0` rests on a fresh `VACUUM`.** In a live table, between vacuums some pages are "dirty," and an Index-Only Scan still dips into the heap — the win is real but not absolute, and it depends on the autovacuum frequency your DBA tunes.
+- **`INCLUDE` bloats the index** (carries extra columns) — that trades disk and write speed for the speed of one query; you shouldn't dump everything into `INCLUDE`.
+- **A partial index pays off only if queries really look into its subset.** If the index condition and the query condition diverge even slightly, the index won't be used; that's worth checking in `EXPLAIN`.
+- **"Which index earns its keep under load," catching unused ones (`pg_stat_user_indexes`), the "extra index vs write speed" balance** in a large system — that's maintenance your DBA runs.
+
+Your job as a developer is to **match the index shape to the query shape**: a narrow subset → partial, "I only need a couple of columns" → covering, "it must be unique" → unique.
 
 ## Takeaways
 

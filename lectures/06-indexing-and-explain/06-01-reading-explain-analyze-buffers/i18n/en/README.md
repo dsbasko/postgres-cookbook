@@ -46,6 +46,33 @@ Time and buffers depend on hardware and cache warmth, so in "Running it" below w
 
 7 pages instead of 7353, zero rows discarded, ~0.04 ms. That's the same difference Brew's dashboard felt. (`Index Searches: 1` is also new in PG18: how many times the index had to be searched anew.)
 
+## The plan is a tree: read it inside-out
+
+Plan nodes nest inside one another. A leaf (a table scan) feeds rows to its parent, which feeds its own parent, up to the root. So a plan is read **inside-out, bottom-up**: first where the rows came from, then what was done with them. Here is the shape of a typical plan with a join — not our query (ours is a one-node tree), but the structure, so the reading order is visible:
+
+```
+Aggregate                          ← ③ folded rows into groups
+  ->  Hash Join                    ← ② joined two sources
+        ->  Seq Scan on events_lab ← ① read the whole table       (leaf)
+        ->  Index Scan on shops    ← ① fetched rows by index      (leaf)
+
+Read bottom-up: ① leaf scans → ② join → ③ aggregate.
+A parent's time and buffers already include its children.
+```
+
+Our demo query is the simplest tree — a **single** node: `Seq Scan` (or, after the index, `Index Scan`). The skill is the same: find the leaves, walk up to the root. What each field under a node means:
+
+| Node / field | What it means | What to watch |
+|---|---|---|
+| `Seq Scan` | reads the whole table, row by row | on a big table under a point filter — wasted work |
+| `Index Scan` | descends the index straight to the rows | what you want for a point lookup |
+| `Index Cond` | the condition the index used to pick rows | work went into the index, not a scan |
+| `Filter` | condition checked after the row is read | rows are read, then thrown away |
+| `Rows Removed by Filter` | rows read and discarded by the filter | a direct measure of wasted work |
+| `actual rows` | rows the node actually returned | compare against the planner's estimate |
+| `Buffers` (`shared hit`/`read`) | 8 KB pages touched (cache / disk) | the honest measure of data churned |
+| `Index Searches` | how many times the index was searched anew (PG18) | usually 1 for a point lookup |
+
 ## What our code shows
 
 The lesson is in `demo.sql`. It builds a lab table `events_lab` of a million rows (we don't touch the Brew canon), gathers statistics with `ANALYZE`, and explains the same query twice — before and after `CREATE INDEX`:
@@ -97,7 +124,13 @@ Output:
 
 ## The fence
 
-What we simplified. First, we turned parallelism off and showed a perfectly selective query (one row out of a million) — there the index always wins. In real life selectivity varies: a query returning half the table will be **deliberately** run as a `Seq Scan` by the planner, because reading half the table via the index (jumping around the disk) is more expensive than reading it sequentially — and that's the right call, not "the index didn't work." Second, the numbers from `ANALYZE` are a measurement of **one** run on a specific machine with a specific cache state; a "cold" run (the first after startup) and a "warm" run give different `Buffers`/`time`, so in production you look at a plan several times and compare the shape, not individual milliseconds. Third, EXPLAIN answers "how did THIS query run," not "is the database healthy overall": system views (`pg_stat_statements` — which queries eat the most time in aggregate), autovacuum, table bloat, the cache hit ratio across the whole database — that's a dashboard your DBA holds. The course boundary: your job as a developer is to **be able to explain your own query and spot wasted work in the plan**; server tuning and cluster monitoring are beyond it.
+What we simplified:
+
+- **Perfect selectivity.** We turned parallelism off and showed a query that returns one row out of a million — there the index always wins. In real life selectivity varies: a query returning half the table will be run as a `Seq Scan` by the planner **on purpose** — reading half the table by jumping around the index is more expensive than reading it sequentially. That's the right call, not "the index didn't work."
+- **One measurement, not a diagnosis.** The numbers from `ANALYZE` are one run on a specific machine with a specific cache state. A "cold" run (the first after startup) and a "warm" run give different `Buffers`/`time`, so in production you look at a plan several times and compare its **shape**, not individual milliseconds.
+- **EXPLAIN is about the query, not the database.** It answers "how did THIS query run," not "is the database healthy overall." System views (`pg_stat_statements` — which queries eat the most time in aggregate), autovacuum, table bloat, the cache hit ratio across the whole database — that's a dashboard your DBA holds.
+
+The course boundary: your job as a developer is to **be able to explain your own query and spot wasted work in the plan**; server tuning and cluster monitoring are beyond it.
 
 ## Takeaways
 

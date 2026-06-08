@@ -20,6 +20,32 @@ A weak lock isn't free — `CONCURRENTLY` has its own rules:
 
 > ⚠️ You need to be able to find broken indexes. The query `SELECT … FROM pg_index WHERE NOT indisvalid` shows every invalid index — it's the first thing you check if `CONCURRENTLY` failed somewhere. Normally it's zero.
 
+## Who waits for whom: SHARE vs CONCURRENTLY
+
+This is the same lock queue that stalled the register on a hot `ALTER` in 02-06 — only now the queue is created by building an index. The difference between the two commands is exactly whether the lock taken conflicts with writes:
+
+```
+Plain CREATE INDEX — takes SHARE (conflicts with writes):
+
+  building index:  [=========================]→ done
+  writes:          [····· wait in the queue ····]→ proceed only after the build
+                    └─ the register is stuck for the whole build ─┘
+
+CREATE INDEX CONCURRENTLY — takes SHARE UPDATE EXCLUSIVE (no conflict):
+
+  building index:  [ pass 1 ]→[ wait for old tx ]→[ pass 2 ]→ done
+  writes:          [=== proceed as usual, no queue ===========]→
+                    └─ the register takes orders for the whole build ─┘
+```
+
+| | `CREATE INDEX` | `CREATE INDEX CONCURRENTLY` |
+|---|---|---|
+| Lock | `SHARE` — **writes stall** | `SHARE UPDATE EXCLUSIVE` — writes proceed |
+| In a transaction | allowed (transactional) | not allowed → `SQLSTATE 25001` |
+| Passes over the table | one | two + waiting for old transactions |
+| If it fails | rolled back, no index | leaves an invalid one (`indisvalid = false`) |
+| When to use | small/cold table, DDL in a migration | hot table in production |
+
 ## What our code shows
 
 `demo.sql` (the `run` target) deterministically checks the rules of `CONCURRENTLY` on a lab table `cic_lab`:
@@ -87,7 +113,14 @@ Session B inserts a row and gets `INSERT 0 1` **during** A's index build — the
 
 ## The fence
 
-What we simplified. `CONCURRENTLY` removes the main pain — the write lock — but safely shipping an index in production doesn't end there, and beyond it lies your DBA/release engineer's territory. First, `CONCURRENTLY` doesn't make a migration instant: at the start it still takes a brief lock and **waits for all current transactions** on the table to finish — one hung long transaction will delay the build's start, so migrations run with `lock_timeout` and retries. Second, since `CONCURRENTLY` can't be in a transaction, migration tools must be able to run such steps outside the common transaction block (many frameworks require a special marker on such a migration). Third, after a failed build someone has to **clean up** the invalid index (`DROP INDEX CONCURRENTLY` + recreate) — an operational procedure. And fourth, `CONCURRENTLY` has relatives for other downtime-free operations (`REINDEX CONCURRENTLY` to rebuild a bloated index, `DROP INDEX CONCURRENTLY`) — choosing and scheduling them is cluster maintenance. The course boundary: your job as a developer is to **know that an index on a hot table is added via `CONCURRENTLY`, not a plain `CREATE INDEX`**, and to mark such migrations accordingly; orchestrating zero-downtime rollouts is beyond it.
+`CONCURRENTLY` removes the main pain — the write lock — but safely shipping an index in production doesn't end there, and beyond it lies your DBA/release engineer's territory:
+
+- **`CONCURRENTLY` isn't instant.** At the start it still takes a brief lock and **waits for all current transactions** on the table to finish — one hung long transaction will delay the build's start, so migrations run with `lock_timeout` and retries.
+- **Not allowed in a transaction → it needs a special migration step.** Since `CONCURRENTLY` can't go in a shared transaction block, migration tools must be able to run such steps separately (many frameworks require an explicit marker).
+- **After a failed build, someone has to clean up** the invalid index (`DROP INDEX CONCURRENTLY` + recreate) — an operational procedure.
+- **`CONCURRENTLY` has relatives** for other downtime-free operations (`REINDEX CONCURRENTLY` for a bloated index, `DROP INDEX CONCURRENTLY`) — choosing and scheduling them is cluster maintenance.
+
+The course boundary: your job as a developer is to **know that an index on a hot table is added via `CONCURRENTLY`, not a plain `CREATE INDEX`**, and to mark such migrations accordingly; orchestrating zero-downtime rollouts is beyond it.
 
 ## Takeaways
 

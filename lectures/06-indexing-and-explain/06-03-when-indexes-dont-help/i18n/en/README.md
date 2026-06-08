@@ -28,6 +28,17 @@ Now the index holds the already-computed `lower(email)` values, sorted. The quer
 
 > ⚠️ For case-insensitive equality there's also an alternative — the `citext` type (case-insensitive text): comparisons on it are insensitive out of the box, and a plain index works. But `citext` is an extension and a schema-level decision; an index on `lower(email)` changes nothing in the types and is therefore easier to bolt onto an existing table.
 
+## A map of non-sargable conditions
+
+The trap is always the same: the column is wrapped in a computation, and an index on the "bare" column doesn't fit it. The cure is either to unwrap the condition or to index the expression itself:
+
+| Condition (non-sargable) | Why the index stays silent | Cure |
+|---|---|---|
+| `WHERE lower(email) = …` | the index holds `email` values, not `lower(email)` | expression index `(lower(email))` (or the `citext` type) |
+| `WHERE date(created_at) = …` | the index holds `timestamptz`, not `date(...)` | unwrap into a range `created_at >= … AND < …` |
+| `WHERE price + 100 > 500` | arithmetic over the column | move it to the constant: `price > 400` |
+| `WHERE email LIKE '%@brew.example'` | leading `%` — the start of the string is unknown | `text_pattern_ops` (prefix) / `pg_trgm` (substring), module 07 |
+
 ## What our code shows
 
 `demo.sql` builds a lab table `accounts_lab` (200,000 mixed-case e-mails) with an ordinary index on `email` and explains three queries:
@@ -86,7 +97,14 @@ Output:
 
 ## The fence
 
-What we simplified. First, we fixed one specific query — but in production you first look at which queries are even hot (`pg_stat_statements`) and index for them, not "just in case": an expression index, like any index, slows writes and takes space. Second, an expression index stores the function's result, so the function must be `IMMUTABLE` (the same output for the same input) — `lower()` is, but `now()` or timezone-dependent expressions can't be indexed (on function volatility — see 09-05). Third, a leading `%` in `LIKE` isn't cured by a bare column but by separate mechanisms: `text_pattern_ops` for prefix search or `pg_trgm` trigrams for substring search — that's module 07. And fourth, the choice between an index on `lower()` and the `citext` type, auditing "sleeping" indexes, rebuilding bloated ones — that's schema maintenance, which in a large system your DBA runs. Your job as a developer is to **recognize a non-sargable condition in your own query** (column wrapped in a function/arithmetic) and either unwrap it or add an expression index.
+What we simplified:
+
+- **We fixed one query.** In production you first look at which queries are even hot (`pg_stat_statements`) and index for them, not "just in case": an expression index, like any index, slows writes and takes space.
+- **The function in the index must be `IMMUTABLE`** (the same output for the same input). `lower()` is; but `now()` or timezone-dependent expressions can't be indexed (on function volatility — see 09-05).
+- **A leading `%` in `LIKE` isn't cured by a bare column.** You need separate mechanisms: `text_pattern_ops` for prefix search or `pg_trgm` trigrams for substring search — that's module 07.
+- **The choice of `lower()` vs `citext`, auditing "sleeping" and bloated indexes** — that's schema maintenance, which in a large system your DBA runs.
+
+Your job as a developer is to **recognize a non-sargable condition in your own query** (column wrapped in a function/arithmetic) and either unwrap it or add an expression index.
 
 ## Takeaways
 
