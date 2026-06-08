@@ -70,7 +70,14 @@ The first table shows the key contrast: `->` returned `"oat"` in quotes (it's `j
 
 ## The fence
 
-`jsonb` tempts you to dump everything into one column — and immediately punishes you for it. A field you regularly filter, count, or join on should almost always be a **regular column**, not a key inside `jsonb`: a column is checked by `CHECK` and `NOT NULL`, carries an ordinary B-tree, and its query plan is predictable. Inside `jsonb` none of that is free: a containment search without GIN is a `Seq Scan` over the whole table, and a `?`-filter on a missing key easily produces three-valued-logic surprises (see 03-06). The rule is simple: **`jsonb` is for the genuinely shapeless and sparse; anything your application logic leans on goes into columns**. In production the document size isn't free either — which is exactly the next unit.
+`jsonb` tempts you to dump everything into one column — and immediately punishes you for it. The line is simple:
+
+- A field you regularly filter, count, or join on is a **column**, not a key inside `jsonb`: it's checked by `CHECK` and `NOT NULL`, carries an ordinary B-tree, and its query plan is predictable.
+- A containment search without GIN is a `Seq Scan` over the whole table (see 06-05); an index under `@>` is mandatory on any sizable table.
+- A `?`-filter on a missing key easily produces three-valued-logic surprises — fully covered by 03-06.
+- The rule: `jsonb` is for the genuinely shapeless and sparse; anything your application logic leans on goes into columns.
+
+In production the document size isn't free either — which is exactly the next unit.
 
 ## Takeaways
 

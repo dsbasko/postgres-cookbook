@@ -8,6 +8,20 @@ The goal of this unit is fuzzy search on trigrams: the `similarity` function (ho
 
 `pg_trgm` cuts a string into **trigrams** — runs of three consecutive characters (`Cappuccino` → `cap`, `app`, `ppu`, …). The similarity of two strings is the fraction of shared trigrams: `similarity(a, b)` returns a number from 0 (nothing in common) to 1 (identical). A typo changes only a few trigrams, so `similarity('Cappuccino', 'capucino')` stays high, while for dissimilar names it drops to nearly zero. This is a fundamentally different search from FTS: it knows nothing of words or morphology — it compares spelling character by character, which is exactly why it catches typos.
 
+## A word in trigrams
+
+A word is cut into runs of three consecutive characters (plus space padding at the edges), and similarity is the fraction of shared triples:
+
+```
+  Cappuccino → cap app ppu puc ucc cci cin ino
+  capucino   → cap apu puc uci cin ino
+
+  shared triples: cap, puc, cin, ino → similarity('Cappuccino','capucino') = 0.538
+  dissimilar words share almost none → similarity ≈ 0
+```
+
+That's why trgm catches typos and FTS doesn't: the comparison is by spelling, not by dictionary lexemes.
+
 ## The `%` operator and the threshold
 
 Computing `similarity` against everything and sorting works, but for a "similar / not similar" filter there's the `%` operator: `name % 'capucino'` is true when similarity exceeds the `pg_trgm.similarity_threshold` parameter (default `0.3`). That's the ready "did-you-mean": keep only what's above the threshold, sort by `similarity DESC`, and show "did you mean…". The threshold is tunable per task: lower means more candidates (and noise), higher is stricter.
@@ -67,7 +81,14 @@ The `similarity` to the typo `capucino` is high only for `Cappuccino` (`0.538`),
 
 ## The fence
 
-`pg_trgm` is a point tool, not a replacement for search. Similarity knows nothing of meaning: `Latte` and `Matte` look alike to it, though they're different things; on short strings the noise is higher. The `%` threshold has to be calibrated to the data, and too low a value floods the results with junk. On large tables a trgm-GIN is noticeably heavier than an ordinary index in both writes and size — that's the price of fuzziness, and putting it on "just in case" is a bad idea. And most importantly — `pg_trgm` complements FTS rather than replacing it: the typical combo is "FTS by words + trgm for typos/`ILIKE`." When you need morphology for a dozen languages, synonyms, learned relevance, or search over terabytes, that's no longer "search in the database" but an external engine (the very handoff into Elasticsearch from the sibling kafka-cookbook); your DBA will tell you where the line is.
+`pg_trgm` is a point tool, not a replacement for search:
+
+- `similarity` knows nothing of meaning: `Latte` and `Matte` look alike to it, though they're different things; on short strings the noise is higher;
+- the `%` threshold has to be calibrated to the data — too low a value floods the results with junk;
+- on large tables a trgm-GIN is noticeably heavier than an ordinary index in both writes and size; putting it on "just in case" is a bad idea;
+- `pg_trgm` complements FTS rather than replacing it: the typical combo is "FTS by words + trgm for typos/`ILIKE`."
+
+When you need morphology for a dozen languages, synonyms, learned relevance, or search over terabytes, that's no longer "search in the database" but an external engine (the handoff into Elasticsearch in the sibling kafka-cookbook); your DBA will tell you where the line is.
 
 ## Takeaways
 

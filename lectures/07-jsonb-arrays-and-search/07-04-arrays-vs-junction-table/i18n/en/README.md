@@ -16,6 +16,21 @@ The junction table `drink_tags(drink_sku, tag)` stores the same thing as rows �
 
 The models aren't enemies — there's a bridge between them. `array_agg(tag ORDER BY tag)` folds junction rows back into an array (as in an API response), and `unnest(tags)` unfolds an array into rows (to count or join). So the normal play is to **store normalized (junction) and serve as an array**: analytic queries run over rows, while the client gets a compact `text[]`/`json` on the outside.
 
+## When an array, when a junction
+
+Both models store the same thing; what diverges is the cost of different questions:
+
+| Question / axis | Array `text[]` | Junction `(drink_sku, tag)` |
+|---|---|---|
+| "does tag X exist" | `tags @> ARRAY['x']`, `'x' = ANY(tags)` | `WHERE tag = 'x'` |
+| what speeds it up | GIN on the column (06-05) | B-tree / PK on the pair |
+| pair uniqueness | none — `{coffee,coffee}` passes | `PRIMARY KEY (drink_sku, tag)` |
+| FK to a tag dictionary | impossible | `tag` → dictionary, typo rejected |
+| a tag's own attributes | none | columns in the junction/dictionary |
+| tag frequency | `unnest(tags)` + `GROUP BY` | a direct `GROUP BY tag` |
+| compact serving | already an array | `array_agg(tag ORDER BY tag)` |
+| when to use | a short list of simple labels, only "does it exist" | relationships, attributes, analytics, integrity |
+
 ## What our code shows
 
 The same tags in two tables: `drink_tags_arr` (array + GIN) and `drink_tags` (junction). Five queries:
@@ -69,7 +84,13 @@ The `@>` on the array and `WHERE tag = 'coffee'` on the junction gave the same l
 
 ## The fence
 
-An array tempts you with compactness — and punishes you when a tag stops being just a label. The moment a tag needs its own attributes (when attached, by whom, with what weight), needs a dictionary with typo checking (FK), or you regularly count/join on tags — that's a signal for a junction table. The array won't give you a foreign key on an element or uniqueness within (nothing forbids a duplicate in `{coffee, coffee}`), and analytics over it always goes through `unnest`. The opposite extreme can also hurt: a junction for simple immutable labels with the single question "does the tag exist" is a needless join out of nowhere. A practical rule: **junction by default for anything with relationships and attributes; an array for short simple lists where the only operation is `@>`/`= ANY`**. In production an "array we now join and count on" usually migrates to a junction — and a DBA will ask you to do it before it bloats.
+An array tempts you with compactness — and punishes you when a tag stops being just a label. The signals for the choice:
+
+- a tag needs its own attributes (when attached, by whom, with what weight), a dictionary with typo checking (FK), or regular counting/joining on tags — go junction;
+- an array gives you neither a foreign key on an element nor uniqueness within (`{coffee, coffee}` passes), and analytics over it always goes through `unnest`;
+- the opposite extreme also hurts: a junction for simple immutable labels with the single question "does the tag exist" is a needless join out of nowhere.
+
+A practical rule: junction by default for anything with relationships and attributes; an array for short simple lists where the only operation is `@>`/`= ANY`. In production an "array we now join and count on" migrates to a junction — and a DBA will ask you to do it before it bloats.
 
 ## Takeaways
 

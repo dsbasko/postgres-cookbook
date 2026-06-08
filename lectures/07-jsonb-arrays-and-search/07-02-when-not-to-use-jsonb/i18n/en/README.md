@@ -12,6 +12,24 @@ In Postgres rows are immutable: any `UPDATE` writes a brand-new version of the e
 
 A column is a contract: the type rejects `'banana'` in a numeric field, `CHECK (price_cents > 0)` rejects a negative price, `NOT NULL` rejects an omission, a foreign key rejects a dangling reference. Inside `jsonb` none of these guarantees exist. `doc || '{"price": -5}'` writes a negative price silently; `'{"price": "banana"}'` writes a string instead of a number, and the database won't object. You can't require "key `price` is mandatory and positive" in one line: you'd either drag in `CHECK (doc ? 'price' AND (doc->>'price')::numeric > 0)` (fragile, won't catch nested, easy to bypass) or validate in the application — which is exactly the work the schema used to do for you. A field with an invariant wants to be a column.
 
+## One field — the whole document
+
+Why a point update inside `jsonb` is expensive, in a picture. We change the price `450 → 999`:
+
+```
+  plain bigint column
+    [ 450 ] ──UPDATE──▶ [ 999 ]        8 bytes, the number changes in place
+
+  the same field inside doc (531 bytes):
+    { sku, name, price:450, nutrition, sizes, milk_options, allergens, i18n }
+                       │  jsonb_set(doc, '{price}', '999')  — rebuild from scratch
+                       ▼
+    { sku, name, price:999, nutrition, sizes, milk_options, allergens, i18n }
+                                       ↑ a NEW full document, 531 bytes again
+```
+
+The column touches 8 bytes; `jsonb`, for one number, rewrites all 531 — and that goes to the heap, to WAL, and to replication. On a hot table with frequent edits that's write amplification.
+
 ## What our code shows
 
 A lab table `menu_doc_lab`: one drink card where the price exists BOTH as a separate `price_cents` column (type + `CHECK`) AND as a `price` key inside `doc`. A `psql` demonstration (escape-hatch: `sqlc` isn't needed here — we look at bytes and `SQLSTATE`):
@@ -62,7 +80,13 @@ The column costs 8 bytes, the document 531, and `jsonb_set` returned another 531
 
 ## The fence
 
-`jsonb` is an excellent tool for exactly one job: **genuinely shapeless, sparse data on which you don't enforce invariants and rarely do point updates** (incoming webhooks, snapshots of external APIs, user settings "as is"). The moment a field gains an invariant (mandatory, range, reference), a frequent point `UPDATE`, or a regular filter/join — that's a signal to lift it into a column. In production a "fat `jsonb` we keep tweaking a little" turns into table and WAL bloat, autovacuum pressure, and loss of control over the data — and your DBA will ask you to normalize exactly the fields your logic rests on. A hybrid schema (stable fields as columns, the truly shapeless tail as one `jsonb`) almost always beats the extremes.
+`jsonb` is great for exactly one job: genuinely shapeless, sparse data on which you don't enforce invariants and rarely do point updates — incoming webhooks, snapshots of external APIs, user settings "as is." The signals that a field should move into a column:
+
+- the field gained an invariant — mandatory, range, reference (all of which a column enforces and `jsonb` doesn't);
+- it takes frequent point `UPDATE`s (the write amplification above) or a regular filter/join;
+- a "fat `jsonb` we keep tweaking a little" — in production that's table and WAL bloat, autovacuum pressure, and loss of control over the data; your DBA will ask you to normalize exactly those fields.
+
+A hybrid schema (stable fields as columns, the truly shapeless tail as one `jsonb`) almost always beats the extremes.
 
 ## Takeaways
 

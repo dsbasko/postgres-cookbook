@@ -16,6 +16,27 @@ Sometimes you don't need values — you need a yes/no answer. There are two oper
 
 The reverse task is to assemble `jsonb`. `jsonb_set(doc, '{path}', value)` patches a field precisely and returns a **new** document (the stored row is unchanged — it's a pure function; the same "edit = rebuild the value" that causes the write amplification in 07-02). `jsonb_build_object('a', x, 'b', y)` builds an object from key-value pairs, and the aggregate `jsonb_agg(... ORDER BY ...)` folds result rows into one `jsonb` array. Together they assemble an API response right in SQL: for example, the whole menu from the canon `drinks` as one document.
 
+## The path step by step
+
+The expression `$.ingredients[*] ? (@.grams > 100).name` is a route through the document. The latte recipe and a walk over it:
+
+```
+  recipe = { "kcal": 190,
+             "ingredients": [ {"name":"espresso", "grams":30},
+                              {"name":"milk",     "grams":220} ] }
+
+  $                   document root
+   .ingredients       → the ingredients field (an array of two objects)
+              [*]      → each array element
+                 ? (@.grams > 100)   → filter: keep where grams > 100
+                                       espresso 30 ✗  ·  milk 220 ✓
+                          .name       → take name of the survivors
+  ───────────────────────────────────────────────────────────────
+  result: ["milk"]
+```
+
+Each step narrows the set: field → elements → filter → field. The same selection via `->`/`#>` chains would have to be assembled by hand — extract the array, unfold it, filter it, fold it back.
+
 ## What our code shows
 
 A lab table `drink_recipe_lab` (recipes with a nested ingredient array) for paths, and building over the canon `drinks`:
@@ -70,7 +91,12 @@ The path filter `? (@.grams > 100)` kept only `milk` (220 g) of the latte's ingr
 
 ## The fence
 
-jsonpath is powerful — and so it tempts you to keep in `jsonb` what has long been asking for columns. If you regularly filter by `$.kcal > 100` or `? (@.name == "milk")`, that's a signal: the data is structured, and it belongs in normal columns with an ordinary B-tree (07-02). For `jsonb` itself, remember the index: `@?`/`@@`/`@>` on a large table without GIN is a `Seq Scan` (06-05). Building (`jsonb_agg`) right in SQL is handy for an API response, but don't overdo it: heavy aggregation of a whole catalog into one document is better cached than rebuilt on every request — in production that's load on the database CPU. And `JSON_TABLE` is PG17: if you read someone else's code using it, don't attribute it to the "18 novelties."
+jsonpath is powerful — and so it tempts you to keep in `jsonb` what has long been asking for columns:
+
+- you regularly filter by `$.kcal > 100` or `? (@.name == "milk")` — the data is structured and belongs in normal columns with a B-tree (07-02);
+- `@?`/`@@`/`@>` on a large table without GIN is a `Seq Scan` (06-05); jsonpath predicates need an index;
+- heavy building (`jsonb_agg` of a whole catalog into one document) is better cached than rebuilt on every request — in production that's load on the database CPU;
+- `JSON_TABLE` is PG17, not PG18: if you read someone else's code using it, don't attribute it to the "18 novelties."
 
 ## Takeaways
 

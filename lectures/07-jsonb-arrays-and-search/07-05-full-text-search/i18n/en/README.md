@@ -16,6 +16,23 @@ Running `to_tsvector` on every query is expensive; better to compute it once at 
 
 `@@` answers "yes/no," but the user needs an order. `ts_rank(tsv, query)` gives a number that grows with how often and how "heavily" (per `setweight`) the query lexemes occur. We sort by it `DESC` — and the most relevant come up top. In the demo the query `brew` finds two articles, but "Cold brew guide" has the word both in the title (weight `A`) and the body (`B`), so its rank is noticeably higher.
 
+## The search pipeline
+
+Both the text and the query go through the same normalization and meet at the `@@` operator:
+
+```
+  article body ──to_tsvector('english',…)──▶ tsvector   'brew':2,8 'cold':1 'hour':11 …
+                  stemming + stop words           │
+                                                  @@   match?
+                                                  │
+  query 'brewing' ─plainto_tsquery('english')─▶ tsquery   'brew'
+                  the same normalization
+
+  rows that pass @@ ──ts_rank(tsvector, tsquery)──▶ a relevance number → ORDER BY DESC
+```
+
+That's why `brewing` finds `brew`: both sides are normalized by the same configuration, so one lexeme `brew` ends up in both the index and the query. `LIKE` can't do that — it compares substrings of raw text.
+
 ## What our code shows
 
 A lab table `kb_articles` (an English knowledge base) with a generated `tsvector` + GIN. Four queries:
@@ -64,7 +81,14 @@ The first block shows what a `tsvector` stores: `brewing` and `brew` merged into
 
 ## The fence
 
-FTS in Postgres is an excellent default as long as volumes are moderate and you have one or two languages. But it has limits beyond which you usually reach for an external engine (the very "handoff" from module 09 into Elasticsearch in the sibling kafka-cookbook). `ts_rank` is simple frequency ranking without learning, built-in synonyms, or typos (fuzziness is `pg_trgm`'s job, see 07-06) and without a distributed index. The language configuration must be chosen deliberately: `'english'` stems for English, Russian text needs `'russian'`, and `'simple'` doesn't stem at all. And remember the index: without a GIN on `tsv` every `@@` is a `Seq Scan` recomputing `to_tsvector` on the fly. In production you also keep synonym dictionaries/thesauri and treat relevance as a product — that's work beyond "search in the database."
+FTS in Postgres is an excellent default as long as volumes are moderate and you have one or two languages. Its limits:
+
+- `ts_rank` is simple frequency ranking: no learning, no built-in synonyms, no typos (fuzziness is `pg_trgm`'s job, see 07-06), and no distributed index;
+- the language configuration is chosen deliberately: `'english'` stems for English, Russian needs `'russian'`, and `'simple'` doesn't stem at all;
+- without a GIN on `tsv` every `@@` is a `Seq Scan` recomputing `to_tsvector` on the fly (06-05);
+- in production you keep synonym dictionaries and thesauri and treat relevance as a product.
+
+Beyond those limits you reach for an external engine — the very handoff into Elasticsearch in the sibling kafka-cookbook.
 
 ## Takeaways
 
