@@ -14,6 +14,21 @@ A recursive `CTE` always consists of two parts glued together by `UNION ALL`. Th
 
 What matters is that at each level we don't merely descend, we **accumulate context**. In the anchor we set `depth = 1` and a path consisting of the single current node; in the step we add one to `depth` and append the current node to the parent's path. This way every row carries both its depth and the entire road from the root down to it — exactly what marketing asked for.
 
+Here is the whole tree — those same `parent_id`s laid out by level. The traversal runs top to bottom in exactly this order (pre-order: a parent, then its whole subtree, then the sibling):
+
+```
+depth 1   Drinks
+depth 2   ├─ Coffee
+depth 3   │  ├─ Espresso drinks
+depth 4   │  │  ├─ Cappuccino
+depth 4   │  │  └─ Latte
+depth 3   │  └─ Filter
+depth 2   └─ Tea
+depth 3      └─ Green
+```
+
+The anchor is the root `Drinks` (no parent); each recursive step descends one level, to the children of already found nodes. `idpath` — an array of `id`s along the branch — sets this pre-order in the output.
+
 ## What our code shows
 
 The first part of `demo.sql` traverses the category tree. The anchor selects the roots and initialises three accumulators: `depth`, an array of identifiers `idpath`, and a string path `namepath`. The recursive step joins the table to itself on `c.parent_id = t.id` and continues all three accumulators:
@@ -100,11 +115,10 @@ In the first block the indentation `repeat('  ', depth - 1)` draws the tree, and
 
 ## The fence
 
-Without an explicit guard, recursion over a cyclic graph never terminates — and that is not a theoretical risk but the very hung query from the incident. Before Postgres 14 there was no `CYCLE` clause, and cycles were caught by hand: you carried an array of visited `id`s through the recursion and added to the step a condition like `NOT c.id = ANY(path)`, cutting off the return into an already visited node. It worked, but it was verbose and easy to break when copied around. `CYCLE` is the modern, standard way to say the same thing in one line; if you spot the old manual variant, now you know what it does.
-
-Next, about scale. Deep recursion costs memory and time: the intermediate result lives in full, and on a large or poorly branching graph the query can eat a noticeable chunk of resources. On such data, in production you set a depth limit (a condition on `depth` in the recursive step) so the query is guaranteed to finish even if an anomaly hides in the graph.
-
-And about architecture. Trees that are read often and in bulk — catalogue navigation, comment threads, org charts — are usually **denormalised** in production: a materialised path is kept alongside, an `ltree` type is used, a closure table is built. Then "give me the whole subtree" turns into an ordinary indexed `SELECT` with no recursion every time. Recursive traversal is good for one-off exports and admin queries, but as a hot path under load it almost always loses to a precomputed structure. And remember the frame: this lesson is about the **expressiveness** of `SQL` — that a tree and a graph fit into a single query — not an invitation to move traversal business logic into the database where it belongs in code.
+- Without an explicit guard, recursion over a cyclic graph never terminates — and that is not a theoretical risk but the very hung query from the incident. Before Postgres 14 there was no `CYCLE` clause, and cycles were caught by hand: you carried an array of visited `id`s through the recursion and added to the step a condition like `NOT c.id = ANY(path)`. It worked, but it was verbose and easy to break when copied around. `CYCLE` says the same thing in one line; if you spot the old manual variant, now you know what it does.
+- Deep recursion costs memory and time: the intermediate result lives in full, and on a large or poorly branching graph the query can eat a noticeable chunk of resources. On such data, in production you set a depth limit (a condition on `depth` in the recursive step) so the query is guaranteed to finish even if an anomaly hides in the graph.
+- Trees that are read often and in bulk — catalogue navigation, comment threads, org charts — are usually **denormalised** in production: a materialised path is kept alongside, an `ltree` type is used, a closure table is built. Then "give me the whole subtree" turns into an ordinary indexed `SELECT` with no recursion every time. Recursive traversal is good for one-off exports and admin queries, but as a hot path under load it almost always loses to a precomputed structure.
+- Remember the frame: this lesson is about the **expressiveness** of `SQL` — that a tree and a graph fit into a single query — not an invitation to move traversal business logic into the database where it belongs in code.
 
 ## What to take away
 

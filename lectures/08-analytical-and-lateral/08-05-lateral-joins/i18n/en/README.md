@@ -60,6 +60,28 @@ is nothing for the join to match on, so it stitches "as is".
 `coalesce(..., '—')`: Karina shows up in the output with dashes instead of
 vanishing.
 
+The same "for each left row" loop, but in two places — outside over the network and inside the database:
+
+```
+N+1 in the app (over the network):       LATERAL (one plan inside the database):
+  1 query → list of customers              FROM customers c
+  then one more query per CUSTOMER:        LEFT JOIN LATERAL (top-3 ... c.id) ON true
+    Alisa  → SELECT top-3 (Alisa)  ┐         for each left row c:
+    Boris  → SELECT top-3 (Boris)  ├─ ×1000    Alisa  → 520, 450, 300
+    Karina → SELECT top-3 (Karina) ┘           Boris  → 480, 250
+  = 1000+1 round-trips                         Karina → (empty) → '—'
+                                             = 1 round-trip, 1 pass
+```
+
+The "body of a loop for each row on the left" idea is the same; the difference is where it spins. Which `JOIN LATERAL` to use, and how it differs from its neighbours:
+
+| Approach | Rows per group | Order-less Karina | When to use |
+|---|---|---|---|
+| N+1 in the app | as many as you like | depends on the code | never (a thousand round-trips) |
+| `DISTINCT ON` (04-04) | exactly 1 | kept (via `LEFT JOIN`) | pure top-1 |
+| `CROSS JOIN LATERAL` | top-N (`LIMIT n`) | **dropped** (no match) | top-N, order-less not needed |
+| `LEFT JOIN LATERAL … ON true` | top-N (`LIMIT n`) | **kept** (`NULL` → `'—'`) | top-N and keep everyone |
+
 ## What our code shows
 
 The heart of the lesson is `query.sql`. The `TopOrdersPerCustomer` query takes
@@ -130,19 +152,11 @@ both lists with dashes — that is the work of `LEFT JOIN LATERAL ... ON true`.
 
 ## The fence
 
-`LATERAL` is powerful, but you pay for that power with attention. The subquery is
-executed logically "per each left row", and if there is no index on the
-correlation condition (`o.customer_id`), this becomes N full scans of the orders
-table instead of one — the same N+1 trap, except now it has hidden inside the
-database and is invisible from the outside. For a pure top-1, `DISTINCT ON` from
-04-04 is often shorter and clearer; `LATERAL` earns its keep precisely when you
-need more than one row per group. Mind the flavor of the join: `CROSS JOIN
-LATERAL` drops rows without a match — to "keep everyone" you need `LEFT JOIN
-LATERAL ... ON true`. And do not confuse `LATERAL` with a correlated subquery in
-`SELECT`: the latter must return exactly one row or a scalar, whereas `LATERAL`
-calmly returns **many** rows per left record. The plan and cost of such a query
-are already module 06; the right index for the correlation in production is
-something your DBA will pick.
+- Without an index on the correlation condition (`o.customer_id`), `LATERAL` becomes N full scans of the orders table instead of one — the same N+1 trap, except now it has hidden inside the database and is invisible from the outside.
+- For a pure top-1, `DISTINCT ON` from 04-04 is often shorter and clearer. `LATERAL` earns its keep precisely when you need more than one row per group.
+- Mind the flavor of the join: `CROSS JOIN LATERAL` drops rows without a match — to "keep everyone" you need `LEFT JOIN LATERAL ... ON true`.
+- Don't confuse `LATERAL` with a correlated subquery in `SELECT`: the latter must return exactly one row or a scalar, whereas `LATERAL` calmly returns **many** rows per left record.
+- The plan and cost of such a query are already module 06; the right index for the correlation in production is something your DBA will pick.
 
 ## What to take away
 

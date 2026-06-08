@@ -20,6 +20,29 @@ When an aggregate (`avg`, `sum`, `count`) sits inside `OVER (...)`, it is comput
 
 On a smooth series with no gaps both variants coincide: three consecutive days are both three rows and a three-day range. The divergence appears exactly where the hole appears.
 
+That very hole on February 5 — in one picture. The till was closed that day, so there's no row for it:
+
+```
+   01.02   02.02   03.02   04.02   ·····   06.02   07.02
+    100     120      90     150    (none)   200     110
+                                     ↑ hole in the series
+
+  Current row — 06.02. The two frames read "three days back" differently:
+   ROWS  2 PRECEDING    → 3 rows in a row: 03, 04, 06        → avg(90, 150, 200) = 146.67
+   RANGE '2 days' PREC.  → dates in [04.02 … 06.02]: 04, 06    → avg(150, 200)    = 175.00
+```
+
+`ROWS` counts rows and steps over the hole without noticing; `RANGE` counts by date and so loses February 5, which isn't there — the window narrows. The same fork as a table:
+
+| | `ROWS` | `RANGE` |
+|---|---|---|
+| Counts | physical rows | the `ORDER BY` value |
+| "2 PRECEDING" means | two rows back | everything within the value range |
+| A hole in the series | doesn't notice it, takes the neighbouring row | narrows the window (the missing date isn't there) |
+| Type in `ORDER BY` | any | sortable (date/number/timestamp) |
+| Cost | cheaper | pricier: bounds are found by value |
+| When to use | "last N events" (position) | "over N calendar days" (time) |
+
 ## What our code shows
 
 The heart of the lesson is `query.sql`. The first query builds "day-over-day" via `lag`/`lead`:
@@ -90,11 +113,10 @@ The second table is the fork in the road. Up to and including February 4, `ma_ro
 
 ## Заборчик
 
-`ROWS` counts rows and is blind to the meaning of the gaps between them: for it, "two rows back" is two rows back, even if there is a week-long void between them. `RANGE` counts by the `ORDER BY` value and is therefore correct on a gappy series, but it pays for that: it needs a sortable type in `ORDER BY` (date, number, timestamp — not just anything), and it costs more, because for each row it determines the window bounds by value rather than by a row counter. Practical rule: a "moving average over N calendar days" in finance and analytics is almost always wanted as `RANGE` over a date — so that weekends and gaps don't inflate the window with extra rows; `ROWS` fits where position is what matters (the last 3 events, whatever their dates).
-
-A separate beginner's surprise is the default frame. If `OVER (...)` has an `ORDER BY` but the frame is not written out explicitly, Postgres substitutes `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. That is why `sum(...) OVER (ORDER BY ...)` back in 08-01 already produced a running total even though we said nothing about frames then — that was the default frame "from the start of the window to the current row". Get into the habit of checking: if an aggregate over `ORDER BY` behaves cumulatively when you didn't intend it to, the default `RANGE UNBOUNDED PRECEDING` almost certainly kicked in.
-
-In production your DBA looks at the frame as a cost: on large series a window aggregate is a sort by `ORDER BY` plus a row buffer for the frame, and that cost shows up in the plan (`EXPLAIN`, module 06) as a separate `WindowAgg` node. The memory for that buffer, and the decision whether to keep it in `work_mem` or spill it to disk, is their concern, not the query's.
+- `ROWS` is blind to the gaps: "two rows back" is two rows back, even if there's a week-long void between them. `RANGE` counts by the `ORDER BY` value and is therefore correct on a gappy series. Practical rule: a "moving average over N calendar days" in finance and analytics is almost always wanted as `RANGE` over a date — so weekends and gaps don't inflate the window with extra rows; `ROWS` fits where position matters (the last 3 events, whatever their dates).
+- `RANGE` pays for its correctness: it needs a sortable type in `ORDER BY` (date, number, timestamp — not just anything), and it costs more, because for each row it finds the window bounds by value rather than by a row counter.
+- A beginner's surprise: the default frame. `ORDER BY` in `OVER (...)` with no explicit frame is `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. That's why `sum(...) OVER (ORDER BY ...)` back in 08-01 already produced a running total even though we said nothing about frames then. Get into the habit of checking: if an aggregate over `ORDER BY` behaves cumulatively when you didn't intend it to, the default `RANGE UNBOUNDED PRECEDING` kicked in.
+- Your DBA looks at the frame as a cost: on large series a window aggregate is a sort by `ORDER BY` plus a row buffer for the frame, and that cost shows up in the plan (`EXPLAIN`, module 06) as a separate `WindowAgg` node. The memory for that buffer, and whether to keep it in `work_mem` or spill it to disk, is their concern, not the query's.
 
 ## Что забрать с собой
 

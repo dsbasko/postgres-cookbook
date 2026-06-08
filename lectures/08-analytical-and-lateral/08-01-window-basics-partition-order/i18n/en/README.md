@@ -68,6 +68,30 @@ which comes first — and the accumulation across those two rows could fall any 
 `id` (which is `GENERATED ALWAYS AS IDENTITY`, i.e. insertion order) breaks the
 tie unambiguously, and the output reproduces verbatim on every run.
 
+The same difference as a picture — `GROUP BY` collapses, the window keeps:
+
+```
+GROUP BY customer                  OVER (PARTITION BY customer)
+7 purchases → 3 rows               7 purchases → 7 rows + a total column
+
+Alice  300 ┐                       Alice  300 ┐
+Alice  450 ├→ Alice  1270          Alice  450 ├ total 1270 in each of Alice's rows
+Alice  520 ┘                       Alice  520 ┘
+Boris  250 ┐→ Boris   730          Boris  250 ┐ total 730
+Boris  480 ┘                       Boris  480 ┘
+Karina 480 ┐→ Karina  780          Karina 480 ┐ total 780
+Karina 300 ┘                       Karina 300 ┘
+                                   rows in place, total glued on as a column
+```
+
+On the left the original purchases are destroyed, three totals remain; on the right all seven rows are intact, with the total written beside them. The window itself is set by the `OVER (...)` clause, which has three forms:
+
+| Form | Window for each row | What's in the column |
+|---|---|---|
+| `OVER ()` | the whole table | the chain's grand total (2780) beside every row |
+| `OVER (PARTITION BY customer)` | rows of the same customer | the customer's static total (1270 in all of Alice's rows) |
+| `OVER (PARTITION BY customer ORDER BY day, id)` | from the window start to the current row | a running total (Alice 300 → 750 → 1270) |
+
 ## What our code shows
 
 The heart of the lesson is `query.sql`. Three queries show one idea from three
@@ -156,32 +180,27 @@ themselves.
 
 ## The fence
 
-A window function is computed at a very late stage of the query — AFTER `WHERE`,
-`GROUP BY`, and `HAVING`. The practical consequence is annoying: you cannot filter
-rows by a window function's value directly in `WHERE` — at the moment `WHERE` is
-checked the window isn't computed yet. So "keep only the purchases where the
-running total crossed 1000" can't be written in a single level. For such top-N
-tasks the window result is wrapped in a CTE (`WITH ...`) and filtered from the
-outside — that's the next unit's job.
-
-For a running total the `ORDER BY` inside the window must be COMPLETE. If you leave
-only `ORDER BY day` and a customer has two purchases on the same day, the
-accumulation across those ties falls non-deterministically — it may jump from run
-to run. We closed that with the second key `id`; in production any column that
-guarantees a unique order works for the role (the primary key itself, or a
-timestamp with sufficient precision).
-
-One more subtlety we deliberately don't touch: when a window has `ORDER BY` but no
-explicit frame, Postgres supplies the default `RANGE BETWEEN UNBOUNDED PRECEDING
-AND CURRENT ROW`. For our series with a unique order it gives exactly what we
-expect, but on ties `RANGE` behaves differently from `ROWS`. That's already frame
-territory — we'll cover it separately.
-
-Finally, about the hardware: on large data a window often requires a sort, and a
-sort that doesn't fit in memory spills to a temporary file on disk. In the query
-plan this shows up as `Sort Method: external merge` (we read plans in module 06).
-How much memory to grant the sort (`work_mem`) and whether to back the window with
-an index — that's your DBA's concern, not a line of SQL.
+- A window function is computed at a very late stage of the query — AFTER `WHERE`,
+  `GROUP BY`, and `HAVING`. The practical consequence is annoying: you cannot filter
+  rows by a window function's value directly in `WHERE` — at the moment `WHERE` is
+  checked the window isn't computed yet. "Keep only the purchases where the running
+  total crossed 1000" can't be written in a single level; for such top-N tasks the
+  window result is wrapped in a CTE (`WITH ...`) and filtered from the outside —
+  that's the next unit's job.
+- For a running total the `ORDER BY` inside the window must be COMPLETE. Leave only
+  `ORDER BY day` and a customer has two purchases on the same day, and the
+  accumulation across those ties falls non-deterministically — it may jump from run
+  to run. We closed that with the second key `id`; in production any column that
+  guarantees a unique order works (the primary key itself, or a timestamp with
+  sufficient precision).
+- When a window has `ORDER BY` but no explicit frame, Postgres supplies the default
+  `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. For our series with a unique
+  order it gives exactly what we expect, but on ties `RANGE` behaves differently from
+  `ROWS`. That's already frame territory — we'll cover it separately.
+- On large data a window often requires a sort, and a sort that doesn't fit in memory
+  spills to a temporary file on disk (`Sort Method: external merge` in the plan,
+  module 06). How much memory to grant the sort (`work_mem`) and whether to back the
+  window with an index — that's your DBA's concern, not a line of SQL.
 
 ## What to take away
 

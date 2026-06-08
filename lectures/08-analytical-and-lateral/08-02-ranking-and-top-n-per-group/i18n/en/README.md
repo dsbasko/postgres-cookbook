@@ -14,6 +14,14 @@ Postgres gives three functions that number rows within a window by `ORDER BY`. F
 
 An important subtlety: what counts as a tie in the first place? For `rank()` and `dense_rank()` two rows are peers (equal in rank) if and only if they're equal across *all* columns of the window's `ORDER BY`. Add one more column to `ORDER BY` on which the rows differ, and the tie falls apart — `rank`/`dense_rank` degenerate into `row_number`. That's not a bug, it's the definition: rank is computed over what's written in `ORDER BY`, no more and no less.
 
+The three functions in one table — they diverge only on a tie:
+
+| Function | On a tie | After the tie | When to use |
+|---|---|---|---|
+| `row_number()` | different numbers | — (numbering is gapless anyway) | stable top-N, pagination by rank |
+| `rank()` | one number for all | skips: `1, 2, 2, 4` | podium places ("two silvers, straight to fourth") |
+| `dense_rank()` | one number for all | no skip: `1, 2, 2, 3` | levels and grades, where a gap throws you off |
+
 ## What our code shows
 
 The heart of the lesson is `query.sql`. The first query puts the three ranks side by side within a single category, `coffee`, and this is where that tie subtlety becomes visible — which is why it uses *two different windows*:
@@ -97,15 +105,11 @@ Cappuccino and Espresso in the first block are both at 120. `row_number` split t
 
 ## The fence
 
-`row_number()` is non-deterministic without a *full* `ORDER BY`. If two rows have nothing to tell them apart, the engine is free to number them in any order — and on the next run the order can change. That's why `wu` has `drink` as the second key: it guarantees that `1, 2, 3, 4` land the same way every time. In production your analyst always adds such a tie-break when rank is used to select rows, otherwise "top-1" can quietly pick different rows between runs.
-
-With `rank()` and `dense_rank()` it's exactly the opposite: an extra tie-break *breaks* the tie. Add a unique column to their `ORDER BY` and 120/120 stop being peers, and the functions degenerate into `row_number`. That's precisely why our query gives them a separate window `wt` *without* `drink`. When deciding "rank by what," think about what should count as a tie, and put exactly those columns in `ORDER BY` — not one extra.
-
-`ntile()` on a number of rows that doesn't divide evenly doesn't fail — it scatters the remainder into the *first* buckets: eight rows over four buckets divide evenly, but nine would give buckets of `3, 2, 2, 2`. Keep this in mind when building deciles on data whose count isn't a multiple of the bucket count — the first buckets end up slightly fuller.
-
-"Top-N per group" via `row_number() = 1` in a CTE is a working classic, but not the only path. On huge partitions `LATERAL` (which we'll reach in 08-05) is sometimes faster, or an index on `(category, units DESC)`, off which the top-1 of each group comes almost for free. In production your DBA will look at the plan: if `row_number` is driving a sort of the whole table just for one row per category, an index or `LATERAL` will cut the work by an order of magnitude.
-
-And finally — the choice between `rank` and `dense_rank` is not about performance, it's about the meaning of the report: whether you want "gaps" in the numbering after ties. Want "after two silvers, straight to fourth" — `rank`. Want "levels with no skips, second-third-fourth" — `dense_rank`. Decide by how people will read the report.
+- `row_number()` is non-deterministic without a *full* `ORDER BY`. If two rows have nothing to tell them apart, the engine is free to number them in any order, and on the next run it can change. That's why `wu` has `drink` as the second key — `1, 2, 3, 4` land the same way every time. In production the analyst always adds such a tie-break when rank selects rows, otherwise "top-1" quietly drifts between runs.
+- With `rank()` and `dense_rank()` it's the opposite: an extra tie-break *breaks* the tie. Add a unique column to their `ORDER BY` and 120/120 stop being peers, and the functions degenerate into `row_number`. That's why our query gives them a separate window `wt` *without* `drink`: in `ORDER BY` put exactly the columns whose equality you count as a tie, not one extra.
+- `ntile()` on a count that doesn't divide evenly doesn't fail — it scatters the remainder into the *first* buckets: eight rows over four divide evenly, but nine would give `3, 2, 2, 2`. Keep this in mind for deciles on data whose count isn't a multiple of the bucket count — the first buckets end up slightly fuller.
+- "Top-N per group" via `row_number() = 1` in a CTE is a working classic, but not the only path. On huge partitions `LATERAL` (which we'll reach in 08-05) is faster, or an index on `(category, units DESC)`, off which the top-1 of each group comes almost for free. Your DBA will look at the plan: if `row_number` is driving a sort of the whole table just for one row per category, an index or `LATERAL` cuts the work by an order of magnitude.
+- The choice between `rank` and `dense_rank` is not about performance, it's about the meaning of the report: whether you want "gaps" in the numbering after ties. Want "after two silvers, straight to fourth" — `rank`. Want "levels with no skips" — `dense_rank`. Decide by how people will read the report.
 
 ## What to take away
 

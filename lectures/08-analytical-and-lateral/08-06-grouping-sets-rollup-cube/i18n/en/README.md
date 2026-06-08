@@ -24,6 +24,33 @@ Postgres can compute all of those slices — leaves, subtotals, and the grand to
 
 A rolled-up column in a subtotal row arrives as `NULL`. But `NULL` also occurs in real data — and then you can't tell a total row from a row with a genuine missing value. The `grouping(col)` function settles this: it returns `1` if the column is rolled up in this row (it's a `NULL` subtotal) and `0` if it's a real value. It's also handy for sorting totals to the end of each group: `ORDER BY grouping(shop), shop, grouping(category), category` — first the rows with a real `shop`, then the per-shop subtotal. In the demo we add both flags into a `level` column: `level = grouping(shop) + grouping(category)`: `0` is data/leaf, `1` is a subtotal with one column rolled up, `2` is the grand total (both rolled up).
 
+Two columns → four rollup variants, a 2×2 square. Each `GROUP BY` extension paints its own set of cells:
+
+```
+               category expanded         category ROLLED UP
+            ┌──────────────────────────┬──────────────────────────┐
+ shop       │ LEAVES           level 0 │ subtotal per shop   l. 1 │
+ expanded   │ (Central, coffee) 1000   │ (Central, — все —) 1300   │
+            ├──────────────────────────┼──────────────────────────┤
+ shop       │ subtotal per cat. l. 1   │ GRAND TOTAL       level 2 │
+ ROLLED UP  │ (— все —, coffee) 1700   │ (— все —, — все —) 2200   │
+            └──────────────────────────┴──────────────────────────┘
+
+  GROUP BY        → top-left only (leaves)
+  ROLLUP          → top-left + top-right + bottom-right (no cross-cut bottom-left)
+  CUBE            → all four cells
+  GROUPING SETS   → exactly the cells you list
+```
+
+The same fork as a table:
+
+| Extension | Which slices | Cells of the 2×2 | When to use |
+|---|---|---|---|
+| `GROUP BY (a, b)` | leaves only | 1 (top-left) | only the detailed cells are needed |
+| `ROLLUP (a, b)` | leaves + prefix subtotals + grand total | 3 (no cross-cut) | hierarchy "shop → its categories → total" |
+| `CUBE (a, b)` | every rollup combination | 4 (all) | slices across all dimensions needed |
+| `GROUPING SETS (…)` | exactly the listed ones | as many as you name | dashboard with a fixed set |
+
 ## What our code shows
 
 `query.sql` has three queries over one small fact table `sales_fact_lab` (two shops × two categories, fixed numbers). The heart of the lesson is `RollupByShop`: `ROLLUP` plus `grouping()` to label and sort the totals.
@@ -91,7 +118,9 @@ Compare the three blocks. `ROLLUP` produced the leaves (`Central/coffee 1000` an
 
 ## The fence
 
-What we simplified. The main trap is that a `NULL` in a subtotal row is **indistinguishable** from a real `NULL` in the data if the column allows them: without `grouping()` you can't tell whether `NULL` here means "total across all categories" or "this row genuinely had no category." The moment real `NULL`s are possible in a grouped column, the `grouping()` flag (and/or `coalesce` for a label) stops being decoration and becomes mandatory. Next: `CUBE` grows as `2^N` combinations in the number of columns — two dimensions is four groupings, five is already thirty-two; over many dimensions `CUBE` is expensive, and for a specific dashboard you're better off with `GROUPING SETS` listing exactly the slices you want. And above all: this is a one-off "on the fly" summary over a small fact table, not a replacement for a real OLAP cube or for materialized aggregates over large data. When there are many slices, the data is heavy, and the report is hit often, building and regularly refreshing such a report (precomputation, materialized views, a separate analytical database) is the job of an analytics platform and your DBA, not of a single `SELECT` in production OLTP.
+- The main trap is that a `NULL` in a subtotal row is **indistinguishable** from a real `NULL` in the data if the column allows them: without `grouping()` you can't tell whether `NULL` here means "total across all categories" or "this row genuinely had no category." The moment real `NULL`s are possible in a grouped column, the `grouping()` flag (and/or `coalesce` for a label) stops being decoration and becomes mandatory.
+- `CUBE` grows as `2^N` combinations in the number of columns: two dimensions is four groupings, five is already thirty-two. Over many dimensions `CUBE` is expensive — for a specific dashboard you're better off with `GROUPING SETS` listing exactly the slices you want.
+- This is a one-off "on the fly" summary over a small fact table, not a replacement for a real OLAP cube or for materialized aggregates over large data. When there are many slices, the data is heavy, and the report is hit often, building and regularly refreshing such a report (precomputation, materialized views, a separate analytical database) is the job of an analytics platform and your DBA, not of a single `SELECT` in production OLTP.
 
 ## Takeaways
 
