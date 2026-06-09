@@ -215,8 +215,12 @@ working; it is enforced by a test and documented in [`CLAUDE.md`](CLAUDE.md).
 4. Write a thin `cmd/demo/main.go` and a `Makefile` (`help · run · gen · db-reset · db-shell ·
    build · clean`) modelled on the reference units. Every unit must expose `run`.
 5. Write `i18n/ru/README.md` along the arc — cold open with a Brew incident, one concept per
-   heading, "what our code shows" (centred on `query.sql`), then `## Запуск` with the **real**
-   pasted output. Every simplification gets a "fence" — a line on what you would do in production.
+   heading (built up in SQL stages), "what our code shows" (centred on `query.sql`), then
+   `## Запуск` with the **real** pasted output, and a hook ending that hands off to the next
+   lesson. Add an ASCII diagram and/or a comparison table where Appendix A of
+   [`docs/course-canon.md`](docs/course-canon.md) prescribes one. Every simplification gets a
+   "fence" — render it as bullets (one production concern each), not a comma-wall. The canon
+   (skeleton §6, playbook §7, Appendix A) is the prose source of truth — read it before writing.
 6. Run the verification gate: `make db-reset` idempotent, `make gen` no diff, `make run` output
    matches the README, `make build` green. Then write `i18n/en/README.md` before marking the unit
    released.

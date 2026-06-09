@@ -146,7 +146,9 @@ stock      | 40
 
 ## The fence
 
-psql is a tool for reconnaissance and debugging **by hand**: look, estimate, test a hypothesis. In production you don't work with data this way — the application doesn't shell out to `psql` and parse text output; it goes to the database through a driver with a typed query (the course reaches that pipeline in 00-03 and 00-04). Meta-commands (`\dt`, `\d`) exist only inside psql: you can't call them from `pgx` in Go, they aren't SQL. And one more thing: `\d` output and `pg_catalog` are a convenient map, not a contract. The structure your application relies on is pinned by migrations (module 02), not by "I looked via `\d` and it seemed to match."
+- psql is a tool for reconnaissance and debugging **by hand**: look, estimate, test a hypothesis. In production you don't work with data this way — the application doesn't shell out to `psql` and parse text output; it goes to the database through a driver with a typed query (the course reaches that pipeline in 00-03 and 00-04).
+- Meta-commands (`\dt`, `\d`) exist only inside psql: you can't call them from `pgx` in Go, they aren't SQL.
+- `\d` output and `pg_catalog` are a convenient map, not a contract. The structure your application relies on is pinned by migrations (module 02), not by "I looked via `\d` and it seemed to match."
 
 ## Takeaways
 

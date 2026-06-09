@@ -95,7 +95,9 @@ ID  SKU     НАЗВАНИЕ  КАТЕГОРИЯ  ЦЕНА
 
 ## The fence
 
-sqlc is type-safe exactly to the extent its schema is truthful. It checks queries against the DDL listed in `sqlc.yaml` (`../../../schema/brew.sql` + `schema.sql`) — if the real database has drifted from the schema files, sqlc won't know (it doesn't connect to the DB during generation). So the source of truth about structure is migrations (module 02), and the schema files in `sqlc.yaml` must stay in step with them. And second: sqlc is the course default, not dogma. When a query needs system columns (`xmin`/`ctid`), dynamic SQL, `EXPLAIN`, or interactive sessions — sqlc doesn't fit, and the lesson switches to the escape hatch (raw pgx or psql scripts, as in 00-02). We **commit** the generated code: it's reviewed in the diff and doesn't require running `sqlc` on someone else's machine.
+- sqlc is type-safe exactly to the extent its schema is truthful. It checks queries against the DDL listed in `sqlc.yaml` (`../../../schema/brew.sql` + `schema.sql`) — if the real database has drifted from the schema files, sqlc won't know (it doesn't connect to the DB during generation). So the source of truth about structure is migrations (module 02), and the schema files in `sqlc.yaml` must stay in step with them.
+- sqlc is the course default, not dogma. When a query needs system columns (`xmin`/`ctid`), dynamic SQL, `EXPLAIN`, or interactive sessions — sqlc doesn't fit, and the lesson switches to the escape hatch (raw pgx or psql scripts, as in 00-02).
+- We **commit** the generated code: it's reviewed in the diff and doesn't require running `sqlc` on someone else's machine.
 
 ## Takeaways
 

@@ -124,7 +124,8 @@ ID  SKU     НАЗВАНИЕ  КАТЕГОРИЯ  ЦЕНА
 
 ## The fence
 
-You **never** glue SQL together from strings — not for user input, not "for config values, those are trusted." The only correct way to pass a value into a query is a parameter (`$1`, `$2`, …). In this unit we write SQL as a string on purpose, to show the mechanics; in real code you won't even be tempted — `pgx` only accepts query-with-placeholders. And second: `rows.Scan` by hand is acceptable, but it's boilerplate where it's easy to fail silently (the compiler won't catch a swapped column order). That's why the course default isn't raw pgx but sqlc: the next unit removes this manual mapping, leaving the SQL itself.
+- You **never** glue SQL together from strings — not for user input, not "for config values, those are trusted." The only correct way to pass a value into a query is a parameter (`$1`, `$2`, …). In this unit we write SQL as a string on purpose, to show the mechanics; in real code you won't even be tempted — `pgx` only accepts query-with-placeholders.
+- `rows.Scan` by hand is acceptable, but it's boilerplate where it's easy to fail silently (the compiler won't catch a swapped column order). That's why the course default isn't raw pgx but sqlc: the next unit removes this manual mapping, leaving the SQL itself.
 
 ## Takeaways
 

@@ -111,7 +111,10 @@ Output:
 
 ## The fence
 
-"More connections = faster" is a myth. Each backend costs the server memory and a slot in the OS scheduler, and beyond the number of cores extra connections only add contention, not throughput. Pool size is a trade-off, not "the more the better"; in production it's tuned to the load and to `max_connections`, not left at the default. When there are many application instances and their pools collectively hit the server limit, an external pooler (PgBouncer) goes between them and Postgres; it has its own pitfalls (transaction mode breaks session-level things like advisory locks and `LISTEN/NOTIFY`) — that's the subject of capstone 10-04. And an iron rule: every `Acquire` must have a matching `Release` (usually a `defer`), or the connection "leaks" from the pool forever — a slow-motion version of Brew's very mistake. Don't hold an acquired connection across long external I/O: you're blocking a scarce resource while waiting on someone else's service.
+- "More connections = faster" is a myth. Each backend costs the server memory and a slot in the OS scheduler, and beyond the number of cores extra connections only add contention, not throughput. Pool size is a trade-off, not "the more the better"; in production it's tuned to the load and to `max_connections`, not left at the default.
+- When there are many application instances and their pools collectively hit the server limit, an external pooler (PgBouncer) goes between them and Postgres; it has its own pitfalls (transaction mode breaks session-level things like advisory locks and `LISTEN/NOTIFY`) — that's the subject of capstone 10-04.
+- Every `Acquire` must have a matching `Release` (usually a `defer`), or the connection "leaks" from the pool forever — a slow-motion version of Brew's very mistake.
+- Don't hold an acquired connection across long external I/O: you're blocking a scarce resource while waiting on someone else's service.
 
 ## Takeaways
 
