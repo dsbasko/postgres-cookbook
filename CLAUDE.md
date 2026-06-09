@@ -154,6 +154,28 @@ checks it byte-for-byte — so a demo must print only reproducible things:
   single-session demo. Two-session scripts can be pinned with `\prompt` (holds a
   transaction open until Enter).
 
+## Verifying `make run` against the README
+
+The gate's "stdout matches the README byte-for-byte" rule is **not automated** —
+it is a manual byte-compare, and three traps make it report false mismatches:
+
+- **Strip the make recipe-echo first.** `make lecture L=… T=run` delegates through
+  a sub-`make`, which echoes the recipe line *before* the demo's stdout. On macOS
+  that line is the full binary path (`/Applications/Xcode.app/…/make -C "<path>"
+  run`), **not** a line starting with `make ` — so drop every leading line up to
+  the program's first output line; don't match on `^make `.
+- **Reset the sandbox for table-listing demos.** The shared `brew` database
+  accumulates other units' `*_lab` tables; a demo that prints a table list (`\dt`)
+  catches them (00-02 once saw 04-01's `count_floor`/`count_storage`). Byte-compare
+  such a unit only against a clean DB (`docker compose down -v && up -d`, or drop
+  the foreign `*_lab` tables first). Demos that print only their own rows / an
+  EXPLAIN shape / self-made lab tables are immune and match without a clean DB.
+- **stdout vs stdout+stderr depends on what the README pastes.** An escape-hatch
+  psql unit whose `## Запуск` pastes the *terminal interleave* (`psql:demo.sql:N:
+  ERROR: …` lines mixed with `SELECT` results) must be captured with `2>&1`
+  (02-05). A sqlc / raw-pgx Go unit prints the `SQLSTATE` on **stdout** and sends
+  raw error text to **stderr**, so capture stdout only (`2>/dev/null`).
+
 ## Authoring patterns (learned building the course)
 
 - **Lab tables.** Demos that need throwaway tables name them `*_lab` and
@@ -255,6 +277,11 @@ so course data resolves via `process.cwd()`.
   EN READMEs present, `make web-check-coverage` green.
 - RU-first: write `i18n/ru/README.md` first; `i18n/en/README.md` must exist
   before a unit is marked released.
+- **Prose typography.** Keep em-dashes (`—`) and Russian guillemets («…») — the
+  whole course (all 124 READMEs, including the 08-01 reference) uses them as
+  correct punctuation. Apply a humanizer/`writer` pass for *substantive* rules
+  (no AI-vocabulary, bullets over comma-walls, sentence-case) but **never**
+  mechanically downgrade `—`→`-` or «…»→`"…"` — it breaks course consistency.
 - Every simplification in a unit carries a "fence" — a line saying what you would
   do differently in production / what your DBA would do.
 - AI-plan files go in `docs/plans/`.
