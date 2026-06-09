@@ -73,6 +73,37 @@ transaction pool it is the only reliable path. A real pgbouncer, by the way, can
 do the opposite too: `max_prepared_statements` lets it track prepared statements
 itself on top of the pool.
 
+## The reseat between backends — and what survives it
+
+All three breakages are the same picture: the pool pins a backend to you for one
+transaction, reseats you between transactions, and anything session-scoped is left
+behind on the old backend:
+
+```
+Transaction pool: the backend is pinned to you per TRANSACTION, not per session
+
+  TX1 ──► pool handed out backend A   LISTEN orders · pg_advisory_lock(42)
+  COMMIT ──► backend A went back into the shared pot
+  TX2 ──► pool handed out backend B   ← a different backend!
+                                        B has none of your LISTEN, none of your lock:
+                                        NOTIFY won't arrive, unlock returns false (leak)
+
+  fix — don't release the backend between operations:
+    pg_advisory_xact_lock   releases itself at COMMIT (lives inside the TX)
+    dedicated connection    you hold backend A yourself, LISTEN on it too
+    simple protocol         no prepared statements pinned to a backend
+```
+
+The same rule folds into a table: what's risky to keep on the session, and what to
+replace it with.
+
+| What lives on the session | Session-scoped (breaks under the pool) | Transaction-safe (survives) |
+|---|---|---|
+| Advisory lock | `pg_advisory_lock` (leaks on another backend) | `pg_advisory_xact_lock` (releases at COMMIT) |
+| LISTEN/NOTIFY | `LISTEN` through the pool (silent) | dedicated connection |
+| Prepared statements | per-backend cache (fails) | simple protocol / `max_prepared_statements` |
+| GUC parameters | `SET` for the session | `SET LOCAL` inside the transaction |
+
 ## What our code shows
 
 There is no real pgbouncer here. We reproduce a transaction pool on **plain
@@ -140,26 +171,20 @@ in simple-protocol mode returned `Эспрессо` with no per-backend cache wh
 
 ## The fence
 
-In production a real **pgbouncer in transaction mode** would sit in front of
-Postgres — we merely imitated its behaviour by spreading operations across several
-pool backends. The simulation is honest in exactly one way: it breaks the same
-session state a real pool would break. But it is not a substitute for pgbouncer,
-nor for its config.
-
-Keep the main rule in mind at all times: **a transaction pool guarantees one
-backend per transaction, not per session.** So anything session-scoped is the
-hazard — session-level advisory locks, `LISTEN`, session GUCs via `SET`, plain
-prepared statements. Their transaction-scoped equivalents are safe:
-`pg_advisory_xact_lock` instead of `pg_advisory_lock`, a dedicated connection for
-`LISTEN`, the simple protocol (or `max_prepared_statements` on the pgbouncer
-side). If you need a different pool mode — session pooling gives you the whole
-session back, but then the very connection savings you put the pool in for
-disappear.
-
-And one more thing: sizing the pool against the database's `max_connections` is
-real and important work, but it is **operational**, your DBA's territory. We don't
-touch it here — this unit is about writing code that survives a transaction pool,
-not about configuring one.
+- **This is a simulation, not a real pgbouncer.** In production a real **pgbouncer in
+  transaction mode** would sit in front of Postgres; we imitated its behaviour by
+  spreading operations across several pool backends. The simulation is honest in
+  exactly one way: it breaks the same session state a real pool would break. But it is
+  not a substitute for pgbouncer, nor for its config.
+- **A transaction pool guarantees one backend per transaction, not per session.** Keep
+  it in mind at all times. Anything session-scoped is the hazard — session-level
+  advisory locks, `LISTEN`, session GUCs via `SET`, plain prepared statements; their
+  transaction-scoped equivalents are safe (see the table above). If you need a
+  different pool mode — session pooling gives you the whole session back, but then the
+  very connection savings you put the pool in for disappear.
+- **Sizing the pool against `max_connections` is operational work, not ours.** It's
+  real and important, but it's your DBA's territory. This unit is about writing code
+  that survives a transaction pool, not about configuring one.
 
 ## Takeaways
 

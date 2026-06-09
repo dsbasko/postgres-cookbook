@@ -43,6 +43,15 @@ before-image and cannot reconstruct what actually changed. `REPLICA IDENTITY
 FULL` tells Postgres to write the **entire old row** to the WAL — then the
 before-image holds every column.
 
+| | `REPLICA IDENTITY DEFAULT` | `REPLICA IDENTITY FULL` |
+|---|---|---|
+| In WAL on UPDATE/DELETE | only the old row's PK | the whole old row |
+| before-image for Debezium | a single `id` | every column (`drinks` has 9) |
+| Enough for a physical replica | yes | yes |
+| Enough for CDC "before → after" | no | yes |
+| Cost in WAL | minimal | grows on hot/wide rows |
+| In our canon | — | `drinks`, `articles`, `customers` |
+
 ## PUBLICATION: an explicit list instead of autocreate
 
 The stream is addressed by a publication:
@@ -70,6 +79,35 @@ of `drinks`, not a single `id`. The slot is dropped right after the check.
 `test_decoding` is a debugging plugin that prints changes as text; in production
 Debezium uses its own decoder, not this one. We need it purely to **see** the
 before-image with our own eyes and confirm that `FULL` works.
+
+## The whole seam: from UPDATE to Kafka
+
+With the parts assembled, you can see the whole path of one change — from the write
+in Brew to Debezium on the `kafka-cookbook` side, without a single line of delivery
+code of ours:
+
+```
+The end-to-end seam: one UPDATE in Brew reaches kafka-cookbook
+
+  Postgres (this course)
+    UPDATE drinks
+       │  the change is written
+       ▼
+    WAL — the write-ahead log (durability writes it anyway)
+       │  logical decoding parses the WAL back into INSERT/UPDATE/DELETE
+       │  REPLICA IDENTITY FULL → the before-image carries the whole old row
+       ▼
+    PUBLICATION dbz_publication (drinks, articles, customers)
+       │  through a logical replication slot
+       ▼
+  kafka-cookbook (the next course)
+    Debezium → Kafka → Elasticsearch
+       db/init.sql is byte-compatible — the schema on that side isn't rewritten
+```
+
+There's no relay of ours (as in 09-03) here: the relay is Postgres itself plus
+Debezium's decoder. Our job is to hand off a correct stream, and the two settings
+(`PUBLICATION` + `REPLICA IDENTITY FULL`) do exactly that.
 
 ## What our code shows
 
@@ -127,27 +165,23 @@ not a stub of a single `id`.
 
 ## The fence
 
-A logical replication slot that **nobody drains** pins the WAL: Postgres cannot
-delete log segments until the slowest consumer has confirmed them — and the disk
-slowly fills. Our demo honestly drops the slot at the end, but in production a
-stuck slot (a dead Debezium, a disconnected consumer) is a real path to `No space
-left on device`. Slots must be watched (`pg_replication_slots`) and dead ones
-cleaned up — that is your DBA's territory, and we don't touch it here.
-
-`test_decoding` is a debugging plugin, not what Debezium reads with: it prints
-changes as text for the eye, while Debezium has its own decoder. We took it only
-to **see** the before-image.
-
-`REPLICA IDENTITY FULL` is a tradeoff: you pay in WAL for a full before-image.
-Every `UPDATE`/`DELETE` now writes the entire old row to the log instead of a
-single PK — on a hot table with wide rows that is a noticeable rise in WAL volume
-and replication load. On our three directories (menu, blog, customers) writes are
-rare and the cost is pennies; on a high-churn table this decision has to be
-weighed.
-
-And the end-to-end pipeline itself — `Debezium → Kafka → sinks` — we do **not**
-run here. That is already the `kafka-cookbook` side: the next course. Our job is
-to hand off a correct stream, and that job is done.
+- **A slot nobody drains pins the WAL.** A logical replication slot that **nobody
+  drains** keeps Postgres from deleting log segments until the slowest consumer has
+  confirmed them — and the disk slowly fills. Our demo honestly drops the slot at the
+  end, but in production a stuck slot (a dead Debezium, a disconnected consumer) is a
+  real path to `No space left on device`. Slots must be watched
+  (`pg_replication_slots`) and dead ones cleaned up — your DBA's territory.
+- **`test_decoding` is not what Debezium reads with.** It's a debugging plugin: it
+  prints changes as text for the eye, while Debezium has its own decoder. We took it
+  only to **see** the before-image.
+- **`REPLICA IDENTITY FULL` is a tradeoff: you pay in WAL for a full before-image.**
+  Every `UPDATE`/`DELETE` now writes the entire old row to the log instead of a single
+  PK — on a hot table with wide rows that is a noticeable rise in WAL volume and
+  replication load. On our three directories (menu, blog, customers) writes are rare
+  and the cost is pennies; on a high-churn table this decision has to be weighed.
+- **The end-to-end pipeline `Debezium → Kafka → sinks` we do not run here.** That is
+  already the `kafka-cookbook` side: the next course. Our job is to hand off a correct
+  stream, and that job is done.
 
 ## Takeaways
 

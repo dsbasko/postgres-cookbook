@@ -25,6 +25,21 @@ One round-trip, the same answer — the same three orders. We count round-trips,
 time depends on hardware and network, while the number of calls to the database is a
 structural fact of the code, and it's visible immediately.
 
+```
+N+1: the list, then one query per customer
+
+  app ──①──► SELECT customers             ──► [c1, c2, c3]
+  app ──②──► SELECT orders WHERE id = c1  ──► orders of c1
+  app ──③──► SELECT orders WHERE id = c2  ──► orders of c2
+  app ──④──► SELECT orders WHERE id = c3  ──► orders of c3
+            1 + N round-trips to the DB (here 1 + 3 = 4)
+
+batch: one query for everyone
+
+  app ──①──► SELECT orders WHERE customer_id = ANY([c1,c2,c3])  ──► all orders
+            1 round-trip, the same answer
+```
+
 ## 2. SELECT * → explicit columns
 
 The menu endpoint needs two fields — the drink's name and its price. But the code writes
@@ -73,6 +88,19 @@ plan cache bloats, and with large lists you hit the limit on the number of param
 `= ANY($1::bigint[])` is **one array parameter** for all thousand ids. The query text is
 the same for any set, parsed and planned once. Both forms find the same **1000 rows** —
 the difference is purely in the parameter shape, and it's structural.
+
+## The five smells at a glance
+
+| Smell | Naive code | Cure | What it proves |
+|---|---|---|---|
+| N+1 | loop of `WHERE customer_id = $1` × N | `= ANY($1)` (or `JOIN`/`LATERAL`) | round-trips: 4 → 1 |
+| `SELECT *` | `SELECT *` — 9 columns | explicit field list | columns: 9 → 2 |
+| non-sargable | `WHERE lower(email) = …` on an index over `email` | index on `(lower(email))` | plan: Seq Scan → Index Scan |
+| deep OFFSET | `LIMIT 10 OFFSET 40000` | keyset `WHERE id > 40000` | rows read: 40010 → 10 |
+| huge IN | `id IN (1,…,1000)` as literals | `= ANY($1::bigint[])` | one text, one parse-plan |
+
+Each row is a disease, the naive code and the cure, and the **number** that proves it.
+All five are cured from the application side, not the database.
 
 ## What our code shows
 
@@ -134,29 +162,24 @@ parameter, and the answer stayed the same — 1000 rows.
 ## The fence
 
 These are all **app-side smells**, not DBA work: the database is healthy, it's the code
-that gets cured. A few caveats.
+that gets cured. Caveats for each cure:
 
-Keyset is fast **under a matching index** and when sorting by that same key, but at the cost
-of flexibility: it can't jump to an arbitrary page ("show page 4000 right now") — it walks
-from the previous boundary. If the product needs numbered page navigation, keyset won't fit;
-the keyset mechanics are covered in detail in 03-02, and indexes plus reading `EXPLAIN` in
-module 06.
-
-The N+1 cure here is `= ANY`, but it isn't the only path: the same list-with-orders is often
-more natural to assemble with one `JOIN` (module 04) or a `LATERAL` "top-N per customer"
-subquery (08-05) — the choice depends on exactly what you need to return.
-
-`= ANY($1)` fixes more than plan-cache bloat: a single array parameter also dodges the
-**parameter-count limit** a giant `IN` list runs into, and removes the re-parse-and-plan on
-every new set of ids.
-
-Non-sargable is cured by exactly one rule: index **the same function** you wrap the column
-with (`lower(email)` in the query → `(lower(email))` in the index). If the query has `lower`
-but the index is on the raw `email`, it's useless; more on this in 06-03.
-
-`SELECT *` breaks for more than the network: code tied to "all columns" fails or starts
-hauling junk when columns are **added or reordered**. An explicit column list is also
-insurance against schema changes.
+- **Keyset is fast under a matching index, but at the cost of flexibility.** It can't jump
+  to an arbitrary page ("show page 4000 right now") — it walks from the previous boundary.
+  If the product needs numbered page navigation, keyset won't fit; its mechanics are covered
+  in 03-02, and indexes plus reading `EXPLAIN` in module 06.
+- **`= ANY` isn't the only N+1 cure.** The same list-with-orders is often more natural to
+  assemble with one `JOIN` (module 04) or a `LATERAL` "top-N per customer" subquery (08-05)
+  — the choice depends on exactly what you need to return.
+- **`= ANY($1)` fixes more than plan-cache bloat.** A single array parameter also dodges the
+  **parameter-count limit** a giant `IN` list runs into, and removes the re-parse-and-plan
+  on every new set of ids.
+- **Non-sargable is cured by exactly one rule.** Index **the same function** you wrap the
+  column with (`lower(email)` in the query → `(lower(email))` in the index). If the query
+  has `lower` but the index is on the raw `email`, it's useless; more on this in 06-03.
+- **`SELECT *` breaks for more than the network.** Code tied to "all columns" fails or
+  starts hauling junk when columns are **added or reordered**. An explicit column list is
+  also insurance against schema changes.
 
 ## Takeaways
 

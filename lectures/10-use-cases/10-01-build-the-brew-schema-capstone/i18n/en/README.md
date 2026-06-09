@@ -38,6 +38,31 @@ services. Brew has two backends writing to one DB; a rule baked only into the Go
 code of one of them, the other will bypass. A constraint in the schema rejects bad
 data from any writer — even from a hand-typed `psql` at three in the morning.
 
+## The race for one balance and the retry loop
+
+The capstone's last scene — two processes touch one balance at the same time. A
+barista hits "grant bonus" under `SERIALIZABLE` while the nightly job accrues
+interest in the very same second. The conflict here isn't accidental: the demo sets
+it up **deterministically** (as in 05-05), so `40001` falls in the same place on
+every run:
+
+```
+Start: Alice's balance 15.00
+
+  ① bonus: BEGIN, reads balance 15.00
+  ② interest: +1.00, COMMIT ──► balance 16.00          (the nightly job commits first)
+  ③ bonus: writes +5.00 over the 15.00 snapshot, COMMIT ──► ✗ 40001 (read/write conflict)
+  ④ withRetry: opens a fresh snapshot, reads 16.00
+  ⑤ bonus: writes +5.00, COMMIT ──► ✓ 21.00
+
+  21.00 = 15.00 + 1.00 (interest) + 5.00 (bonus) — nothing was lost
+```
+
+`SERIALIZABLE` catches that the bonus's snapshot went stale between read and write,
+and rejects the transaction with `40001`. The `withRetry` loop replays it on a fresh
+snapshot — and the balance reconciles to the cent, even though both processes fought
+over one row.
+
 ## What our code shows
 
 This is an escape-hatch unit on raw pgx (there's a `go.mod`, but sqlc isn't the
@@ -119,24 +144,23 @@ the balance at the same time.
 
 ## The fence
 
-The retry loop under `SERIALIZABLE` is **mandatory**, not optional: the DB may
-reject a transaction with `40001` at any moment, and without `withRetry` you simply
-lose the accrual. You cannot use `SERIALIZABLE` without a retry loop — it's part of
-the isolation level's contract (we covered it in 05-04 and ran the same loop in
-05-05). In production this loop is usually provided by a pool wrapper or an ORM, but
-the logic is identical: catch `40001`, open a fresh transaction, replay.
-
-`EXPLAIN` in step 4 explains the plan of **one** query — and only that. It doesn't
-tell you whether the index is healthy overall, whether the table is bloating,
-whether autovacuum is keeping up. Those are DB-health questions: you look at them
-via `pg_stat_statements` and the system views, and that's your DBA's territory, not
-our demo's (we touched `EXPLAIN` in module 06). And the choice itself: which column
-to index and how selective it is — here `member_id` picks three rows out of twenty
-thousand, so the index wins; on a low-selectivity column it might not pay off.
-
-The lab tables `cap_*` are a simplification for the capstone's isolation: we don't
-touch the real Brew canon (`orders`, `outbox`, `drinks`) here, so the DROP can't
-hit the tables that ship into CDC in 10-05.
+- **The retry loop under `SERIALIZABLE` is mandatory, not optional.** The DB may
+  reject a transaction with `40001` at any moment, and without `withRetry` you simply
+  lose the accrual — it's part of the isolation level's contract (we covered it in
+  05-04 and ran the same loop in 05-05). In production this loop is usually provided
+  by a pool wrapper or an ORM, but the logic is identical: catch `40001`, open a
+  fresh transaction, replay.
+- **`EXPLAIN` explains the plan of one query — and only that.** It doesn't tell you
+  whether the index is healthy overall, whether the table is bloating, whether
+  autovacuum is keeping up. Those are DB-health questions: you look at them via
+  `pg_stat_statements` and the system views, and that's your DBA's territory, not our
+  demo's (we touched `EXPLAIN` in module 06).
+- **Index selectivity decides whether it wins.** Here `member_id` picks three rows
+  out of twenty thousand, so the index wins; on a low-selectivity column it might not
+  pay off.
+- **The `cap_*` lab tables are a simplification for the capstone's isolation.** We
+  don't touch the real Brew canon (`orders`, `outbox`, `drinks`) here, so the DROP
+  can't hit the tables that ship into CDC in 10-05.
 
 ## Takeaways
 

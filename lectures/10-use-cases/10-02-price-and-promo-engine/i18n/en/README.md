@@ -82,6 +82,37 @@ RETURNING old.price_cents, new.price_cents;
 A single statement returns both the old and the new price — and that's what fills
 the `price_audit` row, with no separate `SELECT` before and after.
 
+## Half-open intervals and the two forms of the ban
+
+The whole mechanism rests on one property of `tstzrange` — the bounds `[from, to)`
+are half-open, the end is not in the interval. On a time axis you see it at once
+(price periods of drink #1):
+
+```
+Time axis.  Bounds [from, to): the end is NOT included.
+
+  [01-01 ──────── 02-01)                   3.00  ✓ accepted
+                  [02-01 ──────── 03-01)    3.20  ✓ accepted
+  adjacent: the point 02-01 belongs only to the right period → no overlap
+
+       [01-15 ──────────── 02-15)           9.99  ✗ 23P01
+       covers both → exclusion_violation
+```
+
+Two adjacent periods share the boundary `02-01` but don't conflict: the left one
+gave that point up, the right one took it. The third period physically covers both —
+and `23P01` rejects it. The same ban exists in Postgres in two forms:
+
+| | temporal PK `WITHOUT OVERLAPS` | `EXCLUDE USING gist` |
+|---|---|---|
+| Version | PG18 and newer | long before PG18 |
+| Where it lives | inside the `PRIMARY KEY` | a separate table constraint |
+| Spelling | `PRIMARY KEY (drink_id, valid WITHOUT OVERLAPS)` | `EXCLUDE USING gist (code WITH =, span WITH &&)` |
+| Condition | scalar on `=`, range non-overlapping (implicit) | you spell it: `WITH =` and `WITH &&` |
+| Relies on | `btree_gist` | `btree_gist` |
+| On overlap | `23P01` | `23P01` |
+| When to use | new table, "one row per moment" invariant right in the key | existing table or several range conditions |
+
 ## What our code shows
 
 `cmd/demo/main.go` builds three lab tables — `price_periods`, `promo_windows`,
@@ -138,25 +169,22 @@ both versions via `old/new`, filling the audit with no separate `SELECT`.
 
 ## The fence
 
-Both overlap bans — the temporal PK and `EXCLUDE` — rely on the `btree_gist`
-extension. On the sandbox it installs in one line, but in production know **which
-extensions you depend on**: you have to have them in every environment and when
-migrating a cluster. `EXCLUDE`/gist costs more on writes than a plain btree: every
-insert makes the index check for overlaps, and on huge hot tables that is a
-noticeable price — keep such constraints where you actually need to catch
-overlaps, not everywhere.
-
-The half-openness of the range is not a detail but the point: `tstzrange` defaults
-to `[from, to)`, the end excluded. That's why `[.., 02-01)` and `[02-01, ..)` do
-**not** overlap and both fit side by side. If the bounds were closed `[from, to]`,
-adjacent periods would share the point `02-01` and the second would be rejected —
-this is easy to trip over, so check the bound form when entering periods.
-
-And about `RETURNING old/new`: it's convenient for "before → after" in the moment,
-but **it is not a real audit trail**. Here the application itself decided to write
-a row into `price_audit` — and if someone changes the price bypassing this code,
-the log stays silent. A genuine, unbypassable audit is a trigger + history table
-on the DB side, the territory of 09-05, not `RETURNING`.
+- **Both bans rely on `btree_gist`.** On the sandbox the extension installs in one
+  line, but in production know **which extensions you depend on**: you have to have
+  them in every environment and when migrating a cluster. `EXCLUDE`/gist costs more
+  on writes than a plain btree — every insert makes the index check for overlaps, and
+  on huge hot tables that is a noticeable price. Keep such constraints where you
+  actually need to catch overlaps, not everywhere.
+- **The half-openness of the range is not a detail but the point.** `tstzrange`
+  defaults to `[from, to)`, the end excluded, so `[.., 02-01)` and `[02-01, ..)` do
+  **not** overlap and both fit side by side. Were the bounds closed `[from, to]`,
+  adjacent periods would share the point `02-01` and the second would be rejected —
+  check the bound form when entering periods.
+- **`RETURNING old/new` is not a real audit trail.** It's convenient for "before →
+  after" in the moment, but here the application **itself** decided to write a row
+  into `price_audit`; if someone changes the price bypassing this code, the log stays
+  silent. A genuine, unbypassable audit is a trigger + history table on the DB side,
+  the territory of 09-05, not `RETURNING`.
 
 ## Takeaways
 
