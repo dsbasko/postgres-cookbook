@@ -44,7 +44,7 @@ That's why containment `@>` flies via GIN (`Bitmap Index Scan`), while a B-tree 
 
 | Column type | Operators | Opclass |
 |---|---|---|
-| `jsonb` | `@>` (contains), `?` (has key), `?|` / `?&` (any / all keys) | `jsonb_ops` (default) — all of the above |
+| `jsonb` | `@>` (contains), `?` (has key), `?\|` / `?&` (any / all keys) | `jsonb_ops` (default) — all of the above |
 | `jsonb`, `@>` only | `@>` | `jsonb_path_ops` — smaller and faster, but no `?` |
 | `text[]` (array) | `@>` (contains all), `<@` (contained in), `&&` (overlaps) | `array_ops` (default) |
 
