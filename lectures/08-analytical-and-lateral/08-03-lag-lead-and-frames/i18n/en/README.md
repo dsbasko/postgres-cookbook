@@ -72,9 +72,9 @@ FROM daily_revenue_lab
 ORDER BY day;
 ```
 
-`schema.sql` creates a lab table `daily_revenue_lab` (date + cents) with February 5 deliberately missing — the Brew canon with its three orders is no good for a smooth time series, so the table is its own and the canon stays untouched. `cmd/demo/main.go` is thin: it opens the pool, calls `DayOverDay` and `MovingAverage`, and prints both tables via `tabwriter`. The average is wrapped in `round(..., 2)`, so the text is deterministic and matches what is pasted into `## Запуск` below.
+`schema.sql` creates a lab table `daily_revenue_lab` (date + cents) with February 5 deliberately missing — the Brew canon with its three orders is no good for a smooth time series, so the table is its own and the canon stays untouched. `cmd/demo/main.go` is thin: it opens the pool, calls `DayOverDay` and `MovingAverage`, and prints both tables via `tabwriter`. The average is wrapped in `round(..., 2)`, so the text is deterministic and matches what is pasted into `## Running it` below.
 
-## Запуск
+## Running it
 
 ```sh
 docker compose up -d
@@ -111,14 +111,14 @@ In the first table you can see the edges at work: for February 1, `вчера` (
 
 The second table is the fork in the road. Up to and including February 4, `ma_rows` and `ma_range` coincide: the series is smooth, no hole yet. But after February 5 goes missing they diverge. On February 6, `ma_rows = avg(90, 150, 200) = 146.67` — three consecutive physical rows (Feb 03, 04, 06), `ROWS` does not think about dates. And `ma_range = avg(150, 200) = 175.00` — only the dates that fall into the window [04, 06]: February 4 and 6, because February 5 is not in the table. February 7 is the same story: `ma_rows = avg(150, 200, 110) = 153.33` (three rows: 04, 06, 07), while `ma_range = avg(200, 110) = 155.00` — the window is [05, 07], but February 5 is missing, so only the 6th and 7th made it into the calculation. The analyst computed a "3-day average", and `ROWS` gave them a "3-row average" — in a week with a day off those are different things.
 
-## Заборчик
+## The fence
 
 - `ROWS` is blind to the gaps: "two rows back" is two rows back, even if there's a week-long void between them. `RANGE` counts by the `ORDER BY` value and is therefore correct on a gappy series. Practical rule: a "moving average over N calendar days" in finance and analytics is almost always wanted as `RANGE` over a date — so weekends and gaps don't inflate the window with extra rows; `ROWS` fits where position matters (the last 3 events, whatever their dates).
 - `RANGE` pays for its correctness: it needs a sortable type in `ORDER BY` (date, number, timestamp — not just anything), and it costs more, because for each row it finds the window bounds by value rather than by a row counter.
 - A beginner's surprise: the default frame. `ORDER BY` in `OVER (...)` with no explicit frame is `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. That's why `sum(...) OVER (ORDER BY ...)` back in 08-01 already produced a running total even though we said nothing about frames then. Get into the habit of checking: if an aggregate over `ORDER BY` behaves cumulatively when you didn't intend it to, the default `RANGE UNBOUNDED PRECEDING` kicked in.
 - Your DBA looks at the frame as a cost: on large series a window aggregate is a sort by `ORDER BY` plus a row buffer for the frame, and that cost shows up in the plan (`EXPLAIN`, module 06) as a separate `WindowAgg` node. The memory for that buffer, and whether to keep it in `work_mem` or spill it to disk, is their concern, not the query's.
 
-## Что забрать с собой
+## What to take away
 
 `lag`/`lead` are window neighbours: the previous and next row in `ORDER BY` order, and at the edges of the series there is no neighbour and `NULL` arrives (we substituted `'—'` for it). The window frame decides which rows fall into the aggregate around the current one: `ROWS` counts physical rows, `RANGE` counts by the `ORDER BY` value. On a smooth series they give the same thing, but on holes they diverge — and a "3-day average" is almost always wanted as `RANGE`. And remember the default: `ORDER BY` with no explicit frame is `RANGE UNBOUNDED PRECEDING`, that is, an invisible running total.
 
