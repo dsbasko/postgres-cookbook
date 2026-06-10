@@ -89,7 +89,7 @@ cmd/demo/main.go # thin: pgxpool → db.New → typed query → tabwriter
 ```
 
 `sqlc.yaml` is frozen as the canonical template in
-`lectures/00-getting-connected/00-01-client-server-and-sandbox/sqlc.yaml`:
+`lectures/00-getting-connected/00-02-client-server-and-sandbox/sqlc.yaml`:
 `version: "2"`, `engine: postgresql`, `sql_package: pgx/v5`,
 `schema: [../../../schema/brew.sql, schema.sql]` (three levels up reaches the
 repo root), `out: internal/db`. Copy it verbatim; the only thing that ever

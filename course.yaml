@@ -1,17 +1,21 @@
 title: PostgreSQL Cookbook
 description:
   ru: |
-    Практический курс по PostgreSQL 18 для разработчиков приложений на Go.
-    От первого подключения и типов данных до индексов, MVCC, JSONB, оконных функций и серверной
-    логики — и капстонов с outbox/CDC. SQL пишется руками, типизируется через sqlc, весь код
-    запускается на локальном sandbox (postgres:18 + Adminer) и оставляет наблюдаемый эффект —
+    Ты — новый бэкенд-разработчик Brew, вымышленной сети кофеен. Практический курс по
+    PostgreSQL 18 для разработчиков приложений на Go: от первого подключения и типов данных до
+    индексов, MVCC, JSONB, оконных функций и серверной логики — и капстонов с outbox/CDC. Одна
+    модель данных проходит весь курс; финал — ты сам открываешь PUBLICATION и передаёшь поток
+    изменений Brew в соседний kafka-cookbook. SQL пишется руками, типизируется через sqlc, весь
+    код запускается на локальном sandbox (postgres:18 + Adminer) и оставляет наблюдаемый эффект —
     это рабочие сценарии, а не лекции «на доске».
   en: |
-    A hands-on PostgreSQL 18 course for application developers, in Go. From the first
-    connection and data types to indexes, MVCC, JSONB, window functions, and server-side logic —
-    plus capstones with outbox/CDC. You write SQL by hand, type it with sqlc, and every snippet
-    runs on a local sandbox (postgres:18 + Adminer) and leaves an observable effect — working
-    scenarios, not whiteboard lectures.
+    You're a new backend developer at Brew, a fictional chain of coffee shops. A hands-on
+    PostgreSQL 18 course for application developers, in Go: from the first connection and data
+    types to indexes, MVCC, JSONB, window functions, and server-side logic — plus capstones with
+    outbox/CDC. One data model runs through the whole course; the finale is you opening a
+    PUBLICATION yourself and handing Brew's change stream to the sibling kafka-cookbook. You write
+    SQL by hand, type it with sqlc, and every snippet runs on a local sandbox (postgres:18 +
+    Adminer) and leaves an observable effect — working scenarios, not whiteboard lectures.
 basePath: /postgres-cookbook
 repoUrl: https://github.com/dsbasko/postgres-cookbook
 
@@ -40,33 +44,39 @@ modules:
     title: { ru: Подключение и ориентация, en: Getting connected }
     description:
       ru: |
-        Клиент-сервер, локальный sandbox (postgres:18 + Adminer), psql как рабочий инструмент,
-        подключение из Go через pgxpool и типизированные запросы через sqlc. После этого модуля
-        есть рабочий конвейер «SQL руками → sqlc generate → типизированный pgx-код», на который
-        опираются все остальные темы.
+        Старт курса: кто ты, что за Brew и что мы построим (вводный урок-карта), затем первый
+        технический слой — клиент-сервер, локальный sandbox (postgres:18 + Adminer), psql как
+        рабочий инструмент, подключение из Go через pgxpool и типизированные запросы через sqlc.
+        После этого модуля есть рабочий конвейер «SQL руками → sqlc generate → типизированный
+        pgx-код», на который опираются все остальные темы.
       en: |
-        Client-server, the local sandbox (postgres:18 + Adminer), psql as a working tool,
-        connecting from Go via pgxpool, and typed queries via sqlc. After this module you have a
-        working pipeline — "SQL by hand → sqlc generate → typed pgx code" — that every other topic
-        builds on.
+        The course on-ramp: who you are, what Brew is, and what we'll build (an intro map unit),
+        then the first technical layer — client-server, the local sandbox (postgres:18 + Adminer),
+        psql as a working tool, connecting from Go via pgxpool, and typed queries via sqlc. After
+        this module you have a working pipeline — "SQL by hand → sqlc generate → typed pgx code" —
+        that every other topic builds on.
     lessons:
-      - slug: 00-01-client-server-and-sandbox
+      - slug: 00-01-meet-brew
+        title: { ru: Знакомство с Brew, en: Meet Brew }
+        duration: 15m
+        tags: [intro, brew, roadmap]
+      - slug: 00-02-client-server-and-sandbox
         title: { ru: Клиент, сервер и песочница, en: Client, server, and the sandbox }
         duration: 25m
         tags: [client-server, sandbox, sqlc, pgx]
-      - slug: 00-02-psql-survival-kit
+      - slug: 00-03-psql-survival-kit
         title: { ru: psql на каждый день, en: psql survival kit }
         duration: 20m
         tags: [psql, meta-commands, tooling, escape-hatch]
-      - slug: 00-03-connecting-from-go
+      - slug: 00-04-connecting-from-go
         title: { ru: Подключение из Go, en: Connecting from Go }
         duration: 25m
         tags: [pgx, pgxpool, parameters, sql-injection]
-      - slug: 00-04-typed-queries-with-sqlc
+      - slug: 00-05-typed-queries-with-sqlc
         title: { ru: Типизированные запросы через sqlc, en: Typed queries via sqlc }
         duration: 25m
         tags: [sqlc, codegen, pgx, parameters]
-      - slug: 00-05-connection-lifecycle-and-pooling
+      - slug: 00-06-connection-lifecycle-and-pooling
         title: { ru: Жизненный цикл соединения и пулинг, en: Connection lifecycle and pooling }
         duration: 20m
         tags: [pgxpool, pooling, pg_stat_activity, lifecycle]

@@ -194,7 +194,7 @@ reseat you onto another backend. So anything session-scoped silently breaks, and
 the cure is moving to transaction-scoped equivalents: `pg_advisory_xact_lock`
 instead of session locks, a dedicated connection for `LISTEN`/`NOTIFY`,
 simple-protocol mode instead of a per-backend prepared-statement cache. We
-introduced the connection pool back in 00-05, covered advisory locks in 05-06,
+introduced the connection pool back in 00-06, covered advisory locks in 05-06,
 and the dedicated connection for `LISTEN`/`NOTIFY` in 09-04; here all of it met
 the reality of pooling.
 

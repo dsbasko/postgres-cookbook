@@ -25,7 +25,7 @@ per-row round-trip.
 "SQL by hand → sqlc" rule: sqlc generates query functions, and a streaming
 `COPY` is not one of them. In `pgx` it lives as a separate method — `pool.CopyFrom`,
 which takes a table name, a column list, and a row source. That is why this whole
-unit is raw `pgx` (an escape hatch ahead of sqlc), like 00-03 and 05-05.
+unit is raw `pgx` (an escape hatch ahead of sqlc), like 00-04 and 05-05.
 
 ## MERGE: INSERT, UPDATE, and DELETE in one command
 

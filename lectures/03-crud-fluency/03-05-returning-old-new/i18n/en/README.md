@@ -48,7 +48,7 @@ Every row has two "versions" — before the command (`old`) and after (`new`). W
 
 ## Why this unit has no sqlc
 
-The other CRUD units in the module are written with sqlc, but here sqlc gets in the way: its parser (version v1.30.0) doesn't yet know the PG18 `old.`/`new.` syntax and fails with `column "status" does not exist`. And the lesson is precisely about this feature. So the unit is an **escape-hatch**: we write the queries as strings and scan the result by hand via `pgx` (as in 00-03/00-05), with no `query.sql` and no generated `internal/db`. When a lesson needs a database capability the tool doesn't support yet, we choose the capability, not the tool.
+The other CRUD units in the module are written with sqlc, but here sqlc gets in the way: its parser (version v1.30.0) doesn't yet know the PG18 `old.`/`new.` syntax and fails with `column "status" does not exist`. And the lesson is precisely about this feature. So the unit is an **escape-hatch**: we write the queries as strings and scan the result by hand via `pgx` (as in 00-04/00-06), with no `query.sql` and no generated `internal/db`. When a lesson needs a database capability the tool doesn't support yet, we choose the capability, not the tool.
 
 ## What our code shows
 

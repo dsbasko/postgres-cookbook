@@ -113,7 +113,7 @@ Bring up the sandbox, then run a unit:
 ```sh
 docker compose up -d                                                        # start the sandbox (repo root)
 make -C lectures list                                                       # tree of units
-make -C lectures lecture L=00-getting-connected/00-01-client-server-and-sandbox  # run one
+make -C lectures lecture L=00-getting-connected/00-01-meet-brew  # run one
 ```
 
 The `list` / `lecture` / `build` targets live in `lectures/Makefile` — run them from
@@ -146,7 +146,7 @@ LOG_LEVEL=info   # debug | info | warn | error — text to stderr, so stdout sta
     ├── Makefile            # delegates `make` into individual units
     ├── internal/           # shared helpers: pg pool, brew schema, config, runctx, log
     ├── 00-getting-connected/
-    │   └── 00-01-client-server-and-sandbox/
+    │   └── 00-02-client-server-and-sandbox/
     │       ├── go.mod
     │       ├── i18n/{ru,en}/README.md
     │       ├── Makefile
@@ -208,7 +208,7 @@ working; it is enforced by a test and documented in [`CLAUDE.md`](CLAUDE.md).
 2. Add `use ./<NN-module>/<MM-slug>` to `lectures/go.work`.
 3. Write `schema.sql` (this unit's DDL) and `query.sql` (the hand-written SQL at the centre of the
    lesson). Copy `sqlc.yaml` verbatim from the reference unit
-   (`00-getting-connected/00-01-client-server-and-sandbox`) — only the `out` path ever changes —
+   (`00-getting-connected/00-02-client-server-and-sandbox`) — only the `out` path ever changes —
    and run `make gen` to produce `internal/db/`.
    *Escape-hatch units* (interactive / EXPLAIN / concurrent sessions / DDL) skip sqlc: write
    `session-a.sql` / `session-b.sql` / `demo.sql` driven by psql, or raw pgx in `main.go`.
@@ -240,16 +240,18 @@ to the English README, and the Russian one sits next to it under `i18n/ru/`. On 
 
 ### 00 — Getting connected
 
-Client-server, the local sandbox (postgres:18 + Adminer), psql as a working tool,
-connecting from Go via pgxpool, and typed queries via sqlc. After this module you have a
-working pipeline — "SQL by hand → sqlc generate → typed pgx code" — that every other topic
-builds on.
+The course on-ramp: who you are, what Brew is, and what we'll build (an intro map unit),
+then the first technical layer — client-server, the local sandbox (postgres:18 + Adminer),
+psql as a working tool, connecting from Go via pgxpool, and typed queries via sqlc. After
+this module you have a working pipeline — "SQL by hand → sqlc generate → typed pgx code" —
+that every other topic builds on.
 
-- [00-01 — Client](lectures/00-getting-connected/00-01-client-server-and-sandbox/i18n/en/README.md)
-- [00-02 — psql survival kit](lectures/00-getting-connected/00-02-psql-survival-kit/i18n/en/README.md)
-- [00-03 — Connecting from Go](lectures/00-getting-connected/00-03-connecting-from-go/i18n/en/README.md)
-- [00-04 — Typed queries via sqlc](lectures/00-getting-connected/00-04-typed-queries-with-sqlc/i18n/en/README.md)
-- [00-05 — Connection lifecycle and pooling](lectures/00-getting-connected/00-05-connection-lifecycle-and-pooling/i18n/en/README.md)
+- [00-01 — Meet Brew](lectures/00-getting-connected/00-01-meet-brew/i18n/en/README.md)
+- [00-02 — Client](lectures/00-getting-connected/00-02-client-server-and-sandbox/i18n/en/README.md)
+- [00-03 — psql survival kit](lectures/00-getting-connected/00-03-psql-survival-kit/i18n/en/README.md)
+- [00-04 — Connecting from Go](lectures/00-getting-connected/00-04-connecting-from-go/i18n/en/README.md)
+- [00-05 — Typed queries via sqlc](lectures/00-getting-connected/00-05-typed-queries-with-sqlc/i18n/en/README.md)
+- [00-06 — Connection lifecycle and pooling](lectures/00-getting-connected/00-06-connection-lifecycle-and-pooling/i18n/en/README.md)
 
 ### 01 — Data types
 
