@@ -1,13 +1,13 @@
 title: PostgreSQL Cookbook
 description:
   ru: |
-    Практический курс по PostgreSQL 18 для разработчиков приложений (не для DBA) на Go.
+    Практический курс по PostgreSQL 18 для разработчиков приложений на Go.
     От первого подключения и типов данных до индексов, MVCC, JSONB, оконных функций и серверной
     логики — и капстонов с outbox/CDC. SQL пишется руками, типизируется через sqlc, весь код
     запускается на локальном sandbox (postgres:18 + Adminer) и оставляет наблюдаемый эффект —
     это рабочие сценарии, а не лекции «на доске».
   en: |
-    A hands-on PostgreSQL 18 course for application developers (not DBAs), in Go. From the first
+    A hands-on PostgreSQL 18 course for application developers, in Go. From the first
     connection and data types to indexes, MVCC, JSONB, window functions, and server-side logic —
     plus capstones with outbox/CDC. You write SQL by hand, type it with sqlc, and every snippet
     runs on a local sandbox (postgres:18 + Adminer) and leaves an observable effect — working
@@ -220,11 +220,11 @@ modules:
     description:
       ru: |
         Как Postgres ведёт себя под конкурентной нагрузкой: ACID и транзакции, ментальная модель
-        MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции для
-        разработчика, ретраи на 40001 и дедлоки с advisory-локами.
+        MVCC (видимые xmin/xmax), блокировки строк и потерянные обновления, уровни изоляции на
+        практике, ретраи на 40001 и дедлоки с advisory-локами.
       en: |
         How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
-        (visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
+        (visible xmin/xmax), row locks and lost updates, isolation levels in practice, retries on
         40001, and deadlocks with advisory locks.
     lessons:
       - slug: 05-01-transactions-and-acid
@@ -240,7 +240,7 @@ modules:
         duration: 25m
         tags: [locks, for-update, skip-locked, lost-update, escape-hatch]
       - slug: 05-04-isolation-levels-for-devs
-        title: { ru: Уровни изоляции для разработчика, en: Isolation levels for developers }
+        title: { ru: Уровни изоляции на практике, en: Isolation levels in practice }
         duration: 25m
         tags: [isolation, serializable, write-skew, "40001", escape-hatch]
       - slug: 05-05-retry-on-40001

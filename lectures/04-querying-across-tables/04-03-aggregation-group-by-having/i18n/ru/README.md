@@ -68,7 +68,7 @@ FROM drinks GROUP BY category ORDER BY category;
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

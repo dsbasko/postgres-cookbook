@@ -30,9 +30,9 @@ set both explicitly.
 
 ## Three sources and their REPLICA IDENTITY FULL
 
-Three canonical tables travel into the CDC handoff: `drinks` (the menu),
+Three base tables travel into the CDC handoff: `drinks` (the menu),
 `articles` (the blog), `customers` (the customer directory). They already carry
-`REPLICA IDENTITY FULL` in the canon — and that is not cosmetic.
+`REPLICA IDENTITY FULL` in the base schema — and that is not cosmetic.
 
 By default (`REPLICA IDENTITY DEFAULT`), on `UPDATE`/`DELETE` Postgres writes only
 the primary key of the old row to the WAL — enough for a physical replica to
@@ -50,7 +50,7 @@ before-image holds every column.
 | Enough for a physical replica | yes | yes |
 | Enough for CDC "before → after" | no | yes |
 | Cost in WAL | minimal | grows on hot/wide rows |
-| In our canon | — | `drinks`, `articles`, `customers` |
+| In our base schema | — | `drinks`, `articles`, `customers` |
 
 ## PUBLICATION: an explicit list instead of autocreate
 
@@ -115,7 +115,7 @@ Debezium's decoder. Our job is to hand off a correct stream, and the two setting
 configuration (`PUBLICATION`, `REPLICA IDENTITY`, slots) and system decoding
 functions — these are DDL and `pg_*` calls, not sqlc-level SQL, so there is no
 `query.sql` and no `internal/db/` here. The demo runs in sequence: it applies the
-canon, applies the handoff artifact `db/init.sql`, shows the `REPLICA IDENTITY` of
+base schema, applies the handoff artifact `db/init.sql`, shows the `REPLICA IDENTITY` of
 the three sources, prints the published tables, and proves the before-image via
 `test_decoding`. The `db/init.sql` artifact is the very file that is
 byte-compatible with `kafka-cookbook` and ships to its side; re-applying it is
@@ -138,7 +138,7 @@ columns (without a running sandbox the test does `t.Skip`). The unit requires
 `wal_level=logical` — it is already set in the course's root `docker-compose.yml`.
 
 ```
-1) Канон на месте, REPLICA IDENTITY FULL на CDC-источниках:
+1) Базовые таблицы на месте, REPLICA IDENTITY FULL на CDC-источниках:
    articles   replica identity: full
    customers  replica identity: full
    drinks     replica identity: full
@@ -197,12 +197,12 @@ into `outbox` by hand, here the database's own log is the source.
 And this is where the whole course closes. The protagonist throughout was **SQL**:
 sqlc units kept the queries at the centre, and escape-hatches (like this one)
 dropped to the level of DDL, MVCC, and system functions exactly when sqlc got in
-the way of seeing the point. The final frame is the canon byte-compatibility rule
+the way of seeing the point. The final frame is the base-schema byte-compatibility rule
 we held to from the first module: this unit's `db/init.sql` matches the column
 names and types of `kafka-cookbook`'s `init.sql` **verbatim** (guarded by the
 `TestInitSQL_ByteCompatTokens` test), so Debezium reads our
 `drinks`/`articles`/`customers` without rewriting the schema. Rename even one
-canon column here and the handoff breaks.
+base-table column here and the handoff breaks.
 
 Next is the sibling course `kafka-cookbook` (github.com/dsbasko/kafka-cookbook).
 It picks up exactly this stream: Debezium listens to our `dbz_publication`, puts

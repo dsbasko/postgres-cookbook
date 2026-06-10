@@ -2,7 +2,7 @@
 
 Brew decided to give customers a link to their loyalty-program signup and didn't want to expose a sequential numeric id in the URL (`/signup/42` reveals that there are only 42 signups, and adjacent ones are trivial to enumerate). They switched to `uuid` — and immediately hit a second problem: new signups, now keyed by a random `uuid`, started inserting "all over the place" in the index, the "latest signups" page stopped sorting by the key, and inserts got a bit slower. That's how Brew met the difference between a random `uuid` (version 4) and a time-based `uuidv7` (version 7).
 
-The goal of this unit is to choose a key deliberately. A numeric `IDENTITY` (which we saw on the canon tables) is good, but it reveals order and count. A random `gen_random_uuid()` (v4) is unpredictable but doesn't sort and fragments the index. PG18 added `uuidv7()` — a `uuid` with a timestamp embedded at the front: its tail is just as unpredictable, but it **grows monotonically over time**, so it works as a time-sortable primary key. We demonstrate it on a **new** table — the canon is byte-compatible with kafka-cookbook (`customers.id` is `BIGINT` there) and must not be touched.
+The goal of this unit is to choose a key deliberately. A numeric `IDENTITY` (which we saw on the base tables) is good, but it reveals order and count. A random `gen_random_uuid()` (v4) is unpredictable but doesn't sort and fragments the index. PG18 added `uuidv7()` — a `uuid` with a timestamp embedded at the front: its tail is just as unpredictable, but it **grows monotonically over time**, so it works as a time-sortable primary key. We demonstrate it on a **new** table — the Brew base schema is byte-compatible with kafka-cookbook (`customers.id` is `BIGINT` there) and must not be touched.
 
 ## v4 vs v7: what's embedded in them
 
@@ -63,7 +63,7 @@ FROM (SELECT row_number() OVER (ORDER BY id) AS id_rank,
 
 `main.go` clears the table, inserts three signups (the DB assigns `id` from `DEFAULT uuidv7()`), and asks: did the order by `id` match the insertion order? For v7 — yes. In Go a `uuid` arrives as `pgtype.UUID`; we don't print the actual values (they're random).
 
-By the way, this unit's `schema.sql` is the first in the course to add its **own** table: `make db-reset` applies it via `brew.Apply(ctx, pool, ddl)` (canon → unit DDL → seed), and `main.go` reads that DDL next to itself via `runtime.Caller`.
+By the way, this unit's `schema.sql` is the first in the course to add its **own** table: `make db-reset` applies it via `brew.Apply(ctx, pool, ddl)` (base schema → unit DDL → seed), and `main.go` reads that DDL next to itself via `runtime.Caller`.
 
 ## Running it
 
@@ -93,13 +93,13 @@ What we simplified:
 
 - **Monotonicity is about order, not security.** `uuidv7` doesn't hide the creation time (it's easy to extract) — if "when" must stay private, this isn't the tool. Conversely, v4 reveals less but loses on index locality.
 - **The key choice is a trade-off (see the table above).** For distributed inserts and public identifiers `uuidv7` is a good default; for narrow internal tables `IDENTITY` is often still better — more compact, faster, though it reveals order/volume and merges poorly across databases.
-- **The canon stays on `BIGINT`.** Deliberately, for byte-compatibility with kafka-cookbook — we try new ideas on new tables, not on the canon.
+- **The base tables stay on `BIGINT`.** Deliberately, for byte-compatibility with kafka-cookbook — we try new ideas on new tables, not on the base tables.
 
 ## Takeaways
 
 - `gen_random_uuid()` — v4, random: unpredictable, but doesn't sort and fragments the B-tree.
 - PG18 `uuidv7()` — v7, with embedded time: monotonic, works as a time-sortable primary key; the time is extracted with `uuid_extract_timestamp()`.
 - `uuid` values are random — check and show **properties** (version, monotonicity), not specific values.
-- Demonstrate modern idioms (`uuidv7`) on new tables; don't touch the Brew canon (`*.id BIGINT`) — that keeps the handoff with kafka-cookbook.
+- Demonstrate modern idioms (`uuidv7`) on new tables; don't touch the Brew base tables (`*.id BIGINT`) — that keeps the handoff with kafka-cookbook.
 
 Next up — the **01-05 "enums, arrays, and a jsonb intro"** unit: container types — the ordered `enum`, arrays (`text[]` with the `@>` operator), and a first look at `jsonb`; when each container fits, and when it's time to normalize.

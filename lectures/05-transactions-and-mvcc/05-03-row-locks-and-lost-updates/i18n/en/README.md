@@ -60,7 +60,7 @@ The three fixes in one table — from the most common to the most special:
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and restore the canon:
+Bring up the sandbox (from the repo root) and restore the Brew base schema:
 
 ```sh
 docker compose up -d
@@ -146,7 +146,7 @@ A3) Итог очереди — B взял ДРУГУЮ задачу (#2), не 
   3 | сварить заказ #3 | pending
 ```
 
-After the demo, restore the canon: `make ... T=db-reset` (the `job_queue` table can be dropped by hand).
+After the demo, restore the Brew base schema: `make ... T=db-reset` (the `job_queue` table can be dropped by hand).
 
 ## The fence
 
@@ -164,4 +164,4 @@ The step order in the two-session scenario is held by `\prompt` — without them
 - **`FOR UPDATE SKIP LOCKED`** does the opposite — it *skips* locked rows: the job-queue idiom, where N workers split the work with no waiting and no double-processing.
 - A lock lives until the end of the transaction → keep the critical section short, don't call external services while holding it.
 
-Next is **05-04 "isolation levels for developers"**: `FOR UPDATE` locks rows explicitly, but Postgres has a second lever against anomalies — the transaction's isolation level. We'll walk `READ COMMITTED` → `REPEATABLE READ` → `SERIALIZABLE` and the write-skew anomaly that only the last one catches.
+Next is **05-04 "isolation levels in practice"**: `FOR UPDATE` locks rows explicitly, but Postgres has a second lever against anomalies — the transaction's isolation level. We'll walk `READ COMMITTED` → `REPEATABLE READ` → `SERIALIZABLE` and the write-skew anomaly that only the last one catches.

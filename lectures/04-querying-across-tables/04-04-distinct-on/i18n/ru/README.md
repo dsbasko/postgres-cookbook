@@ -64,7 +64,7 @@ ORDER BY o.customer_id, o.created_at DESC, o.id DESC;
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

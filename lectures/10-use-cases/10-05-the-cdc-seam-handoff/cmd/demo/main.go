@@ -100,7 +100,7 @@ func run(ctx context.Context, reset bool) error {
 		return fmt.Errorf("applyInitSQL: %w", err)
 	}
 
-	fmt.Println("1) Канон на месте, REPLICA IDENTITY FULL на CDC-источниках:")
+	fmt.Println("1) Базовые таблицы на месте, REPLICA IDENTITY FULL на CDC-источниках:")
 	if err := showReplicaIdentity(ctx, pool); err != nil {
 		return fmt.Errorf("showReplicaIdentity: %w", err)
 	}

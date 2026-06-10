@@ -63,7 +63,7 @@ In `main.go` we seed the lab table `price_lab` (5 rows), do a safe targeted `UPD
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon plus the unit's table:
+Bring up the sandbox (from the repo root) and apply the Brew base schema plus the unit's table:
 
 ```sh
 docker compose up -d

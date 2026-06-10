@@ -69,7 +69,7 @@ This is an escape-hatch unit on raw pgx (there's a `go.mod`, but sqlc isn't the
 protagonist here): the capstone builds the schema with DDL, reads plans via
 `EXPLAIN`, and runs a retry loop — that needs interactivity sqlc doesn't give. We
 work on the lab tables `cap_members` / `cap_ledger`: `buildSchema` does `DROP ...
-CASCADE + CREATE`, so the build is idempotent, and we don't touch the Brew canon.
+CASCADE + CREATE`, so the build is idempotent, and we don't touch the Brew base schema.
 
 `cmd/demo/main.go` walks the subservice end to end in five steps. (1) It builds the
 schema. (2) Creates three members via `INSERT ... RETURNING id` — the id is
@@ -159,7 +159,7 @@ the balance at the same time.
   out of twenty thousand, so the index wins; on a low-selectivity column it might not
   pay off.
 - **The `cap_*` lab tables are a simplification for the capstone's isolation.** We
-  don't touch the real Brew canon (`orders`, `outbox`, `drinks`) here, so the DROP
+  don't touch the real Brew base tables (`orders`, `outbox`, `drinks`) here, so the DROP
   can't hit the tables that ship into CDC in 10-05.
 
 ## Takeaways

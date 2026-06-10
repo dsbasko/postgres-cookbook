@@ -70,7 +70,7 @@ ORDER BY grouping(shop), shop, grouping(category), category;
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

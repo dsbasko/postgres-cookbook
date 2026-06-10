@@ -112,7 +112,7 @@ What we simplified:
 - **Skip-scan is a safety net, not a replacement for design.** At high leader cardinality it loses to a `Seq Scan`. You shouldn't rely on it instead of a dedicated index on `(price)`.
 - **An index has a write and storage cost.** Every extra index slows down `INSERT`/`UPDATE` and takes disk, so "an index for every case" isn't free (on maintenance cost and `CREATE INDEX CONCURRENTLY` — see 06-06).
 
-Which indexes a cluster actually needs under real load, how to catch unused ones (`pg_stat_user_indexes`) and duplicates — that's your DBA's dashboard; your job as a developer is to **pick the column order for your queries and verify it in `EXPLAIN`**.
+Which indexes a cluster actually needs under real load, how to catch unused ones (`pg_stat_user_indexes`) and duplicates — that's your DBA's dashboard; your job is to **pick the column order for your queries and verify it in `EXPLAIN`**.
 
 ## Takeaways
 

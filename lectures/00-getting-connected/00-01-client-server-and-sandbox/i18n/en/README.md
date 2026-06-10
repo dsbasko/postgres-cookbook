@@ -1,6 +1,6 @@
 # 00-01 — Client, server, and the sandbox
 
-First day at Brew. Somewhere there's a Postgres running — with orders, the menu, customers — and your job as a developer is to work with it. Not to administer it, not to set up replication, but to write an application that reads and writes data. Before touching types, indexes, and transactions, two boring but mandatory things: understand what is actually on the other end of the connection, and get a local copy you're not afraid to break.
+First day at Brew. Somewhere there's a Postgres running — with orders, the menu, customers — and your job is to work with it. Not to administer it, not to set up replication, but to write an application that reads and writes data. Before touching types, indexes, and transactions, two boring but mandatory things: understand what is actually on the other end of the connection, and get a local copy you're not afraid to break.
 
 That's the whole plot of this unit. No SQL heroics — connect, ask the server its version, read the menu. Everything that follows rides on this same pipeline.
 
@@ -21,7 +21,7 @@ One connection, two ends:
                                                                   • owns the data files — only it
 ```
 
-Why this matters to a developer, not just an admin. Every word that comes up later — "connection", "pool", "timeout", "the connection dropped" — is about this very socket. The server does the work: it parses SQL, builds a plan, executes it, runs MVCC and locking. The client only sends the query and collects the result. One server serves many clients at once — and the whole concurrency story (module 05) grows from exactly this: several connections, one set of data.
+Why this matters in practice, not just in administration theory. Every word that comes up later — "connection", "pool", "timeout", "the connection dropped" — is about this very socket. The server does the work: it parses SQL, builds a plan, executes it, runs MVCC and locking. The client only sends the query and collects the result. One server serves many clients at once — and the whole concurrency story (module 05) grows from exactly this: several connections, one set of data.
 
 The practical takeaway for today is simple: to do anything with data you need a connection. Let's open one and confirm there really is a live Postgres 18 on the other end.
 
@@ -33,7 +33,7 @@ The local stand is one Postgres 18 container plus Adminer as a web client. Bring
 docker compose up -d
 ```
 
-A single database `brew` serves the whole course. Each unit layers its own schema on top of the shared Brew canon (`schema/brew.sql`) via `make db-reset` — no separate container per unit. The canon is the coffee-shop's tables: `drinks` (the menu), `customers`, `orders`, `shops`, and others. We fill them with deterministic seed data: fixed `id`s, fixed `created_at`s. That's why the demo output reproduces verbatim — and why it's safe to paste straight into a README.
+A single database `brew` serves the whole course. Each unit layers its own schema on top of the shared Brew base schema (`schema/brew.sql`) via `make db-reset` — no separate container per unit. The base tables are the coffee-shop's tables: `drinks` (the menu), `customers`, `orders`, `shops`, and others. We fill them with deterministic seed data: fixed `id`s, fixed `created_at`s. That's why the demo output reproduces verbatim — and why it's safe to paste straight into a README.
 
 `make db-reset` is idempotent: under the hood it applies the schema via `IF NOT EXISTS` and the seed via `TRUNCATE ... RESTART IDENTITY` before inserting. Run it as many times as you like — the database always lands in the same state. This isn't cosmetic: reproducibility is what separates "works on my machine" from "works for everyone".
 
@@ -61,7 +61,7 @@ FROM drinks
 ORDER BY id;
 ```
 
-`make gen` runs `sqlc generate`: sqlc reads `query.sql` together with the schema (the Brew canon plus the unit's additions) and generates typed Go code into `internal/db/`. From `-- name: ListDrinks :many` you get a method `ListDrinks(ctx) ([]ListDrinksRow, error)`, where `ListDrinksRow` is a struct with fields of exactly the table's types (`base_price BIGINT` → `int64`). We **commit** the generated code: it's part of the repo, gets reviewed in the diff, and doesn't require code generation on someone else's machine.
+`make gen` runs `sqlc generate`: sqlc reads `query.sql` together with the schema (the Brew base schema plus the unit's additions) and generates typed Go code into `internal/db/`. From `-- name: ListDrinks :many` you get a method `ListDrinks(ctx) ([]ListDrinksRow, error)`, where `ListDrinksRow` is a struct with fields of exactly the table's types (`base_price BIGINT` → `int64`). We **commit** the generated code: it's part of the repo, gets reviewed in the diff, and doesn't require code generation on someone else's machine.
 
 `main.go` after that is thin. Its whole essence is four lines:
 
@@ -76,7 +76,7 @@ No manual `rows.Scan`, no SQL string literals in the Go code — all of that is 
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d

@@ -2,7 +2,7 @@
 
 At month-end the Brew revenue report didn't reconcile. The register says one thing, the export from the app is a couple of kopeks short, and it's like that on every line. The cause is mundane and famous: the sums were added in floating-point numbers. And `float` can't represent decimal fractions exactly — in it `0.1 + 0.2` is not `0.3`, and that error accumulates over thousands of orders into a noticeable hole.
 
-The goal of this unit is to close that class of bug up front: understand why `float` is wrong for money, and pick a representation that adds up exactly and maps cleanly into Go. Postgres has `numeric` (exact, arbitrary precision), but in an application money is usually kept even simpler — as an integer count of minor units (cents). That's exactly how the Brew canon is built: `drinks.base_price` is a `BIGINT` in cents.
+The goal of this unit is to close that class of bug up front: understand why `float` is wrong for money, and pick a representation that adds up exactly and maps cleanly into Go. Postgres has `numeric` (exact, arbitrary precision), but in an application money is usually kept even simpler — as an integer count of minor units (cents). That's exactly how the Brew base schema is built: `drinks.base_price` is a `BIGINT` in cents.
 
 ## Why float breaks money
 
@@ -14,7 +14,7 @@ In `numeric` the same numbers have no error: it's a decimal type with an exact r
 
 The third path — and usually the best one for an application — is to not store a fraction at all. A price of `3.00 ₽` is `300` cents, an integer. Addition, multiplying by quantity, summing over an order — all of these are integer operations: exact, fast, no surprises. In Go `BIGINT` is `int64`, a native type with no wrappers. You unfold it into rubles-and-kopeks only at the output boundary: `price/100` and `price%100`.
 
-The Brew canon keeps all prices this way: `drinks.base_price`, `order_items.unit_price` — `BIGINT` in cents. The report that didn't reconcile would be fixed by replacing the `float` sum with a `sum()` over integer cents.
+The Brew base schema keeps all prices this way: `drinks.base_price`, `order_items.unit_price` — `BIGINT` in cents. The report that didn't reconcile would be fixed by replacing the `float` sum with a `sum()` over integer cents.
 
 ## Three representations: which to pick
 
@@ -55,7 +55,7 @@ fmt.Fprintf(w, "%d\t%s\t%d\t%d.%02d\n", d.ID, d.Name, d.BasePrice, d.BasePrice/1
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d
@@ -100,7 +100,7 @@ One thing is non-negotiable: **money is never computed in `float`**.
 
 - `float`/`double precision` is inexact for decimal fractions: `0.1 + 0.2 ≠ 0.3`. For money — never.
 - `numeric` is exact (`0.1 + 0.2 = 0.3`), but in Go it's `pgtype.Numeric` and slower than integers.
-- In an application, money is most convenient as an integer count of minor units (cents) in a `BIGINT` → Go `int64`; unfold into `₽.kop` only at output. That's how the Brew canon is built.
+- In an application, money is most convenient as an integer count of minor units (cents) in a `BIGINT` → Go `int64`; unfold into `₽.kop` only at output. That's how the Brew base schema is built.
 - `sum()` over `BIGINT` returns `numeric` — cast the result to `::bigint` if you expect `int64`.
 
 Next up — the **01-02 "text, boolean, and the NULL teaser"** unit: we'll look at three "boring" types that applications actually trip over — why we keep `text` and not `char(n)`, what the three-valued logic of `boolean` is, and why `NULL` is not "empty" but "unknown".

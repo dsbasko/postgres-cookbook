@@ -10,7 +10,7 @@ An `enum` is a type with a fixed list of values (`small`, `medium`, `large`). It
 
 ## Arrays: text[] and the @> operator
 
-An array (`text[]`, `int[]`, …) stores a list of same-typed values in one column. In the canon, an article's tags live as the string `'coffee,basics'` (that's how kafka-cookbook has it — byte-compatibility), but `string_to_array(tags, ',')` unfolds it into `text[]`, and in Go that's `[]string`. The basic operator is `@>` ("array contains"): `tags @> ARRAY['coffee']` finds articles with the `coffee` tag. At scale this search is sped up by a GIN index (module 06/07). An array is good when the values are simple, few, and don't need their own attributes; the moment a tag needs its own fields (color, counter), it's time for a separate junction table.
+An array (`text[]`, `int[]`, …) stores a list of same-typed values in one column. In the base schema, an article's tags live as the string `'coffee,basics'` (that's how kafka-cookbook has it — byte-compatibility), but `string_to_array(tags, ',')` unfolds it into `text[]`, and in Go that's `[]string`. The basic operator is `@>` ("array contains"): `tags @> ARRAY['coffee']` finds articles with the `coffee` tag. At scale this search is sped up by a GIN index (module 06/07). An array is good when the values are simple, few, and don't need their own attributes; the moment a tag needs its own fields (color, counter), it's time for a separate junction table.
 
 ## jsonb: flexibility with an asterisk
 
@@ -28,7 +28,7 @@ The right-hand column is the boundary: a container fits while the data is simple
 
 ## What our code shows
 
-A dedicated `enum` type (in `schema.sql`) and three demonstrations. The enum order on literals; arrays and `jsonb` on the canon and literals:
+A dedicated `enum` type (in `schema.sql`) and three demonstrations. The enum order on literals; arrays and `jsonb` on the base schema and literals:
 
 ```sql
 SELECT ('small'::drink_size < 'large'::drink_size) AS small_lt_large,   -- EnumOrder
@@ -42,7 +42,7 @@ SELECT coalesce('{"size":"L","milk":"oat","shots":2}'::jsonb ->> 'milk', '')    
        jsonb_exists('{"size":"L","milk":"oat","shots":2}'::jsonb, 'milk')            AS has_milk;
 ```
 
-sqlc types `tag_list` as `[]string`; the `jsonb`-operator results arrive as strings. Like 01-04, this unit adds its own object to the schema (the `drink_size` type), so `make db-reset` applies it via `brew.Apply` (canon → unit DDL → seed).
+sqlc types `tag_list` as `[]string`; the `jsonb`-operator results arrive as strings. Like 01-04, this unit adds its own object to the schema (the `drink_size` type), so `make db-reset` applies it via `brew.Apply` (base schema → unit DDL → seed).
 
 ## Running it
 
@@ -87,7 +87,7 @@ The rule is simple: **what you filter / count / join on is a column; `jsonb` is 
 ## Takeaways
 
 - `enum` is ordered by value declaration, not alphabetically; good for fixed scales, but inflexible to change.
-- Arrays (`text[]`) + the `@>` ("contains") operator are handy for simple lists; in the canon tags are a string, `string_to_array` gives `text[]` → Go `[]string`.
+- Arrays (`text[]`) + the `@>` ("contains") operator are handy for simple lists; in the base schema tags are a string, `string_to_array` gives `text[]` → Go `[]string`.
 - `jsonb`: `->>` extracts `text`, `->` extracts `jsonb` (with quotes), `jsonb_exists`/`?` tests key presence. This is an intro; the depth is module 07.
 - A container is not a substitute for normalization: keep what you filter/count/join on as columns.
 

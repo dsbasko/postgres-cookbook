@@ -32,7 +32,7 @@ SELECT customer FROM order_options_lab WHERE options @> '{"extras":["honey"]}'; 
 SELECT customer FROM order_options_lab WHERE options ? 'extras';                 -- HasExtrasKey
 ```
 
-`coalesce` substitutes a missing value with `∅` (Egor has no `milk`, Boris has no `extras`) and also gives sqlc the type `string` instead of a nullable `interface{}`. Like units 01-04/01-05, this one adds its own object to the schema, so `make db-reset` applies it via `brew.Apply` (canon → unit DDL+seed → canon seed).
+`coalesce` substitutes a missing value with `∅` (Egor has no `milk`, Boris has no `extras`) and also gives sqlc the type `string` instead of a nullable `interface{}`. Like units 01-04/01-05, this one adds its own object to the schema, so `make db-reset` applies it via `brew.Apply` (Brew base schema → unit DDL+seed → Brew seed).
 
 ## Running it
 

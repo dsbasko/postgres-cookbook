@@ -47,7 +47,7 @@ WHERE base_price > (SELECT avg(base_price) FROM drinks)
 
 ## Что показывает наш код
 
-Подзапросы канона:
+Подзапросы по базовым таблицам:
 
 ```sql
 -- AbovePriceAvg:           WHERE base_price > (SELECT avg(base_price) FROM drinks)
@@ -64,7 +64,7 @@ WHERE base_price > (SELECT avg(base_price) FROM drinks)
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

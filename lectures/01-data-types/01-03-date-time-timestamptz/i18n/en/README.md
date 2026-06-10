@@ -34,7 +34,7 @@ The value doesn't change — only the projection does. A `timestamp` without a z
 
 ## What our code shows
 
-`demo.sql` takes one real instant from the canon — `orders.created_at` of order #1 (`2025-01-15 09:00:00+00`) — and reads it under three zones, changing only `SET TIME ZONE`:
+`demo.sql` takes one real instant from the base table — `orders.created_at` of order #1 (`2025-01-15 09:00:00+00`) — and reads it under three zones, changing only `SET TIME ZONE`:
 
 ```sql
 SET TIME ZONE 'UTC';            SELECT created_at FROM orders WHERE id = 1;
@@ -48,7 +48,7 @@ In Go (via pgx) `timestamptz` arrives as `time.Time` — also an instant. Format
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

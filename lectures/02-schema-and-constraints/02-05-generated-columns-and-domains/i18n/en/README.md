@@ -37,7 +37,7 @@ The formula is one and the same — only the moment of computation and the cost 
 
 ## What our code shows
 
-The lesson is in `demo.sql`, on a lab table (we don't touch the canon). A table with two generated columns on one formula, and a domain:
+The lesson is in `demo.sql`, on a lab table (we don't touch the base tables). A table with two generated columns on one formula, and a domain:
 
 ```sql
 CREATE TABLE gen_lab (
@@ -97,14 +97,14 @@ What we simplified and where it bites in production (the part your DBA watches):
 - `VIRTUAL` in PG18 is tempting as "free," but it has hard limits. It **can't be indexed**, can't be part of a primary/foreign key, and (as we saw while building this unit) doesn't work with user-defined types like domains. So `VIRTUAL` is for cheap derived values you read but don't search by; anything that lands in `WHERE`/`ORDER BY`/an index must be `STORED`.
 - `STORED`, in turn, bloats the table and makes writes more expensive — for a heavy formula on a hot table that's noticeable.
 - Domains are convenient, but changing the `CHECK` of an existing domain in production means validating all dependent columns under a lock (the same story as `ALTER` in 02-06), and some ORMs/tools introspect domains poorly and just see a `bigint`.
-- The key byte-compatibility rule: generated columns and domains go only on **new** tables (`gen_lab` here, `shops`/`order_items` in the canon), while the six CDC tables of Brew stay verbatim — otherwise the 10-05 handoff breaks.
+- The key byte-compatibility rule: generated columns and domains go only on **new** tables (`gen_lab` here, `shops`/`order_items` in the base schema), while the six CDC tables of Brew stay verbatim — otherwise the 10-05 handoff breaks.
 
 ## Takeaways
 
 - A generated column (`GENERATED ALWAYS AS (expr)`) — the DB computes the value from other columns itself; one formula instead of copies in code, a direct write is rejected (`428C9`).
 - `STORED` — computed on write, kept on disk, can be indexed (for values in `WHERE`/`ORDER BY`); `VIRTUAL` (PG18) — computed on read, takes no space, but can't be indexed (for cheap, rarely-read derived values).
 - `DOMAIN` — a reusable type with a built-in `CHECK` (`positive_cents`): the invariant is declared once, a violation → `23514`.
-- Modern idioms (`VIRTUAL`, domains) — on new tables; the Brew canon is byte-compatible and untouchable.
+- Modern idioms (`VIRTUAL`, domains) — on new tables; the Brew base tables are byte-compatible and untouchable.
 - Why escape-hatch: `VIRTUAL` isn't parsed by sqlc yet — the lesson runs with psql directly.
 
 Next up — the **02-06 "ALTER TABLE: a migration mindset"** unit: which schema changes are instant (metadata only) and which rewrite the whole table under a write lock — and how to add constraints in two phases (`NOT VALID` → `VALIDATE`) without taking production down.

@@ -58,7 +58,7 @@ The demo runs two transfers. The first is ordinary, to an existing account: `COM
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon plus this unit's table:
+Bring up the sandbox (from the repo root) and apply the Brew base schema plus this unit's table:
 
 ```sh
 docker compose up -d

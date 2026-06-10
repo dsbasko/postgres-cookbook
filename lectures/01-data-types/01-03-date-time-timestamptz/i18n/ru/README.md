@@ -34,7 +34,7 @@
 
 ## Что показывает наш код
 
-`demo.sql` берёт один реальный инстант из канона — `orders.created_at` заказа #1 (`2025-01-15 09:00:00+00`) — и читает его под тремя поясами, меняя только `SET TIME ZONE`:
+`demo.sql` берёт один реальный инстант из базовой таблицы — `orders.created_at` заказа #1 (`2025-01-15 09:00:00+00`) — и читает его под тремя поясами, меняя только `SET TIME ZONE`:
 
 ```sql
 SET TIME ZONE 'UTC';            SELECT created_at FROM orders WHERE id = 1;
@@ -48,7 +48,7 @@ SET TIME ZONE 'America/New_York'; SELECT created_at FROM orders WHERE id = 1;
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

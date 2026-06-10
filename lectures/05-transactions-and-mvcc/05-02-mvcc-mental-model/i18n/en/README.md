@@ -20,7 +20,7 @@ The answer about the report grows straight out of this. Each transaction works a
 
 ## What our code shows
 
-The lesson lives in two psql scripts. The first, `demo.sql`, shows the mechanics inside a single transaction — what `UPDATE` physically does to a row version. To keep `ctid`/`xmin` clean (not muddied by past transactions over the canon), we work on a separate lab table `mvcc_lab`, which we drop at the end:
+The lesson lives in two psql scripts. The first, `demo.sql`, shows the mechanics inside a single transaction — what `UPDATE` physically does to a row version. To keep `ctid`/`xmin` clean (not muddied by past transactions over the base tables), we work on a separate lab table `mvcc_lab`, which we drop at the end:
 
 ```sql
 INSERT INTO mvcc_lab VALUES (2, 450);
@@ -51,7 +51,7 @@ The `\prompt` holds A's transaction open until you come back, so the order of st
 
 ## Running it
 
-Bring up the sandbox and apply the canon:
+Bring up the sandbox and apply the Brew base schema:
 
 ```sh
 docker compose up -d
@@ -120,7 +120,7 @@ We showed `xmin`/`xmax`/`ctid` directly and said "the old version lingers and ge
 - Dead versions are **bloat**: tables and indexes swell until `autovacuum` clears the dead tuples. Frequent `UPDATE`s on the same row breed versions faster than you'd think.
 - `VACUUM` can remove a version only once nobody can still see it. A **long open transaction** (the infamous `idle in transaction`, or a `BEGIN` forgotten in code) holds the visibility horizon and blocks cleanup across the whole database — even for tables it never touched.
 
-The practical takeaway for a developer: transactions must be short, and a `BEGIN` without a prompt `COMMIT`/`ROLLBACK` is a bug, not a style. You don't read system columns by hand in an app; you need to know about them to understand *why* things behave this way.
+The practical takeaway: transactions must be short, and a `BEGIN` without a prompt `COMMIT`/`ROLLBACK` is a bug, not a style. You don't read system columns by hand in an app; you need to know about them to understand *why* things behave this way.
 
 ## Takeaways
 

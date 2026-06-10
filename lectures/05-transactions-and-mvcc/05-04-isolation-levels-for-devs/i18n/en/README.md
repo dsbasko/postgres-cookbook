@@ -1,8 +1,8 @@
-# 05-04 — Isolation levels for developers
+# 05-04 — Isolation levels in practice
 
 A Brew shift has an unwritten rule: at least one barista must always be on the floor — the room can't go empty. Right now two are on the floor — baristas Alice and Boris (namesakes of the customers Alice Ivanova and Boris Petrov from other modules: different people, shift staff). Both decide to step into the stockroom — **at the same time**. Each glances at the room: "there are two of us, I'll step away, one stays." Each reasons flawlessly. But they leave together — and the room empties. No `UPDATE` "clobbered" another (Alice changed her own row, Boris his own), the row locks from 05-03 are useless here: they touch **different** rows. And yet the invariant is broken.
 
-This is **write-skew** — an anomaly that neither `FOR UPDATE` (the rows differ) nor even the fixed snapshot of `REPEATABLE READ` catches. Only the strictest isolation level catches it — `SERIALIZABLE`. This unit is about the three isolation levels available to a developer, and what exactly sets the top one apart.
+This is **write-skew** — an anomaly that neither `FOR UPDATE` (the rows differ) nor even the fixed snapshot of `REPEATABLE READ` catches. Only the strictest isolation level catches it — `SERIALIZABLE`. This unit is about the three available isolation levels, and what exactly sets the top one apart.
 
 This is an escape-hatch unit (like 05-02): isolation anomalies are concurrent by nature, and we teach the lesson with psql scripts.
 
@@ -46,7 +46,7 @@ Boris (B) commits first — successfully. Alice (A) commits second — her `COMM
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and restore the canon:
+Bring up the sandbox (from the repo root) and restore the Brew base schema:
 
 ```sh
 docker compose up -d

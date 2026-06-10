@@ -10,9 +10,9 @@ It's not the whole query — it's one word in it: which `JOIN` you picked. There
 
 `INNER JOIN` (you can write just `JOIN`) keeps rows that found a pair on both sides at once. A customer with no order and an order with no customer don't make it through. It's the right choice when you want exactly the matched pairs — "orders together with the data of the customer who placed them." But for an "all customers" report it's treacherous: those who haven't ordered yet it silently removes.
 
-One detail about the join condition. `customers.id` is `BIGINT`, while `orders.customer_id` is `TEXT` (that's the Brew canon: in the real CDC stream orders and the customer directory travel independently, and an order holds the customer id as a string). So we bring the keys together with an explicit cast `c.id::text = o.customer_id`. The key type doesn't matter for the `JOIN` discussion — what matters is only that the condition links a customer to their order.
+One detail about the join condition. `customers.id` is `BIGINT`, while `orders.customer_id` is `TEXT` (that's the Brew base schema: in the real CDC stream orders and the customer directory travel independently, and an order holds the customer id as a string). So we bring the keys together with an explicit cast `c.id::text = o.customer_id`. The key type doesn't matter for the `JOIN` discussion — what matters is only that the condition links a customer to their order.
 
-On the Brew canon Alice has two orders, Boris one: they matched and made it into the result. Karina has no orders, nothing to match — INNER throws her out. That's why the marketing list "lost" exactly her: INNER answers "show the pairs that exist," not "show all customers."
+In Brew's data Alice has two orders, Boris one: they matched and made it into the result. Karina has no orders, nothing to match — INNER throws her out. That's why the marketing list "lost" exactly her: INNER answers "show the pairs that exist," not "show all customers."
 
 ## LEFT JOIN — all of the left, the right if present
 
@@ -32,7 +32,7 @@ That's why `RIGHT` is almost never written in code. Any `RIGHT` turns into a `LE
 
 `FULL JOIN` keeps unmatched rows on both sides at once: left ones with no pair and right ones with no pair.
 
-Let's be honest: you can't show it on the Brew canon. Every order is tied to an existing customer, there are no "orphan" orders on the right — and `FULL` would degenerate into a plain `LEFT`. In application code it's rare too: within one normalized schema data is linked directionally, and `LEFT` is almost always enough. You can work a year and not write a single `FULL JOIN`.
+Let's be honest: you can't show it in the Brew data. Every order is tied to an existing customer, there are no "orphan" orders on the right — and `FULL` would degenerate into a plain `LEFT`. In application code it's rare too: within one normalized schema data is linked directionally, and `LEFT` is almost always enough. You can work a year and not write a single `FULL JOIN`.
 
 But one scenario justifies it: when you reconcile two independent sources, and each may have "its own" rows the other doesn't. Take an end-of-day stock count. The floor recounted drinks and turned in sheet `{1, 2}`, storage turned in `{2, 4}`. Drink 2 is in both, drink 1 only on the floor, drink 4 only in storage. A `FULL JOIN` on `drink_id` merges both sheets into one table: what's in both, what's only on the floor (`storage = NULL`), what's only in storage (`floor = NULL`). That's its job — merge two sources and highlight where they diverged.
 
@@ -45,7 +45,7 @@ All four are the same pair of sets under different rules. The left table, the ri
    ┌─────────────────┐ ┌──────────────┐ ┌───────────────────┐
    │     Karina      │ │ Alice, Boris │ │   order with       │
    │ (customer with  │ │  (matched:   │ │   no customer      │
-   │  no order)      │ │  a pair)     │ │ (none on canon)    │
+   │  no order)      │ │  a pair)     │ │ (none in data)     │
    └─────────────────┘ └──────────────┘ └───────────────────┘
 ```
 
@@ -99,7 +99,7 @@ ORDER BY d.id;
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d
@@ -147,7 +147,7 @@ Output:
 What we simplified.
 
 - On five rows an `ON` over an unindexed pair is invisible, but on large tables a `JOIN` without an index on the join key is either a hash join (builds a hash table on one side) or a nested loop (for each left row scans for a right match), and the cost grows fast. How the server picks a join method and why an index on the key matters — module 06.
-- The `c.id::text` cast in `ON` is needed only because `customer_id` is deliberately `TEXT` in the canon. In your own schema keep join keys of the same type, better still a real foreign key: then the index lands and no cast is needed.
+- The `c.id::text` cast in `ON` is needed only because `customer_id` is deliberately `TEXT` in the base schema. In your own schema keep join keys of the same type, better still a real foreign key: then the index lands and no cast is needed.
 - A `FULL JOIN` within one normalized schema is almost always a sign the data should have been linked directionally and `LEFT` would have done. Its honest place is the seam between two independent sources, each with "its own" rows.
 
 ## Takeaways

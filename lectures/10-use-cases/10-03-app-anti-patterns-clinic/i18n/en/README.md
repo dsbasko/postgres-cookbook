@@ -108,7 +108,7 @@ All five are cured from the application side, not the database.
 naive variant and its cure side by side. `setupLab` builds two lab tables of 50k rows each
 via `generate_series` (deterministic, no `random`): `events_lab` with a dense `id` key —
 for OFFSET/keyset and the huge IN; `accounts_lab` with an `email` — for non-sargable. N+1
-runs on the **canonical** `customers`/`orders` from `schema/brew.sql`. Before measuring, the
+runs on the **base** `customers`/`orders` from `schema/brew.sql`. Before measuring, the
 demo does `SET max_parallel_workers_per_gather = 0` so the plans are reproducible.
 
 Why **raw-pgx** (an escape-hatch with a `go.mod`, no sqlc): the lesson isn't about the text
@@ -161,7 +161,7 @@ parameter, and the answer stayed the same — 1000 rows.
 
 ## The fence
 
-These are all **app-side smells**, not DBA work: the database is healthy, it's the code
+These are all **app-side smells**: the database is healthy, it's the code
 that gets cured. Caveats for each cure:
 
 - **Keyset is fast under a matching index, but at the cost of flexibility.** It can't jump

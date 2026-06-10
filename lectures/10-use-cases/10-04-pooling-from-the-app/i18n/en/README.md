@@ -198,7 +198,7 @@ introduced the connection pool back in 00-05, covered advisory locks in 05-06,
 and the dedicated connection for `LISTEN`/`NOTIFY` in 09-04; here all of it met
 the reality of pooling.
 
-Next — the finale. Capstone 10-05 closes the course: the Brew canon (`orders`,
+Next — the finale. Capstone 10-05 closes the course: the Brew base tables (`orders`,
 `outbox`, the CDC sources with `REPLICA IDENTITY FULL`) goes into logical
 replication, and the CDC seam hands the baton to `kafka-cookbook` — Debezium reads
 our tables without rewriting the schema. The two books meet on a single data

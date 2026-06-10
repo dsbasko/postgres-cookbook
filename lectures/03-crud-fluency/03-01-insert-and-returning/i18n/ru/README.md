@@ -44,7 +44,7 @@ card, err := queries.IssueCard(ctx, db.IssueCardParams{CustomerID: 1, CardNo: "B
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон + таблицу юнита:
+Подними песочницу (из корня репозитория) и накати схему Brew + таблицу юнита:
 
 ```sh
 docker compose up -d

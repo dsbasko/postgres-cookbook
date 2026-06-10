@@ -75,7 +75,7 @@ FROM order_totals ORDER BY order_id;
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

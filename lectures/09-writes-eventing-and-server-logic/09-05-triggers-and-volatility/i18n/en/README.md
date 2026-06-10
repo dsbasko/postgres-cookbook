@@ -162,8 +162,8 @@ with code `42P17`.
   The label must be honest: a function that reads data is at most `STABLE`, one
   that writes or is nondeterministic is `VOLATILE`.
 - **The depth of PL/pgSQL** (cursors, exceptions, dynamic SQL, the performance of
-  server-side functions) is a separate large topic at the seam with your DBA; in a
-  course for developers we keep server-side logic at "medium" depth.
+  server-side functions) is a separate large topic at the seam with your DBA; in
+  this course we keep server-side logic at "medium" depth.
 
 ## Takeaways
 
@@ -181,4 +181,4 @@ That closes module 09: we learned to write in batches (`MERGE`/`COPY`), hand out
 work (`SKIP LOCKED`), reliably produce events (`outbox`), push signals (`NOTIFY`),
 and move invariants into the DB (triggers). Next is module 10, the capstones: all
 of this ties into end-to-end scenarios, including `10-05`, where our `outbox` and
-the canon travel via CDC into the sibling `kafka-cookbook`.
+the Brew base tables travel via CDC into the sibling `kafka-cookbook`.

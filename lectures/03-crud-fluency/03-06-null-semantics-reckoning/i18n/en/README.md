@@ -76,7 +76,7 @@ And the trap we show on data: a list `unavailable = {4, NULL}` and one question 
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon plus the unit's table:
+Bring up the sandbox (from the repo root) and apply the Brew base schema plus the unit's table:
 
 ```sh
 docker compose up -d

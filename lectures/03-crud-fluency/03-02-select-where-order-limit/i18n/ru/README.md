@@ -75,7 +75,7 @@ WHERE category = sqlc.arg(category) ORDER BY base_price LIMIT sqlc.arg(page_size
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

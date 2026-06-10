@@ -68,7 +68,7 @@ And the hierarchy self-join (`StaffWithManager`, above). In `main.go` both reads
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d
@@ -104,7 +104,7 @@ Output:
 
 What we simplified.
 
-- The multi-table `JOIN` runs on several keys at once, and each wants an index on large data — otherwise the planner joins tables by brute force. There's already an index under the FK `order_items.order_id` in the canon (`order_items_order_id_idx`); but `c.id::text = o.customer_id` is a `JOIN` on an expression, and a plain index on `customer_id` won't speed it up (how to index an expression and how the server picks a join method — module 06).
+- The multi-table `JOIN` runs on several keys at once, and each wants an index on large data — otherwise the planner joins tables by brute force. There's already an index under the FK `order_items.order_id` in the base schema (`order_items_order_id_idx`); but `c.id::text = o.customer_id` is a `JOIN` on an expression, and a plain index on `customer_id` won't speed it up (how to index an expression and how the server picks a join method — module 06).
 - We keep the four-`INNER JOIN` chain short on purpose. In production such reports quickly grow to a dozen tables, and then "in what order and by what method to join" is decided not by readability but by the query plan.
 - A self-join unfolds the hierarchy exactly one level. For arbitrary depth you need a recursive CTE (08-04); stacking N self-joins "just in case" is an anti-pattern.
 

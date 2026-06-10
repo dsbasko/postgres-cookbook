@@ -32,7 +32,7 @@ SELECT customer FROM order_options_lab WHERE options @> '{"extras":["honey"]}'; 
 SELECT customer FROM order_options_lab WHERE options ? 'extras';                 -- HasExtrasKey
 ```
 
-`coalesce` подменяет отсутствующее значение на `∅` (у Егора нет `milk`, у Бориса — `extras`) и заодно даёт sqlc тип `string` вместо nullable `interface{}`. Как и юниты 01-04/01-05, этот добавляет свой объект в схему, поэтому `make db-reset` накатывает его через `brew.Apply` (канон → DDL+seed юнита → seed канона).
+`coalesce` подменяет отсутствующее значение на `∅` (у Егора нет `milk`, у Бориса — `extras`) и заодно даёт sqlc тип `string` вместо nullable `interface{}`. Как и юниты 01-04/01-05, этот добавляет свой объект в схему, поэтому `make db-reset` накатывает его через `brew.Apply` (схема Brew → DDL+seed юнита → seed Brew).
 
 ## Запуск
 

@@ -47,7 +47,7 @@ finding drinks NOT on promo; promos (featured_drink_id) = {1, NULL}
 
 ## What our code shows
 
-Canon subqueries:
+Subqueries over the base tables:
 
 ```sql
 -- AbovePriceAvg:           WHERE base_price > (SELECT avg(base_price) FROM drinks)
@@ -64,7 +64,7 @@ And the trap on the lab `promo`, where `featured_drink_id` may be `NULL` (a "who
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

@@ -72,7 +72,7 @@ FROM daily_revenue_lab
 ORDER BY day;
 ```
 
-`schema.sql` creates a lab table `daily_revenue_lab` (date + cents) with February 5 deliberately missing — the Brew canon with its three orders is no good for a smooth time series, so the table is its own and the canon stays untouched. `cmd/demo/main.go` is thin: it opens the pool, calls `DayOverDay` and `MovingAverage`, and prints both tables via `tabwriter`. The average is wrapped in `round(..., 2)`, so the text is deterministic and matches what is pasted into `## Running it` below.
+`schema.sql` creates a lab table `daily_revenue_lab` (date + cents) with February 5 deliberately missing — the Brew base tables with their three orders are no good for a smooth time series, so the table is its own and the base tables stay untouched. `cmd/demo/main.go` is thin: it opens the pool, calls `DayOverDay` and `MovingAverage`, and prints both tables via `tabwriter`. The average is wrapped in `round(..., 2)`, so the text is deterministic and matches what is pasted into `## Running it` below.
 
 ## Running it
 

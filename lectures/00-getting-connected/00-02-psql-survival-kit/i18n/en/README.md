@@ -31,7 +31,7 @@ Three commands answer "what's even here" at three levels of nesting.
 
 `\l` (list) — the databases on the server. It shows `brew` plus the system `postgres`, `template0`, `template1`. Useful when you're not sure you connected to the right database.
 
-`\dt` (describe tables) — the tables of the current database. In our `brew` that's the 9 canon tables. Nearby live `\dv` (views), `\di` (indexes), `\ds` (sequences), `\dn` (schemas), `\df` (functions) — the letter after `\d` narrows the type.
+`\dt` (describe tables) — the tables of the current database. In our `brew` that's the 9 base tables. Nearby live `\dv` (views), `\di` (indexes), `\ds` (sequences), `\dn` (schemas), `\df` (functions) — the letter after `\d` narrows the type.
 
 `\d <name>` — the structure of one object: columns, types, nullability, defaults, indexes, and — especially valuable — foreign keys in both directions (what the table references and what references it). `\d drinks` immediately shows that `base_price` is a `bigint` (price in cents, not a float) and that `order_items` and `inventory` reference `drinks`. That's a map of relationships without a single JOIN to `pg_catalog`.
 
@@ -64,7 +64,7 @@ The last row is for contrast: everything with `\` stays on the client, plain SQL
 
 ## What our code shows
 
-The "code" of this unit is the psql script `demo.sql`: a small tour that runs three key meta-commands over the Brew canon without changing any data.
+The "code" of this unit is the psql script `demo.sql`: a small tour that runs three key meta-commands over the Brew base schema without changing any data.
 
 ```sql
 \dt                 -- which tables exist in the database
@@ -78,7 +78,7 @@ SELECT id, sku, name, category, base_price, stock FROM drinks WHERE sku = 'CLD-0
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d
@@ -96,7 +96,7 @@ make lecture L=00-getting-connected/00-02-psql-survival-kit
 Output:
 
 ```
-== \dt — какие таблицы есть в базе brew (канон Brew: 9 таблиц) ==========
+== \dt — какие таблицы есть в базе brew (схема Brew: 9 таблиц) ==========
                 List of tables
  Schema |         Name         | Type  | Owner 
 --------+----------------------+-------+-------

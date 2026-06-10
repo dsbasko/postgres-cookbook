@@ -70,7 +70,7 @@ ORDER BY grouping(shop), shop, grouping(category), category;
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

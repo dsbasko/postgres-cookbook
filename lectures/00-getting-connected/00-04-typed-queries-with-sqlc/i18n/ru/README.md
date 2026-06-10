@@ -60,7 +60,7 @@ teaCount, err := queries.CountDrinksByCategory(ctx, "tea")   // :one, скаля
 
 ## Запуск
 
-Подними песочницу (из корня репозитория) и накати канон:
+Подними песочницу (из корня репозитория) и накати схему Brew:
 
 ```sh
 docker compose up -d

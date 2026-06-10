@@ -180,11 +180,11 @@ it is a manual byte-compare, and three traps make it report false mismatches:
 
 - **Lab tables.** Demos that need throwaway tables name them `*_lab` and
   `DROP`+`CREATE` (or `TRUNCATE`) them inside `run`, so the run is idempotent and
-  the Brew canon is never touched. Modern idioms (uuidv7, virtual generated
+  the Brew base schema is never touched. Modern idioms (uuidv7, virtual generated
   columns, custom enums, extensions) live on these or on the RICH tables.
 - **Per-unit DDL from a sqlc demo.** `go:embed` can't reach a sibling
   `schema.sql` from `cmd/demo/`; read it via `runtime.Caller` and apply with
-  `brew.Apply(ctx, pool, ddl)` (canon → unit DDL → seed). The committed
+  `brew.Apply(ctx, pool, ddl)` (base schema → unit DDL → seed). The committed
   `internal/db/` is still generated from `schema.sql` at `make gen` time.
 - **Extensions** (`btree_gist` for 10-02, `pg_trgm` for 07-06) are created in the
   unit's DDL, idempotent via `CREATE EXTENSION IF NOT EXISTS`.
@@ -204,16 +204,16 @@ it is a manual byte-compare, and three traps make it report false mismatches:
     embedded TOC between the `<!-- generated … -->` markers reproduces verbatim,
     so `make web-generate-readme-toc` stays diff-stable.
 
-## The Brew canon and the byte-compatibility rule
+## The Brew base schema and the byte-compatibility rule
 
 `schema/brew.sql` has two groups of tables:
 
-- **CANON** — `orders`, `outbox` (+ `outbox_unpublished_idx`),
+- **BASE** — `orders`, `outbox` (+ `outbox_unpublished_idx`),
   `processed_outbox_ids`, `drinks`, `articles`, `customers`. These are
   transcribed **verbatim** from the `init.sql` files of `kafka-cookbook`, down
   to column names and types (`orders.customer_id TEXT`, `drinks.base_price
   BIGINT`, `customers.id BIGINT`). `REPLICA IDENTITY FULL` is set on the three
-  CDC sources (`drinks`, `articles`, `customers`). **Never rename a canon
+  CDC sources (`drinks`, `articles`, `customers`). **Never rename a base-schema
   column.** Capstone `10-05` publishes exactly these tables into logical
   replication, and Debezium on the Kafka side reads them without a schema
   rewrite — a rename breaks the handoff. A DB-free test
@@ -222,7 +222,7 @@ it is a manual byte-compare, and three traps make it report false mismatches:
   examples (JOIN, LATERAL, window functions). They are not part of the CDC
   handoff, so this is where modern PG18 idioms live: `GENERATED ALWAYS AS
   IDENTITY`, and any `uuidv7()` / generated-column demos go on **new** tables,
-  never on the canon.
+  never on the base tables.
 
 ## Accuracy guardrails (when authoring content)
 

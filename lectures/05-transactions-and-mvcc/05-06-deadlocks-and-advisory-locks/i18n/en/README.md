@@ -50,7 +50,7 @@ The three advisory-API functions — by waiting and lifetime:
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and restore the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d
@@ -126,7 +126,7 @@ HINT:  See server log for query details.
 CONTEXT:  while updating tuple (0,2) in relation "lock_lab"
 ```
 
-Postgres picked the victim on its own (here, A) and rolled back its transaction; B proceeded and committed. (The process/transaction numbers in `DETAIL` will be your own, and the victim may turn out to be B — that's the scheduler's choice.) After the demo, restore the canon: `make ... T=db-reset`.
+Postgres picked the victim on its own (here, A) and rolled back its transaction; B proceeded and committed. (The process/transaction numbers in `DETAIL` will be your own, and the victim may turn out to be B — that's the scheduler's choice.) After the demo, re-apply the Brew base schema: `make ... T=db-reset`.
 
 ## The fence
 

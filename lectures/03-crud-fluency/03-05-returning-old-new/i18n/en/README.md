@@ -78,7 +78,7 @@ We print the "empty" side (`NULL`) as `∅`. The demo works on the lab table `or
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

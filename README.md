@@ -93,7 +93,7 @@ comes from `brand.siteUrl` in `course.yaml`, wired into `NEXT_PUBLIC_SITE_URL` a
 
 Everything the units talk to runs from one [`docker-compose.yml`](docker-compose.yml): a single
 Postgres instance shared across the whole course (each unit layers its own `schema.sql` on top of
-the Brew canon via `make db-reset`, so one database is enough), plus Adminer as a web UI. Bring it
+the Brew base schema via `make db-reset`, so one database is enough), plus Adminer as a web UI. Bring it
 up from the repo root with `docker compose up -d`:
 
 | Service | Image | Local endpoint |
@@ -139,7 +139,7 @@ LOG_LEVEL=info   # debug | info | warn | error — text to stderr, so stdout sta
 .
 ├── docker-compose.yml      # the sandbox: Postgres 18 + Adminer
 ├── course.yaml             # course manifest + branding (consumed by the site engine)
-├── schema/                 # the Brew canon: brew.sql (baseline) + seed.sql
+├── schema/                 # the Brew base schema: brew.sql (baseline) + seed.sql
 ├── web/                    # thin Next.js wrapper over @dsbasko/cookbook-engine
 └── lectures/
     ├── go.work             # workspace tying all unit modules together
@@ -168,7 +168,7 @@ Common boilerplate lives in `lectures/internal/` instead of being copied into ev
 
 - `pg.NewPool(ctx, opts ...pg.Option)` — a `*pgxpool.Pool` with course defaults (reads
   `DATABASE_URL`, else assembles it from `PG*`; `pg.WithMaxConns(n)` is the escape hatch)
-- `brew.Reset(ctx, pool)` / `brew.Apply(ctx, pool, extraDDL ...string)` — apply the Brew canon
+- `brew.Reset(ctx, pool)` / `brew.Apply(ctx, pool, extraDDL ...string)` — apply the Brew base schema
   (`schema/brew.sql`) → a unit's `schema.sql` → `schema/seed.sql`, idempotently
 - `config.MustEnv(name)`, `config.EnvOr(name, default)` — wrappers over `os.Getenv`
 - `runctx.New()` — a context cancelled on `SIGINT` / `SIGTERM`
@@ -197,7 +197,7 @@ That is not cosmetic. The Postgres capstone `10-05` sets `REPLICA IDENTITY FULL`
 sources and runs `CREATE PUBLICATION dbz_publication`, opening a logical-replication stream.
 Because the schema matches exactly, Debezium on the `kafka-cookbook` side reads that stream
 without a single schema rewrite — the Postgres course literally hands the baton to the Kafka
-course. The byte-compatibility rule (never rename a canon column) is what keeps that handoff
+course. The byte-compatibility rule (never rename a base-schema column) is what keeps that handoff
 working; it is enforced by a test and documented in [`CLAUDE.md`](CLAUDE.md).
 
 ## How to add a unit
@@ -305,13 +305,13 @@ CTEs with materialization. This is where data turns into answers to business que
 ### 05 — Transactions
 
 How Postgres behaves under concurrency: ACID and transactions, an MVCC mental model
-(visible xmin/xmax), row locks and lost updates, isolation levels for developers, retries on
+(visible xmin/xmax), row locks and lost updates, isolation levels in practice, retries on
 40001, and deadlocks with advisory locks.
 
 - [05-01 — Transactions and ACID](lectures/05-transactions-and-mvcc/05-01-transactions-and-acid/i18n/en/README.md)
 - [05-02 — The MVCC mental model](lectures/05-transactions-and-mvcc/05-02-mvcc-mental-model/i18n/en/README.md)
 - [05-03 — Row locks and lost updates](lectures/05-transactions-and-mvcc/05-03-row-locks-and-lost-updates/i18n/en/README.md)
-- [05-04 — Isolation levels for developers](lectures/05-transactions-and-mvcc/05-04-isolation-levels-for-devs/i18n/en/README.md)
+- [05-04 — Isolation levels in practice](lectures/05-transactions-and-mvcc/05-04-isolation-levels-for-devs/i18n/en/README.md)
 - [05-05 — Retrying on 40001](lectures/05-transactions-and-mvcc/05-05-retry-on-40001/i18n/en/README.md)
 - [05-06 — Deadlocks and advisory locks](lectures/05-transactions-and-mvcc/05-06-deadlocks-and-advisory-locks/i18n/en/README.md)
 

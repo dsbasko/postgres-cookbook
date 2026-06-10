@@ -8,7 +8,7 @@ In every previous unit we called `pg.NewPool` without wondering what's inside. T
 
 When a client connects to Postgres, the server forks a separate process for it — a **backend**. That process lives for the whole connection and holds its own memory (work_mem, caches, session state). Opening it means a TCP handshake, authentication, session init: milliseconds that add up to noticeable latency under load. And keeping them open costs memory and OS scheduling per backend. So the server has a hard ceiling — `max_connections` (default ~100): not "as many as it can take", but how many backends it will allow at all.
 
-The takeaway for a developer: a connection is an expensive and limited resource. Opening one per request is an anti-pattern (Brew's very mistake). The right way is to open a pool once at application startup and reuse connections.
+The takeaway: a connection is an expensive and limited resource. Opening one per request is an anti-pattern (Brew's very mistake). The right way is to open a pool once at application startup and reuse connections.
 
 ## The pool: open once, reuse many times
 
@@ -75,7 +75,7 @@ The last row is the whole point of the pool: in use is 0, yet total is 4. The co
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d

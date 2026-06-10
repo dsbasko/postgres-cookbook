@@ -90,7 +90,7 @@ The anti-demo uses the same `queryDrinks`, but twice on the malicious input: onc
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

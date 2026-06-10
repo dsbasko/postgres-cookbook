@@ -6,7 +6,7 @@ This unit is about three types that look boring but are exactly what application
 
 ## text, not char(n) or varchar(n)
 
-In Postgres the default string type is `text`, with no length limit. `varchar(n)` is `text` with a length check (and almost never needed: constrain length with a `CHECK` if you must). `char(n)`, though, is a separate trap: it pads the string with spaces to a fixed length. Because of that `'abc'::char(5)` actually stores `'abc  '`, and on comparison the trailing spaces are "eaten": `'abc'::char(5) = 'abc  '::char(5)` → `true`. In `text` spaces are significant: `'abc' = 'abc '` → `false`. So in the course (and in the Brew canon) we keep `text` — predictable byte-wise comparison.
+In Postgres the default string type is `text`, with no length limit. `varchar(n)` is `text` with a length check (and almost never needed: constrain length with a `CHECK` if you must). `char(n)`, though, is a separate trap: it pads the string with spaces to a fixed length. Because of that `'abc'::char(5)` actually stores `'abc  '`, and on comparison the trailing spaces are "eaten": `'abc'::char(5) = 'abc  '::char(5)` → `true`. In `text` spaces are significant: `'abc' = 'abc '` → `false`. So in the course (and in the Brew base schema) we keep `text` — predictable byte-wise comparison.
 
 ## boolean: true, false, and… NULL
 

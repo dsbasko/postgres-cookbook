@@ -68,7 +68,7 @@ And per-customer stats with the two counters side by side — so the discrepancy
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

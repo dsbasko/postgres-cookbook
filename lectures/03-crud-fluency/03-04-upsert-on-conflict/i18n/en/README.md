@@ -12,7 +12,7 @@ The goal of this unit is to do it in one atomic, concurrency-safe command: `INSE
 
 On a conflict `DO UPDATE SET ...` runs. There a special pseudo-table `EXCLUDED` is available — it's the row we **tried to insert** (it was "excluded" from the insert due to the conflict). `SET on_hand = EXCLUDED.on_hand` means "take the new stock value from the input." That's how you write a typical upsert counter: the new value overwrites the old. You can also accumulate (`SET on_hand = stock_levels.on_hand + EXCLUDED.on_hand` — add to the current), referring to the old value by the table name and to the new one via `EXCLUDED`.
 
-The alternative is `DO NOTHING`: on a conflict, do nothing. That's the idempotent-insert idiom: "insert if not present, otherwise silently skip." This is exactly how the Brew canon silences duplicates by `outbox_id` (the `processed_outbox_ids` table) — a redelivered event doesn't break the consumer.
+The alternative is `DO NOTHING`: on a conflict, do nothing. That's the idempotent-insert idiom: "insert if not present, otherwise silently skip." This is exactly how the Brew base schema silences duplicates by `outbox_id` (the `processed_outbox_ids` table) — a redelivered event doesn't break the consumer.
 
 ## Insert or update? The xmax trick
 
@@ -66,7 +66,7 @@ In `main.go` we insert the pair `CENTRAL/ESP-01`, then upsert it again with a ne
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon plus the unit's table:
+Bring up the sandbox (from the repo root) and apply the Brew base schema plus the unit's table:
 
 ```sh
 docker compose up -d

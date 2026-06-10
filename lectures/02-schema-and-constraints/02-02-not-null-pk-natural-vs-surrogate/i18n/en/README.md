@@ -85,7 +85,7 @@ Output:
 What we simplified: we presented the surrogate as an "almost always right default" but didn't finish the foreign-key story — no table here references our `code`/`id`, so the rename cascade stayed off-screen (we'll do it in 02-03). In production the choice of key is a trade-off your DBA and you both keep in mind:
 
 - A surrogate decouples identity from the business value (the recommended default for app tables) but adds a column and an index and requires remembering that "real" uniqueness lives on the `UNIQUE` code, not the id.
-- A natural key is good for genuinely immutable values (currency, country codes) and in many-to-many junction tables, where a composite natural PK is natural (our canon `inventory (shop_id, drink_id)` is exactly that).
+- A natural key is good for genuinely immutable values (currency, country codes) and in many-to-many junction tables, where a composite natural PK is natural (our base table `inventory (shop_id, drink_id)` is exactly that).
 - Always put `NOT NULL` explicitly on business-required fields: let the schema, not the code, ensure data doesn't arrive empty.
 
 ## Takeaways
@@ -93,6 +93,6 @@ What we simplified: we presented the surrogate as an "almost always right defaul
 - `PRIMARY KEY` is `NOT NULL` + `UNIQUE`: the key is never `NULL` (`23502`) and never repeats (`23505`); `NOT NULL` makes the schema the first line of validation.
 - A natural key = a business value as identity: it changes with the business, and changing it "drags" the foreign keys along.
 - A surrogate key = a synthetic `id` owns identity, the business code lives in a `UNIQUE` column; renaming the code doesn't touch the `id`. This is the right default for most app tables.
-- A composite natural key fits junction tables (`inventory (shop_id, drink_id)` in the canon).
+- A composite natural key fits junction tables (`inventory (shop_id, drink_id)` in the base schema).
 
 Next up — the **02-03 "Foreign keys (ON DELETE CASCADE/SET NULL)"** unit: how an FK enforces referential integrity (a dangling reference → `23503`) and what to do with children when a parent is deleted — cascade-delete them, null out the reference, or forbid the delete entirely.

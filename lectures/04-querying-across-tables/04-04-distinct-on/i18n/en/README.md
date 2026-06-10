@@ -64,7 +64,7 @@ We cast `amount` (NUMERIC) to `numeric(10,2)::text` for a stable "X.XX," and the
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

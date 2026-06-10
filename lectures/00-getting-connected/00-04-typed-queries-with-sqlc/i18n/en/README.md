@@ -60,7 +60,7 @@ No `rows.Scan`, no SQL strings in the Go code. If tomorrow you add a column to t
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the base schema:
 
 ```sh
 docker compose up -d

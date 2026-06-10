@@ -14,7 +14,7 @@ Sometimes you don't need values — you need a yes/no answer. There are two oper
 
 ## Building: jsonb_set, build_object, jsonb_agg
 
-The reverse task is to assemble `jsonb`. `jsonb_set(doc, '{path}', value)` patches a field precisely and returns a **new** document (the stored row is unchanged — it's a pure function; the same "edit = rebuild the value" that causes the write amplification in 07-02). `jsonb_build_object('a', x, 'b', y)` builds an object from key-value pairs, and the aggregate `jsonb_agg(... ORDER BY ...)` folds result rows into one `jsonb` array. Together they assemble an API response right in SQL: for example, the whole menu from the canon `drinks` as one document.
+The reverse task is to assemble `jsonb`. `jsonb_set(doc, '{path}', value)` patches a field precisely and returns a **new** document (the stored row is unchanged — it's a pure function; the same "edit = rebuild the value" that causes the write amplification in 07-02). `jsonb_build_object('a', x, 'b', y)` builds an object from key-value pairs, and the aggregate `jsonb_agg(... ORDER BY ...)` folds result rows into one `jsonb` array. Together they assemble an API response right in SQL: for example, the whole menu from the `drinks` table as one document.
 
 ## The path step by step
 
@@ -39,7 +39,7 @@ Each step narrows the set: field → elements → filter → field. The same sel
 
 ## What our code shows
 
-A lab table `drink_recipe_lab` (recipes with a nested ingredient array) for paths, and building over the canon `drinks`:
+A lab table `drink_recipe_lab` (recipes with a nested ingredient array) for paths, and building over the `drinks` table:
 
 ```sql
 SELECT jsonb_path_query_array(recipe, '$.ingredients[*].name'),                    -- all names
@@ -83,11 +83,11 @@ Output:
 3) jsonb_set(recipe, '{kcal}', '130') — правка возвращает новый документ:
    kcal до = 190, после = 130
 
-4) jsonb_agg(jsonb_build_object(...)) — меню канона drinks одним документом:
+4) jsonb_agg(jsonb_build_object(...)) — меню таблицы drinks одним документом:
    [{"sku": "ESP-01", "price_cents": 300}, {"sku": "CAP-01", "price_cents": 450}, {"sku": "LAT-01", "price_cents": 480}, {"sku": "CLD-01", "price_cents": 520}, {"sku": "TEA-01", "price_cents": 250}]
 ```
 
-The path filter `? (@.grams > 100)` kept only `milk` (220 g) of the latte's ingredients, `@?` found milk in the latte alone, and `@@` flagged the same one as high-calorie. `jsonb_set` returned `kcal=130` without touching the stored `190`. And `jsonb_agg` assembled all five canon drinks into one document — note that the keys come out in normalized order (`sku` before `price_cents`): `jsonb` stores keys sorted.
+The path filter `? (@.grams > 100)` kept only `milk` (220 g) of the latte's ingredients, `@?` found milk in the latte alone, and `@@` flagged the same one as high-calorie. `jsonb_set` returned `kcal=130` without touching the stored `190`. And `jsonb_agg` assembled all five menu drinks into one document — note that the keys come out in normalized order (`sku` before `price_cents`): `jsonb` stores keys sorted.
 
 ## The fence
 

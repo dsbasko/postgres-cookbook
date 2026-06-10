@@ -104,7 +104,7 @@ What we simplified:
 - **A leading `%` in `LIKE` isn't cured by a bare column.** You need separate mechanisms: `text_pattern_ops` for prefix search or `pg_trgm` trigrams for substring search — that's module 07.
 - **The choice of `lower()` vs `citext`, auditing "sleeping" and bloated indexes** — that's schema maintenance, which in a large system your DBA runs.
 
-Your job as a developer is to **recognize a non-sargable condition in your own query** (column wrapped in a function/arithmetic) and either unwrap it or add an expression index.
+Your job is to **recognize a non-sargable condition in your own query** (column wrapped in a function/arithmetic) and either unwrap it or add an expression index.
 
 ## Takeaways
 

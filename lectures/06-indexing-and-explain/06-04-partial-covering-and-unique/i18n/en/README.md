@@ -109,7 +109,7 @@ What we simplified:
 - **A partial index pays off only if queries really look into its subset.** If the index condition and the query condition diverge even slightly, the index won't be used; that's worth checking in `EXPLAIN`.
 - **"Which index earns its keep under load," catching unused ones (`pg_stat_user_indexes`), the "extra index vs write speed" balance** in a large system — that's maintenance your DBA runs.
 
-Your job as a developer is to **match the index shape to the query shape**: a narrow subset → partial, "I only need a couple of columns" → covering, "it must be unique" → unique.
+Your job is to **match the index shape to the query shape**: a narrow subset → partial, "I only need a couple of columns" → covering, "it must be unique" → unique.
 
 ## Takeaways
 

@@ -107,7 +107,7 @@ func run(ctx context.Context, reset bool) error {
 	if err != nil {
 		return fmt.Errorf("BuildMenu: %w", err)
 	}
-	fmt.Println("\n4) jsonb_agg(jsonb_build_object(...)) — меню канона drinks одним документом:")
+	fmt.Println("\n4) jsonb_agg(jsonb_build_object(...)) — меню таблицы drinks одним документом:")
 	fmt.Printf("   %v\n", menu)
 
 	return nil

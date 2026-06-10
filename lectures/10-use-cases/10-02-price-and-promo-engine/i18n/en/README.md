@@ -116,7 +116,7 @@ and `23P01` rejects it. The same ban exists in Postgres in two forms:
 ## What our code shows
 
 `cmd/demo/main.go` builds three lab tables — `price_periods`, `promo_windows`,
-`price_audit` (the canon is untouched) — and runs three scenes. First it lands two
+`price_audit` (the base tables are untouched) — and runs three scenes. First it lands two
 adjacent price periods (accepted) and a third, overlapping one — the temporal PK
 rejects it with `23P01`. Then the same on promos: `SUMMER` with an overlap is
 rejected, `AUTUMN` with the same window accepted. Finally it raises the second

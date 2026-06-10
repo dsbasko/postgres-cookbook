@@ -75,7 +75,7 @@ In `main.go` the keyset pagination walks the whole menu in a loop: after each pa
 
 ## Running it
 
-Bring up the sandbox (from the repo root) and apply the canon:
+Bring up the sandbox (from the repo root) and apply the Brew base schema:
 
 ```sh
 docker compose up -d

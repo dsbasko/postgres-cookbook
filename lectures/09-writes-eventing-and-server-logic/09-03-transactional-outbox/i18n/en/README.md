@@ -31,10 +31,10 @@ relay dies midway, it restarts and reads on; it doesn't promise "exactly once",
 but it does promise "at least once" (the consumer on the other side dedupes by
 `outbox_id` (table `processed_outbox_ids`)).
 
-The `orders` and `outbox` tables here are **canonical**, from `schema/brew.sql`,
+The `orders` and `outbox` tables here are **base tables**, from `schema/brew.sql`,
 byte-compatible with `kafka-cookbook`. That is no accident: this very pair travels
 into capstone 10-05 and onward — into the CDC handoff to the Kafka course. So the
-unit defines no lab tables of its own and works on the real canon.
+unit defines no lab tables of its own and works on the real Brew base tables.
 
 ## Writing: order and event in one transaction
 
@@ -73,7 +73,7 @@ LIMIT $1;
 ```
 
 `WHERE published_at IS NULL` rides the partial index `outbox_unpublished_idx` (it
-exists in the canon) — the relay doesn't scan the whole outbox history, only the
+exists in the base schema) — the relay doesn't scan the whole outbox history, only the
 tail of undelivered rows. `FOR UPDATE SKIP LOCKED` lets you spin up **several**
 relay workers: they drain the events with no duplicates and no blocking on each
 other. Having delivered an event, the relay does `UPDATE outbox SET published_at =
@@ -112,7 +112,7 @@ This is the watershed between the **two ways** to push changes outward:
 **09-03 outbox is application-level** (you write an event row and run the relay
 yourself), while **10-05 CDC is database-level** (Postgres hands its own WAL to
 logical replication, with no event table and no relay of your own; Debezium reads
-the canon directly). Not two steps of one process, but two different entry
+the base tables directly). Not two steps of one process, but two different entry
 points — you pick one.
 
 ## What our code shows
@@ -172,7 +172,7 @@ sorted) and marked them published — nothing is left in the queue.
   long-published rows) and attention to autovacuum — but that is operations, your
   DBA's territory, and we don't touch it here.
 - **The relay-versus-CDC fork.** You can write the relay by hand (as here — read
-  `outbox` and publish), or write no relay at all: feed the canon into **logical
+  `outbox` and publish), or write no relay at all: feed the base tables into **logical
   replication** and pick the changes up via CDC (Debezium). The second path is
   capstone 10-05 (`REPLICA IDENTITY FULL` on the CDC sources + `CREATE
   PUBLICATION`); there CDC works at the database level and is presented as an
@@ -187,7 +187,7 @@ the event about it into one database in one transaction**, with Postgres providi
 the atomicity. Delivery to the outside moves into a separate **relay** that reads
 unpublished `outbox` rows via `FOR UPDATE SKIP LOCKED` (several workers, no
 duplicates) and marks them delivered. This is at-least-once: the consumer must be
-idempotent. The canonical `orders`/`outbox` here are no accident — they are the
+idempotent. The base `orders`/`outbox` here are no accident — they are the
 very pair that ships into CDC in 10-05.
 
 Next — another way to learn of a change immediately, without polling a table in a

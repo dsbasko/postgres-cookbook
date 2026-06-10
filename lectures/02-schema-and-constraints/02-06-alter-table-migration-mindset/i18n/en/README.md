@@ -48,7 +48,7 @@ And here's how the operations themselves compare by cost:
 
 ## What our code shows
 
-The lesson is in `demo.sql`, on a 1000-row lab table (we don't touch the canon). Before each `ALTER` we capture `relfilenode`, after — compare:
+The lesson is in `demo.sql`, on a 1000-row lab table (we don't touch the base tables). Before each `ALTER` we capture `relfilenode`, after — compare:
 
 ```sql
 SELECT pg_relation_filenode('alter_lab') AS fn \gset before1_
@@ -110,7 +110,7 @@ What we simplified: `relfilenode` is a good "rewrote / didn't" indicator, but no
 - **A big rewrite isn't done head-on.** `ALTER TYPE` on a hot table is split into steps in production: you add a new column, backfill data in batches in the background, then swap it atomically — or use online tools (`pg_repack`, orchestrators like Reshape).
 - **Version nuances.** `ADD COLUMN` with a **volatile** default (`now()`, a function) already rewrites; adding `NOT NULL` historically scans the table (PG12 can skip the scan if a valid `CHECK (col IS NOT NULL)` exists).
 
-The course boundary: orchestrating zero-downtime migrations leans toward DBA/DevOps; your job as a developer is to **recognize a dangerous `ALTER` in a migration review** and not ship a hot-table rewrite during business hours.
+The course boundary: orchestrating zero-downtime migrations leans toward DBA/DevOps; your job is to **recognize a dangerous `ALTER` in a migration review** and not ship a hot-table rewrite during business hours.
 
 ## Takeaways
 

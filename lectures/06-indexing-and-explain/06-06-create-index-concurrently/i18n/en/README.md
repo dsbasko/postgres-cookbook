@@ -120,7 +120,7 @@ Session B inserts a row and gets `INSERT 0 1` **during** A's index build — the
 - **After a failed build, someone has to clean up** the invalid index (`DROP INDEX CONCURRENTLY` + recreate) — an operational procedure.
 - **`CONCURRENTLY` has relatives** for other downtime-free operations (`REINDEX CONCURRENTLY` for a bloated index, `DROP INDEX CONCURRENTLY`) — choosing and scheduling them is cluster maintenance.
 
-The course boundary: your job as a developer is to **know that an index on a hot table is added via `CONCURRENTLY`, not a plain `CREATE INDEX`**, and to mark such migrations accordingly; orchestrating zero-downtime rollouts is beyond it.
+The course boundary: your job is to **know that an index on a hot table is added via `CONCURRENTLY`, not a plain `CREATE INDEX`**, and to mark such migrations accordingly; orchestrating zero-downtime rollouts is beyond it.
 
 ## Takeaways
 

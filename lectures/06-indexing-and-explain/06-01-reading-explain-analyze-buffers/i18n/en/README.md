@@ -75,7 +75,7 @@ Our demo query is the simplest tree — a **single** node: `Seq Scan` (or, after
 
 ## What our code shows
 
-The lesson is in `demo.sql`. It builds a lab table `events_lab` of a million rows (we don't touch the Brew canon), gathers statistics with `ANALYZE`, and explains the same query twice — before and after `CREATE INDEX`:
+The lesson is in `demo.sql`. It builds a lab table `events_lab` of a million rows (we don't touch the Brew base tables), gathers statistics with `ANALYZE`, and explains the same query twice — before and after `CREATE INDEX`:
 
 ```sql
 -- 1) without an index
@@ -130,7 +130,7 @@ What we simplified:
 - **One measurement, not a diagnosis.** The numbers from `ANALYZE` are one run on a specific machine with a specific cache state. A "cold" run (the first after startup) and a "warm" run give different `Buffers`/`time`, so in production you look at a plan several times and compare its **shape**, not individual milliseconds.
 - **EXPLAIN is about the query, not the database.** It answers "how did THIS query run," not "is the database healthy overall." System views (`pg_stat_statements` — which queries eat the most time in aggregate), autovacuum, table bloat, the cache hit ratio across the whole database — that's a dashboard your DBA holds.
 
-The course boundary: your job as a developer is to **be able to explain your own query and spot wasted work in the plan**; server tuning and cluster monitoring are beyond it.
+The course boundary: your job is to **be able to explain your own query and spot wasted work in the plan**; server tuning and cluster monitoring are beyond it.
 
 ## Takeaways
 
