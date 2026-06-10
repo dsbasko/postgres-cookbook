@@ -11,8 +11,8 @@ importers:
   web:
     dependencies:
       '@dsbasko/cookbook-engine':
-        specifier: 1.0.0
-        version: 1.0.0(next@14.2.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 1.1.0
+        version: 1.1.0(next@14.2.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       next:
         specifier: 14.2.18
         version: 14.2.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -53,8 +53,8 @@ importers:
 
 packages:
 
-  '@dsbasko/cookbook-engine@1.0.0':
-    resolution: {integrity: sha512-t28Tbe8y3LX6QD5Tq08Hhi6RCysbwoHZx9zbiKn5h7MVYH8rOP/HzUA9mlKxkpBcj0nfzIAgXM6AiElTw2gBmA==}
+  '@dsbasko/cookbook-engine@1.1.0':
+    resolution: {integrity: sha512-cbDL28OTHTWhcOqBHJgmPQi5JSRWRUAlmY7QXT59CTs6OJNGaWQQ3ONZm2io2BkVuL7TrWSYTCnOqc3yvybSLw==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -2119,7 +2119,7 @@ packages:
 
 snapshots:
 
-  '@dsbasko/cookbook-engine@1.0.0(next@14.2.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@dsbasko/cookbook-engine@1.1.0(next@14.2.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@types/hast': 3.0.4
       '@types/js-yaml': 4.0.9
