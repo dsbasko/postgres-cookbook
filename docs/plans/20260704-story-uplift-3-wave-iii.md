@@ -1,0 +1,244 @@
+# Story uplift 3/5 — волна III: модули 07–08 (Акт II, пониженная плотность)
+
+## Overview
+
+Четвёртый план семейства story-uplift (архив исходного плана —
+`docs/plans/completed/20260703-story-uplift.md`). Раскатка сюжетного слоя на
+модули 07 и 08 — 12 юнитов: пик арки Дани (07-02) и «спринт Виктора»
+(модуль 08, плотность сцен сознательно ниже).
+
+**Предусловие запуска:** план `2-wave-ii` завершён и принят владельцем.
+
+## Context
+
+- Канон истории: `docs/story-canon.md` — целиком перед каждой правкой прозы.
+- Карта сцен: `docs/story-scene-map.md` — запись юнита = обязательный вход
+  задачи; бюджет-заметки модулей — там же.
+- Гейты сцен: `.claude/skills/lecture-writer/references/checklist.md`.
+- Модули волны: `lectures/07-jsonb-arrays-and-search/`,
+  `lectures/08-analytical-and-lateral/` — правятся только
+  `i18n/{ru,en}/README.md`.
+- Предусловия окружения: команды из корня; `pnpm install` выполнен;
+  Docker-песочница не нужна.
+
+## Development Approach
+
+- Одна задача = один юнит (RU+EN вместе), полностью до перехода дальше;
+  внутри волны — по номерам.
+- Правки — только `i18n/{ru,en}/README.md`. Код, `query.sql`, `sqlc.yaml`,
+  `Makefile`, секции `## Запуск` / `## Running it` неприкасаемы.
+- Полные сцены — только у ★ по карте. Сцена заменяет прозу (cap ×1.5) и
+  обязана быть сильнее заменяемого открытия (правило отката). Для 08-01
+  правило отката критично: текущее открытие — одно из сильнейших в курсе.
+- Модуль 08 — пониженная плотность по канону (§6, «спринт Виктора»): не
+  доукомплектовывать сценами сверх карты.
+- Гейты зелёные — до следующей задачи. CRITICAL: при отклонении объёма
+  обновлять план (➕/⚠️).
+- Коммит на задачу: `docs:` — EN subject, RU body (формат по CLAUDE.md).
+
+## Testing Strategy
+
+- После каждого юнита — «линтер юнита» (команда в Technical Details).
+- `make web-check-coverage` / `make web-build` — на чеке волны.
+- Консистенси-чек волны: греп нитей §7, сверка голосов §2, полный линтер по
+  двум модулям.
+
+## Progress Tracking
+
+- Отмечать `[x]` сразу; новые пункты — ➕, блокеры — ⚠️.
+- При расхождении с планом — править план в том же коммите.
+
+## Technical Details
+
+- «Линтер юнита» = `node .claude/skills/lecture-writer/scripts/check_unit.mjs
+  <путь-юнита> --against-head` (из корня; путь — в блоке Files задачи).
+- Порядок работ: канон целиком → запись карты → текущие README → RU → EN →
+  линтер → diff-скоуп.
+- Открытый вопрос №3 (плашка-сводка: проза или каллаут `[!NOTE]`): первый
+  носитель жанра — 08-05 (если не закрыт раньше на 06-01) — решение
+  фиксируется в разделе «Открытые вопросы» карты сцен и применяется дальше.
+
+## Implementation Steps
+
+### Task 1: юнит `07-01-jsonb-access-and-containment` — ★ полная сцена
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-01-jsonb-access-and-containment/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-01-jsonb-access-and-containment/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `07-01` в карте сцен, оба README юнита
+- [ ] RU: сцена по записи карты (cap ×1.5, сцена заменяет прозу боли); гейты —
+  чек-лист скилла lecture-writer
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU, без he/she
+  о читателе
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 2: юнит `07-02-when-not-to-use-jsonb` — ★ полная сцена (пик арки Дани)
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-02-when-not-to-use-jsonb/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-02-when-not-to-use-jsonb/i18n/en/README.md`
+
+Особое: пик арки Дани (искупление — его победа, не провал) и эхо мема
+«просто» (реестр §7); балансировка §2.3 — Даня не громоотвод.
+
+- [ ] прочитать канон целиком, запись `07-02` в карте сцен, оба README юнита
+- [ ] RU: сцена по записи карты (cap ×1.5)
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 3: юнит `07-03-sql-json-path-and-building` — микро-реплика
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-03-sql-json-path-and-building/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-03-sql-json-path-and-building/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `07-03` в карте сцен, оба README юнита
+- [ ] RU: микро-реплика по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 4: юнит `07-04-arrays-vs-junction-table` — микро-диалог
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `07-04` в карте сцен, оба README юнита
+- [ ] RU: микро-диалог по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 5: юнит `07-05-full-text-search` — микро-диалог
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-05-full-text-search/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-05-full-text-search/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `07-05` в карте сцен, оба README юнита
+- [ ] RU: микро-диалог по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 6: юнит `07-06-pg-trgm-fuzzy` — микро-диалог
+
+**Files:**
+- Modify: `lectures/07-jsonb-arrays-and-search/07-06-pg-trgm-fuzzy/i18n/ru/README.md`
+- Modify: `lectures/07-jsonb-arrays-and-search/07-06-pg-trgm-fuzzy/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `07-06` в карте сцен, оба README юнита
+- [ ] RU: микро-диалог по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 7: юнит `08-01-window-basics-partition-order` — ★ полная сцена
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-01-window-basics-partition-order/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-01-window-basics-partition-order/i18n/en/README.md`
+
+Особое: правило отката в полную силу — текущее открытие 08-01 эталонное;
+сцена пишется только если она сильнее, иначе деградировать форму по лестнице
+§4.3 и зафиксировать это в карте сцен.
+
+- [ ] прочитать канон целиком, запись `08-01` в карте сцен, оба README юнита
+- [ ] RU: сцена по записи карты с проверкой правила отката (cap ×1.5)
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 8: юнит `08-02-ranking-and-top-n-per-group` — микро-реплика
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-02-ranking-and-top-n-per-group/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-02-ranking-and-top-n-per-group/i18n/en/README.md`
+
+Особое: запросы «аналитика сети» звучат голосами Стаса/Виктора (правка канона
+подачи из плана `0-pilot`); сам аналитик — закадровая роль.
+
+- [ ] прочитать канон целиком, запись `08-02` в карте сцен, оба README юнита
+- [ ] RU: микро-реплика по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 9: юнит `08-03-lag-lead-and-frames` — микро-диалог
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-03-lag-lead-and-frames/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-03-lag-lead-and-frames/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `08-03` в карте сцен, оба README юнита
+- [ ] RU: микро-диалог по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 10: юнит `08-04-recursive-ctes` — микро-диалог
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-04-recursive-ctes/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-04-recursive-ctes/i18n/en/README.md`
+
+- [ ] прочитать канон целиком, запись `08-04` в карте сцен, оба README юнита
+- [ ] RU: микро-диалог по записи карты
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 11: юнит `08-05-lateral-joins` — плашка-сводка
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-05-lateral-joins/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-05-lateral-joins/i18n/en/README.md`
+- Modify: `docs/story-scene-map.md` (фиксация решения вопроса №3, если ещё открыт)
+
+Особое: первый (и единственный) носитель жанра «плашка-сводка» — если вопрос
+№3 (проза vs `[!NOTE]`) ещё не закрыт на 06-01, решить здесь и зафиксировать
+в разделе «Открытые вопросы» карты сцен; эпизод «Опять Карина?!» — payoff
+сериала Карины (реестр §7).
+
+- [ ] прочитать канон целиком, запись `08-05` в карте сцен, оба README юнита
+- [ ] RU: плашка-сводка по записи карты и §9.4 канона
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff — два README (+ карта сцен при фиксации
+  решения №3)
+
+### Task 12: юнит `08-06-grouping-sets-rollup-cube` — ★ полная сцена
+
+**Files:**
+- Modify: `lectures/08-analytical-and-lateral/08-06-grouping-sets-rollup-cube/i18n/ru/README.md`
+- Modify: `lectures/08-analytical-and-lateral/08-06-grouping-sets-rollup-cube/i18n/en/README.md`
+
+Особое: финал «спринта Виктора» — арка Виктора (§2.5, дефицитный гость);
+чек заказа #1 — эхо нити §7 (payoff в 10-05).
+
+- [ ] прочитать канон целиком, запись `08-06` в карте сцен, оба README юнита
+- [ ] RU: сцена по записи карты (cap ×1.5)
+- [ ] EN: зеркало — число реплик именованных персонажей равно RU
+- [ ] линтер юнита — зелёный; diff юнита — только два README
+
+### Task 13: Verify acceptance criteria (консистенси-чек волны III)
+
+**Files:**
+- Modify: `docs/story-canon.md` (пометки статуса нитей §7)
+
+- [ ] полный линтер волны: `node
+  .claude/skills/lecture-writer/scripts/check_unit.mjs
+  lectures/07-jsonb-arrays-and-search lectures/08-analytical-and-lateral
+  --against-head` — ноль ошибок, предупреждения разобраны
+- [ ] нити §7: греп по греп-маркерам (RU и EN) для нитей волны; список
+  «setup написан, payoff ещё нет» отметить в реестре §7 канона
+- [ ] сверка голосов: все сцены волны подряд «глазами» каждого говорившего
+  персонажа против реестра §2; отклонения поправить
+- [ ] `make web-check-coverage` и `make web-build` — зелёные
+- [ ] скоуп прогона: каждый коммит прогона (все они правят этот план-файл;
+  список — `git log --format=%h --
+  docs/plans/20260704-story-uplift-3-wave-iii.md`) под `lectures/` меняет
+  только `i18n/{ru,en}/README.md` юнитов волны (проверить `git show --stat`)
+- [ ] все требования Overview выполнены (12 юнитов; плотность модуля 08 не
+  превышена; вопрос №3 закрыт и зафиксирован)
+
+## Post-Completion
+
+*Ручные шаги владельца — без чекбоксов.*
+
+- Приёмка волны: выборочное чтение (минимум 07-02, 08-01 — проверка правила
+  отката, 08-05 — форма плашки), RU и EN.
+- Дальше: `ralphex docs/plans/20260704-story-uplift-4-wave-iv.md`.
