@@ -1,12 +1,30 @@
 # 00-06 — Connection lifecycle and pooling
 
-Brew's site shipped to production, traffic came in — and the application logs filled with `FATAL: sorry, too many clients already`. The investigation found something mundane: the code opened a new `pgx.Connect` connection per HTTP request and didn't close it cleanly. Under load the number of connections hit the server's `max_connections` limit, and Postgres started rejecting everyone — including healthy requests.
+Launch night for Brew's site. Traffic is coming in — and the application logs turn red with a single line: `FATAL: sorry, too many clients already`. The team gathers around one monitor.
 
-In every previous unit we called `pg.NewPool` without wondering what's inside. This unit opens the black box: what a connection is from the server's point of view, why a pool is needed, how many connections it holds, and how to see your own backends through Postgres's own eyes via `pg_stat_activity`. This is a raw-pgx unit — the lesson is about the pool's API, not about queries, so sqlc has no role here.
+> **Danya:** The site won't take orders. Now the till catches the same FATAL — and it did nothing wrong.
+>
+> **Zoya:** I see it. Backends hit the limit. All of them — yours.
+>
+> **Marat:** We look from both sides. Zoya — the server. You — the pool.
+>
+> **You:** Our pool is empty. The site goes around it: the launch code calls pgx.Connect on every HTTP request.
+>
+> **Zoya:** So every guest's click is a new process on my server. Ceiling. Refusal — for everyone.
+>
+> **Marat:** That code is older than our pool. First understand, then fix.
+
+Understanding it is this unit's job. It opens the black box of `pg.NewPool`, which we've called in every previous unit: what a connection is to the server, why a pool is needed, how many connections it holds, and how to see your own backends through Postgres's own eyes via `pg_stat_activity`. This is a raw-pgx unit — the lesson is about the pool's API, not about queries, so sqlc has no role here.
 
 ## A connection is a server process, and it isn't free
 
 When a client connects to Postgres, the server forks a separate process for it — a **backend**. That process lives for the whole connection and holds its own memory (work_mem, caches, session state). Opening it means a TCP handshake, authentication, session init: milliseconds that add up to noticeable latency under load. And keeping them open costs memory and OS scheduling per backend. So the server has a hard ceiling — `max_connections` (default ~100): not "as many as it can take", but how many backends it will allow at all.
+
+> **You:** A hundred connections — that's just a hundred sockets, right?
+>
+> **Zoya:** A hundred processes. Memory. The scheduler.
+>
+> **Marat:** Hence the pool.
 
 The takeaway: a connection is an expensive and limited resource. Opening one per request is an anti-pattern (Brew's very mistake). The right way is to open a pool once at application startup and reuse connections.
 
@@ -130,7 +148,7 @@ Output:
 
 ## Common mistakes in module 00
 
-This is the last unit of the module, so here in one place are the first-contact rakes. What they share: the demo doesn't show them — some silently return the wrong thing (injection, a swapped `Scan`), others pile up and take the app down only in production under load (a connection per request, a pool leak). Pin this table above your code review.
+The morning after the war-room the team sits down for a short postmortem — and since this is the last unit of the module, the first-contact rakes get collected into one table. What they share: the demo doesn't show them — some silently return the wrong thing (injection, a swapped `Scan`), others pile up and take the app down only in production under load (a connection per request, a pool leak). Pin this table above your code review.
 
 | trap | unit | the right way |
 |---|---|---|
@@ -146,4 +164,8 @@ This is the last unit of the module, so here in one place are the first-contact 
 - One connection in the pool = one backend on the server; `pool.Stat()` and `pg_stat_activity` show this from both sides and agree.
 - Pool size is tuned to the load and `max_connections`; every `Acquire` must have a `Release`.
 
-That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with money, where `numeric` vs `float` decides whether Brew's till balances.
+Late in the evening, once the site is taking orders again, a message pops up in the team chat from Viktor — the founder you know so far only from the framed receipt of order #1.
+
+> **Viktor (in chat):** The site is alive, guests are ordering. In the morning I want our first report: how much we made today. Down to the cent.
+
+That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with Viktor's report — with money, where `numeric` vs `float` decides whether Brew's till balances down to the cent.
