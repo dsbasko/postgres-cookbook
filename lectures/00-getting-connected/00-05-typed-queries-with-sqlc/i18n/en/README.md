@@ -1,6 +1,10 @@
 # 00-05 — Typed queries via sqlc
 
-In 00-04 we read Brew's menu from Go by hand: `pool.Query`, a `rows.Next` loop, `rows.Scan` into struct fields in order. The code works, but it's fragile. Change the column order in the `SELECT` and `Scan` will silently put `name` into the `category` field: the compiler won't object, because both columns are `text`. Forget `rows.Err()` and you'll miss a read error. This isn't hypothetical — it's a class of bugs that surface in production, not at review.
+In 00-04 we read Brew's menu from Go by hand: `pool.Query`, a `rows.Next` loop, `rows.Scan` into struct fields in order. The code works, but it's fragile — and that's not hypothetical:
+
+> **Danya (in chat):** Reordered the columns in the `SELECT` — tests green, but the latte on the storefront moved to the tea category. `Scan` said nothing: `name` and `category` are both `text`, the compiler doesn't care.
+
+That's this whole class of bugs: as long as the types line up, a swapped column order gets past both the compiler and the tests — it surfaces in production, not at review. `rows.Err()` is in the same bucket: forget it and you'll miss a read error.
 
 The goal of this unit is to close that class entirely: we write SQL in `query.sql`, run `sqlc generate`, and get typed Go code where column order and types are checked against the schema at build time. 00-02 already showed this pipeline in broad strokes; here we take it apart as a working tool — with a `$1` parameter, three result shapes, and that very boilerplate from 00-04 now generated for us.
 
@@ -8,7 +12,11 @@ The goal of this unit is to close that class entirely: we write SQL in `query.sq
 
 sqlc is a **code generator**, not an ORM and not a driver. It takes two inputs: the schema (the DDL of your tables) and `query.sql` (the queries you wrote by hand). It parses both, works out which columns and which types each query returns, and generates Go functions that run that query and map the result into typed structs.
 
-Crucially: **the SQL stays yours**. sqlc doesn't hide queries behind a "magic" API like `.Where("category", cat).First()` — you still write `SELECT ... WHERE category = $1`, and that exact SQL goes to the server. sqlc removes only the mechanical row mapping — the very `Scan` loop we wrote in 00-04.
+> **Danya:** So it's an ORM, just sideways?
+>
+> **Marat:** No. The SQL stays yours. Only the plumbing is generated.
+
+Marat's verdict is worth unpacking. sqlc doesn't hide queries behind a "magic" API like `.Where("category", cat).First()` — you still write `SELECT ... WHERE category = $1`, and that exact SQL goes to the server. sqlc removes only the mechanical row mapping — the very `Scan` loop we wrote in 00-04.
 
 It's not an ORM: sqlc doesn't manage relationships, doesn't do lazy loading, doesn't build queries dynamically, and doesn't apply migrations (schema and migrations are module 02's job). It does exactly one thing — turn hand-written SQL into type-safe Go. That's why SQL stays at the center of the course.
 
