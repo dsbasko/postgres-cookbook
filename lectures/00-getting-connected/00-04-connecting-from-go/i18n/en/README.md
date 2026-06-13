@@ -1,8 +1,16 @@
 # 00-04 — Connecting from Go
 
-A feature appears at Brew: search drinks by category. A developer built the query the way it feels natural to a beginner — by gluing a string: `"... WHERE category = '" + input + "'"`. In the demo it all worked. Then a security review found that the string `' OR 1=1 --` in the search field returns **the entire menu**, bypassing any filter. That's SQL injection, and it isn't exotic — it's the number-one mistake from every list of web vulnerabilities.
+The first feature is yours: search drinks by category. The query is built by gluing a string: `"... WHERE category = '" + input + "'"`. In the demo it all worked. Today is the review: Marat silently types `' OR 1=1 --` into the search field and turns the screen toward you. The storefront returns **the entire menu** — bypassing any filter.
 
-The goal of this unit is to make the first query to Postgres from Go correctly: open a `pgxpool` connection pool, run a query with a parameter via `$1`, and on one and the same input see the difference between string gluing and parameter binding. This is a raw-pgx unit: we deliberately write `rows.Scan` by hand so that in the next unit (00-05) we can see exactly what sqlc takes off our plate.
+> **You:** But it worked in the demo!
+>
+> **Marat:** It worked. The field got `coffee` — not a quote with a tail. Your input became the text of the query.
+>
+> **Danya:** Same story with me in my first month. It flew in testing with ten clients — but in production the search field gets more than coffee. Ever since, anything from outside travels only through `$1`, separately from the query text.
+>
+> **Marat:** No dressing-down. Let's work out together what goes to the server.
+
+That's SQL injection — the number-one mistake from every list of web vulnerabilities. The goal of this unit is to make the first query to Postgres from Go correctly: a `pgxpool` pool, a `$1` parameter — and on one and the same input see the difference between string gluing and parameter binding. This is a raw-pgx unit: we deliberately write `rows.Scan` by hand so that in the next unit (00-05) we can see exactly what sqlc takes off our plate.
 
 ## The connection pool: `pgxpool`, not a single connection
 
