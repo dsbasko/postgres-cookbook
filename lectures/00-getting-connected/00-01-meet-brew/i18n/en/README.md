@@ -1,22 +1,52 @@
 # 00-01 — Meet Brew
 
-Hi. You've just been hired as a backend developer at **Brew** — a chain of coffee shops with its own application. The till takes orders, the site shows the menu, marketing runs promos, and at the end of the month an analyst asks for a revenue report. Behind all of it sits one Postgres, and now it's your job. Not to administer it — that's the DBA's work. Your job is to write the code that reads from it and writes to it: queries, schema, transactions, indexes.
+Day one at Brew. The dev office is the second floor above the chain's very first coffee shop: a grinder rumbles downstairs, a dozen desks sit upstairs, and nobody here is surprised by the smell of espresso.
 
-This unit isn't about SQL. It's a map. What Brew is, what we'll build over the course, how it ends, and which topics we'll cover along the way. From here on every unit opens with a concrete business pain and closes it with one Postgres technique — but it's worth seeing the whole route first, so you don't feel dropped into code from the first line.
+> **Marat:** Laptop issued, badge works — not bad for ten in the morning. I'm Marat, the backend team lead. The tour is short: our whole system is right here.
+>
+> **You:** One database?
+>
+> **Marat:** One database, nine tables: orders, line items, menu, customers, stock. People somehow expect something grand behind a chain of coffee shops.
+>
+> **Danya:** And the outbox. He always forgets the outbox, and it's our best table — you'll get it closer to winter. I'm Danya, the second backend dev, so now there are three of us. Advice for your first week: don't trust the word "just" around here. "Just add a column," "just fix a price" — that's how the till went down here.
+>
+> **Marat:** That happened once.
+>
+> **Danya:** That happened twice.
+
+From behind a partition, without turning away from her two monitors, a woman with a liter mug — not a single word printed on it — speaks up.
+
+> **Zoya:** Zoya. My database. The sandbox will be up by lunch. Don't ask for prod.
+>
+> **You:** What if I really need it?
+>
+> **Zoya:** Especially if you really need it.
+>
+> **Marat:** The boundary with Zoya is simple: everything inside the server is her territory. Everything that talks to the server with queries is ours. Where exactly that boundary runs, I'll be showing you all year. There's also Stas from marketing, one floor up: he shows up saying "small tweak," and it hasn't been true once yet.
+
+Marat turns his laptop around. On the screen is the orders table, first row highlighted.
+
+> **Marat:** Look. Order number one: Alice Ivanova, January fifteenth, nine o'clock sharp. A cappuccino and a cold brew, status paid. The first order in Brew's history — Viktor, our founder, still keeps the paper receipt framed. On this one row I'll show you just about everything: types, joins, transactions, indexes.
+>
+> **You:** A whole course — on one order?
+>
+> **Marat:** On one order, one database, and one year. Remember the two questions every investigation here starts with: "show me the query" and "what did the database say." By the end of the year these nine tables will ride out as a stream to a neighboring system — and you'll be the one opening that stream. But we'll start with a simpler question: what actually happens on the other end of the socket when an application talks to Postgres.
+
+The socket question is the next unit's topic. This one isn't about SQL. It's a map: what Brew is, what we'll build over the course, how it ends, and which topics we'll cover along the way. From here on every unit opens with a concrete business pain and closes it with one Postgres technique — but it's worth seeing the whole route first, so you don't feel dropped into code from the first line.
 
 ## What Brew is
 
-Brew started as a single coffee shop, and by the start of the course it's already a chain: a spot in Moscow (`BREW-CENTRAL`), a spot in St. Petersburg (`BREW-NORTH`), a shared menu, a shared customer base. It will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one till turns into lost orders and a till that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
+Brew started as a single coffee shop, and by the start of the course it's already a chain: a spot in Moscow (`BREW-CENTRAL`), a spot in St. Petersburg (`BREW-NORTH`), a shared menu, a shared customer base, and its own application — the till, the site, promo campaigns, reports. All of it talks in queries to that same "one database" from the tour. Brew will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one till turns into lost orders and a till that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
 
-The data you'll live with for the whole course is simple and recognizable: the drinks menu (`drinks`), customers (`customers`), orders (`orders`) and their line items (`order_items`), shops (`shops`), per-shop stock (`inventory`), a blog (`articles`), and `outbox` — the table through which order events leave for the outside world. The same set of tables runs through the entire course: from the first connection to the final capstone.
+The data you'll live with for the whole course is exactly what Marat's tour named: the drinks menu (`drinks`), customers (`customers`), orders (`orders`) and their line items (`order_items`), shops (`shops`), per-shop stock (`inventory`), a blog (`articles`), and `outbox` — the very table Danya vouched for, through which order events leave for the outside world. The same set of tables runs through the entire course: from the first connection to the final capstone.
 
-So the abstraction "order" doesn't stay an abstraction, we have an anchor — **order #1**. Alice Ivanova placed it: two line items (Cappuccino + Cold brew), January 15, status `paid`. The course returns to this row again and again — on it we'll watch how JOINs work, what happens during a concurrent update, how to read a query plan. When later you hit the word "order" and it feels too generic — remember Alice's order #1.
+The anchor Marat highlighted on the screen — **order #1**, Alice Ivanova's — wasn't picked for looks. The course returns to this row again and again: on it we'll watch how JOINs work, what happens during a concurrent update, how to read a query plan. When later you hit the word "order" and it feels too generic — remember order #1.
 
 ## What we'll build, and how it ends
 
 The course route is also the route of your growth at Brew. At the start you're a newcomer who glues SQL together with strings (and opens a hole for injection) and drops the connection pool under the first real load. By the end you're an engineer who defends invariants right in the schema, reads `EXPLAIN` instead of guessing, and writes a retry loop on a serialization conflict.
 
-The finale is concrete. You'll open a `PUBLICATION` yourself and hand Brew's change stream to the sibling course [`kafka-cookbook`](https://github.com/dsbasko/kafka-cookbook): Postgres passes the baton, Kafka takes it. Two coffee stories — one world, one data model. That's why Brew's base tables in this course match the sibling's schema byte for byte: rename a column and the handoff breaks. There's a whole conversation about that in the capstone; for now just remember the course has an exit outward, not only an internal kitchen.
+The finale is concrete — and Marat has already promised it. You'll open a `PUBLICATION` yourself and hand Brew's change stream to the sibling course [`kafka-cookbook`](https://github.com/dsbasko/kafka-cookbook): Postgres passes the baton, Kafka takes it. Two coffee stories — one world, one data model. That's why Brew's base tables in this course match the sibling's schema byte for byte: rename a column and the handoff breaks. There's a whole conversation about that in the capstone; for now just remember the course has an exit outward, not only an internal kitchen.
 
 ## The course map
 
@@ -54,7 +84,7 @@ Units follow one template, and it's worth learning now — it repeats some sixty
 
 ## What our code shows
 
-First contact. We connect to the sandbox, ask the server for its version (to confirm it's Postgres 18 on the other end), and take a census of the Brew world — how many rows sit in each of the 9 canon tables after the seed. No SQL heroics, just "look around before getting to work."
+First contact. We connect to the sandbox, ask the server for its version (to confirm it's Postgres 18 on the other end), and take a census of the Brew world — checking Marat's words: how many rows sit in each of the 9 canon tables after the seed. No SQL heroics, just "look around before getting to work."
 
 `query.sql` — two hand-written queries:
 
