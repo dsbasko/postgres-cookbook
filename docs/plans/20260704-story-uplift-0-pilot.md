@@ -259,14 +259,21 @@
 - Modify: `lectures/00-getting-connected/00-02-client-server-and-sandbox/i18n/ru/README.md`
 - Modify: `lectures/00-getting-connected/00-02-client-server-and-sandbox/i18n/en/README.md`
 
-- [ ] прочитать канон целиком, запись `00-02` в карте сцен, оба README юнита
-- [ ] RU: микро-диалог по записи карты (Зоя выдаёт песочницу; 2–3 реплики,
+- [x] прочитать канон целиком, запись `00-02` в карте сцен, оба README юнита
+- [x] RU: микро-диалог по записи карты (Зоя выдаёт песочницу; 2–3 реплики,
   дальше — существующая проза); гейты — чек-лист скилла
-- [ ] EN: зеркало — число реплик именованных персонажей равно RU
-- [ ] `node .claude/skills/lecture-writer/scripts/check_unit.mjs
+- [x] EN: зеркало — число реплик именованных персонажей равно RU
+- [x] `node .claude/skills/lecture-writer/scripts/check_unit.mjs
   lectures/00-getting-connected/00-02-client-server-and-sandbox --against-head`
   — зелёный; diff юнита — только два README
-- [ ] `make web-check-coverage` и `make web-build` — зелёные
+- [x] `make web-check-coverage` и `make web-build` — зелёные
+- ➕ по факту прогона (вход для Task 15): чат-жанр Зои (строчными, §4.4) —
+  payoff «Песочницу подниму к обеду» из 00-01; реплик именованных RU=EN=2
+  (обе — Зоя), «Ты»/"You" — 1; линтер — ноль ошибок и ноль предупреждений.
+  Отчёт длины: RU 118 / EN 136 слов при базе (холодное открытие) ~93 RU /
+  ~100 EN — cap ×1.5 соблюдён. Попутно из захваченной сценой ремарки убрано
+  маскулинное «ты уже видел» («Карта курса из 00-01 — позади») — в духе
+  предусловия §3.2 канона
 
 ### Task 8: юнит `00-03-psql-survival-kit` — микро-диалог
 

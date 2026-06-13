@@ -1,6 +1,14 @@
 # 00-02 — Client, server, and the sandbox
 
-You've already seen the course map in 00-01 — now the first technical step. Somewhere there's a Postgres running — with the menu, orders, and customers of Brew — and your job is to work with it: write an application that reads and writes data, not administer the server. Before touching types, indexes, and transactions, understand two boring but mandatory things: what is actually on the other end of the connection, and how to get a local copy you're not afraid to break.
+The course map from 00-01 is behind you — now the first technical step. Around lunchtime a message from Zoya lands in the team chat — the promise from day one, delivered.
+
+> **Zoya (in chat):** sandbox is up. docker compose up -d — postgres is yours. break it all you want.
+>
+> **You:** And the production database?
+>
+> **Zoya (in chat):** everything inside the server is mine. you're a client on the other side of the socket. don't ask for prod.
+
+Telegraphic, but precise: your role for the whole course is the client. Write an application that reads and writes data — not administer the server. Before touching types, indexes, and transactions, understand two boring but mandatory things: what is actually on the other end of the connection — and how the local copy you're not afraid to break is put together.
 
 That's the whole plot of this unit. No SQL heroics — connect, ask the server its version, read the menu. Everything that follows rides on this same pipeline.
 
