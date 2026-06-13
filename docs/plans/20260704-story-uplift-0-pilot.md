@@ -216,11 +216,11 @@
 **Files:**
 - Modify: `lectures/00-getting-connected/00-01-meet-brew/i18n/ru/README.md`
 
-- [ ] строку «Привет. Ты только что вышел бэкенд-разработчиком в **Brew** —
+- [x] строку «Привет. Ты только что вышел бэкенд-разработчиком в **Brew** —
   сеть кофеен с собственным приложением.» заменить на «Привет. Ты — новый
   бэкенд-разработчик **Brew** — сети кофеен с собственным приложением.»
   (EN-зеркало уже нейтрально — не трогать)
-- [ ] `node .claude/skills/lecture-writer/scripts/check_unit.mjs
+- [x] `node .claude/skills/lecture-writer/scripts/check_unit.mjs
   lectures/00-getting-connected/00-01-meet-brew --against-head` — зелёный
 
 ### Task 6: юнит `00-01-meet-brew` — ★ полная сцена (открытие курса)
