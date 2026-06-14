@@ -1,6 +1,18 @@
 # 01-02 — text, boolean, and the NULL teaser
 
-Brew decided to build a simple report: "how many orders does each customer have." The query was quick to write, but the number of customers in the report came out smaller than in the `customers` table. Carol, who signed up but hasn't bought anything yet, simply vanished from the result. It's not a join bug — she was "eaten" by careless handling of `NULL`: she has no orders, so her `order_id` is `NULL`, and `NULL` behaves differently than it looks.
+The "how many orders does each customer have" report at Brew was quick to write — and the loyalty mailing has already gone out based on it. In the morning, Stas shows up in the team chat.
+
+> **Stas (in chat):** Cross-checking the loyalty mailing against the "orders per customer" report. Karina Sidorova — didn't get one. I have her profile open: signed up, but she's not in the report. Where did she go?
+>
+> **You:** She's in `customers`, the row is right there. Where does she disappear on the way into the report?
+>
+> **Marat:** How are the orders counted — `count(*)` or `count` on a column? Recount with `count(*)`. And look at what Karina has in `order_id`.
+
+You recount — and Karina comes back into the report, with zero orders.
+
+> **Stas (in chat):** She's back, I can see her. Noting it down: there's some NULL living in the database, and it eats my customers. When you figure it out — explain it in human terms.
+
+Not a join bug: Karina has no orders, so her `order_id` is `NULL`, and `NULL` behaves differently than it looks.
 
 This unit is about three types that look boring but are exactly what applications trip over: `text` (and why not `char(n)`), `boolean` (with its three-valued logic), and `NULL`. The key point about `NULL` is that it's not "empty" and not "zero" — it's **"unknown"**. The full `NULL` semantics are coming in 03-06; here it's a teaser, so the trap doesn't catch you off guard.
 
@@ -17,7 +29,7 @@ In Postgres the default string type is `text`, with no length limit. `varchar(n)
 The key intuition: `NULL` means "the value is unknown." So **comparing with `NULL` via `=` gives not `false` but `NULL`**: `NULL = NULL` is "unknown = unknown" → also `NULL`. Two things follow:
 
 - `WHERE col = NULL` never fires (the condition is never `true`) — to test for the absence of a value there's `IS NULL` / `IS NOT NULL`.
-- Aggregates skip `NULL`: `count(*)` counts all rows, while `count(col)` counts only rows where `col` is not `NULL`. That same Carol is lost if you count `count(order_id)` instead of `count(*)`.
+- Aggregates skip `NULL`: `count(*)` counts all rows, while `count(col)` counts only rows where `col` is not `NULL`. That same Karina is lost if you count `count(order_id)` instead of `count(*)`.
 
 `NULL` appears in data naturally — for example, from a `LEFT JOIN`: for a customer with no orders, the columns from the right table are `NULL`. And that's the correct, type-safe way to express "there is no value": sqlc sees that a `LEFT JOIN` column is nullable and types it as `pgtype.Int8` (with a `Valid` field), not as a bare `int64`.
 
@@ -29,7 +41,7 @@ The key intuition: `NULL` means "the value is unknown." So **comparing with `NUL
 | `NULL = NULL` | `NULL` | "unknown = unknown" is also unknown, not `true` |
 | `col = NULL` | never `true` | test for absence with `IS NULL` / `IS NOT NULL` |
 | `count(*)` | all rows | rows are counted as they are |
-| `count(col)` | rows where `col` is not `NULL` | `NULL` is skipped — this is where Carol is lost |
+| `count(col)` | rows where `col` is not `NULL` | `NULL` is skipped — this is where Karina is lost |
 
 This is the everyday working minimum; the full three-valued logic (`NOT IN` with `NULL`, `COALESCE`, `IS DISTINCT FROM`) is covered in 03-06.
 
@@ -94,7 +106,7 @@ ID  НАЗВАНИЕ     IS_PREMIUM
    'abc'::char(5) = 'abc  ' → true   (char(n): паддинг съел пробелы)
 ```
 
-(The demo prints in Russian.) There's Carol: in the `LEFT JOIN` her `order_id` is `NULL`, and `count(o.id)` (=3) doesn't count her, while `count(*)` (=4) does. An "orders per customer" report should show her with a zero, not lose her — and now you can see why the naive `count` did exactly that.
+(The demo prints in Russian.) There's Karina: in the `LEFT JOIN` her `order_id` is `NULL`, and `count(o.id)` (=3) doesn't count her, while `count(*)` (=4) does. An "orders per customer" report should show her with a zero, not lose her — and now you can see why the naive `count` did exactly that.
 
 ## The fence
 
