@@ -1,6 +1,22 @@
 # 02-06 — ALTER TABLE: a migration mindset
 
-Brew shipped a migration in the middle of the business day. The line looked harmless: `ALTER TABLE orders ALTER COLUMN amount TYPE numeric(12,2)`. On a table of tens of millions of rows, that command took an `ACCESS EXCLUSIVE` lock and set about **rewriting the entire table** from scratch — for about eight minutes. The whole time, not a single order could be read or written: the app hit timeouts, the register stalled. Meanwhile a neighboring migration in the same release — `ADD COLUMN ... DEFAULT 'active'` — finished instantly and went unnoticed. The difference isn't in the syntax: some `ALTER`s touch only metadata, others rewrite the whole table under a lock.
+Lunchtime. You're shipping a release: two migrations, both reviewed, both harmless-looking — `ADD COLUMN ... DEFAULT 'active'` and one line, `ALTER TABLE orders ALTER COLUMN amount TYPE numeric(12,2)`. The release goes out at 12:33.
+
+> **Anna (in chat, 12:41):** Registers. Both. 12:41.
+>
+> **You:** Looking. Nothing new except the release. But that's a column changing type — harmless, isn't it?
+>
+> **Zoya:** ALTER TYPE on orders. ACCESS EXCLUSIVE, rewriting the whole table. Registers are stuck behind your migration. Killing it.
+
+Eight minutes — release to kill — both registers couldn't ring up a single order: tens of millions of rows were being rewritten under a lock. That evening — your first postmortem, with you in the "author" field. Zoya silently takes out a new paper notebook and writes the date.
+
+> **Danya:** Remember day one — "that's how the register went down"? That happened twice. Looks like we'll have to recount.
+>
+> **Marat:** The count can wait. The postmortem rule: the method is at fault, not the person. The line passed review. The method — a hot-table rewrite at lunchtime.
+>
+> **You:** In the migration file both lines look the same. How do you tell them apart?
+>
+> **Marat:** Not by syntax. Some ALTERs edit metadata — that's instant. Others rewrite the table under a lock. We learn to tell beforehand.
 
 The goal of this unit isn't "memorize the list of safe ALTERs" but a **reflex**: before a migration, ask "is this instant, or is it a rewrite / a long lock?". We'll observe the cost via `relfilenode` — the identifier of the table's physical file. It changes **only** on a full rewrite; if an `ALTER` only adjusted metadata, the file is the same. We'll also cover the two-phase constraint add (`NOT VALID` → `VALIDATE`), which separates a fast metadata change from a long scan.
 
@@ -120,4 +136,8 @@ The course boundary: orchestrating zero-downtime migrations leans toward DBA/Dev
 - Even an instant `ALTER` takes `ACCESS EXCLUSIVE` briefly → production needs `lock_timeout`; a big rewrite is done via new-column + batched backfill + swap.
 - The reflex before a migration: "does this edit metadata, or rewrite the table / hold a long lock?".
 
-That closes module **02 "Schema, DDL, and constraints"**: `IDENTITY`/`DEFAULT`, `NOT NULL`/`PK` and key choice, foreign keys, `UNIQUE`/`CHECK`, generated columns/domains, and the migration mindset. Next up — module **03 "CRUD fluency"**: confident `INSERT ... RETURNING`, `SELECT` with pagination, safe `UPDATE`/`DELETE`, `upsert`, and sober `NULL` semantics.
+That closes module **02 "Schema, DDL, and constraints"**: `IDENTITY`/`DEFAULT`, `NOT NULL`/`PK` and key choice, foreign keys, `UNIQUE`/`CHECK`, generated columns/domains, and the migration mindset. Danya finishes reading the postmortem of your incident — and lingers by your desk.
+
+> **Danya:** Don't beat yourself up: our most expensive incident is a single line. UPDATE with no WHERE. I know. I'm the author.
+
+What that line cost Brew, and what discipline protects against lines like it — that's where module **03 "CRUD fluency"** begins: confident `INSERT ... RETURNING`, `SELECT` with pagination, safe `UPDATE`/`DELETE`, `upsert`, and sober `NULL` semantics.
