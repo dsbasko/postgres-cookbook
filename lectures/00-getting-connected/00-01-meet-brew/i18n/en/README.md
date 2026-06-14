@@ -8,7 +8,7 @@ Day one at Brew. The dev office is the second floor above the chain's very first
 >
 > **Marat:** One database, nine tables: orders, line items, menu, customers, stock. People somehow expect something grand behind a chain of coffee shops.
 >
-> **Danya:** And the outbox. He always forgets the outbox, and it's our best table — you'll get it closer to winter. I'm Danya, the second backend dev, so now there are three of us. Advice for your first week: don't trust the word "just" around here. "Just add a column," "just fix a price" — that's how the till went down here.
+> **Danya:** And the outbox. He always forgets the outbox, and it's our best table — you'll get it closer to winter. I'm Danya, the second backend dev, so now there are three of us. Advice for your first week: don't trust the word "just" around here. "Just add a column," "just fix a price" — that's how the register went down here.
 >
 > **Marat:** That happened once.
 >
@@ -36,7 +36,7 @@ The socket question is the next unit's topic. This one isn't about SQL. It's a m
 
 ## What Brew is
 
-Brew started as a single coffee shop, and by the start of the course it's already a chain: a spot in Moscow (`BREW-CENTRAL`), a spot in St. Petersburg (`BREW-NORTH`), a shared menu, a shared customer base, and its own application — the till, the site, promo campaigns, reports. All of it talks in queries to that same "one database" from the tour. Brew will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one till turns into lost orders and a till that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
+Brew started as a single coffee shop, and by the start of the course it's already a chain: a spot in Moscow (`BREW-CENTRAL`), a spot in St. Petersburg (`BREW-NORTH`), a shared menu, a shared customer base, and its own application — the register, the site, promo campaigns, reports. All of it talks in queries to that same "one database" from the tour. Brew will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one register turns into lost orders and a register that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
 
 The data you'll live with for the whole course is exactly what Marat's tour named: the drinks menu (`drinks`), customers (`customers`), orders (`orders`) and their line items (`order_items`), shops (`shops`), per-shop stock (`inventory`), a blog (`articles`), and `outbox` — the very table Danya vouched for, through which order events leave for the outside world. The same set of tables runs through the entire course: from the first connection to the final capstone.
 
@@ -54,7 +54,7 @@ Eleven modules, ordered by rising difficulty. Roughly bottom to top:
 
 - **Getting connected** (this module) — client and server, the sandbox, `psql`, connecting from Go, the `sqlc` pipeline, the life of a connection and the pool.
 - **Data types** — which type to pick and why: `numeric` vs `float` for money, `timestamptz` for time, `uuid` and `uuidv7`, enums/arrays, and an intro to `jsonb`.
-- **Schema and constraints** — keys, `NOT NULL`, foreign keys, `UNIQUE`/`CHECK`, generated columns, and a migration mindset: which `ALTER` is instant and which freezes the till.
+- **Schema and constraints** — keys, `NOT NULL`, foreign keys, `UNIQUE`/`CHECK`, generated columns, and a migration mindset: which `ALTER` is instant and which freezes the register.
 - **CRUD fluency** — `INSERT … RETURNING`, keyset pagination, safe `UPDATE`/`DELETE`, upsert via `ON CONFLICT`, and sober `NULL` semantics.
 - **Querying across tables** — joins, aggregation, `DISTINCT ON`, subqueries, and CTEs: this is where data turns into answers to business questions.
 - **Transactions, MVCC, and concurrency** — ACID, an MVCC mental model, row locks, isolation levels, retrying on `40001`, deadlocks.
@@ -76,7 +76,7 @@ One detail that keeps coming up: the demo output in the README is real and deter
 
 ## How each unit is built
 
-Units follow one template, and it's worth learning now — it repeats some sixty times ahead. A unit opens with a Brew business pain (a drink vanished from the menu, a report didn't add up to the kopeck, the till froze under load), then the concept is assembled in prose stage by stage — the why before the how. Then comes the `## Running it` section with the real demo output, which we read back right away by facts. And at the very end of each unit there are two sections worth calling out separately, because they repeat everywhere.
+Units follow one template, and it's worth learning now — it repeats some sixty times ahead. A unit opens with a Brew business pain (a drink vanished from the menu, a report didn't add up to the kopeck, the register froze under load), then the concept is assembled in prose stage by stage — the why before the how. Then comes the `## Running it` section with the real demo output, which we read back right away by facts. And at the very end of each unit there are two sections worth calling out separately, because they repeat everywhere.
 
 **"The fence"** is the boundary of simplifications. Any teaching example cuts something for clarity: one database for the whole course, `sslmode=disable`, the password `brew`/`brew` right in the connection string. The fence is where the unit honestly shows where it simplified and how the same thing is done in production (often in the words "your DBA would do this instead"). The name is literal: past this fence the teaching sandbox ends and production begins. Read it so you don't carry a simplification from the lesson into shipping code — that's the difference people later get burned on in review.
 

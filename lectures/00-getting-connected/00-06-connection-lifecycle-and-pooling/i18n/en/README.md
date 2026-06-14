@@ -2,7 +2,7 @@
 
 Launch night for Brew's site. Traffic is coming in — and the application logs turn red with a single line: `FATAL: sorry, too many clients already`. The team gathers around one monitor.
 
-> **Danya:** The site won't take orders. Now the till catches the same FATAL — and it did nothing wrong.
+> **Danya:** The site won't take orders. Now the register catches the same FATAL — and it did nothing wrong.
 >
 > **Zoya:** I see it. Backends hit the limit. All of them — yours.
 >
@@ -168,4 +168,4 @@ Late in the evening, once the site is taking orders again, a message pops up in 
 
 > **Viktor (in chat):** The site is alive, guests are ordering. In the morning I want our first report: how much we made today. Down to the kopek.
 
-That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with Viktor's report — with money, where `numeric` vs `float` decides whether Brew's till balances down to the kopek.
+That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with Viktor's report — with money, where `numeric` vs `float` decides whether Brew's register balances down to the kopek.

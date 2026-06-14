@@ -2,7 +2,7 @@
 
 In 00-04 we read Brew's menu from Go by hand: `pool.Query`, a `rows.Next` loop, `rows.Scan` into struct fields in order. The code works, but it's fragile — and that's not hypothetical:
 
-> **Danya (in chat):** Reordered the columns in the `SELECT` — tests green, but the latte on the storefront moved to the tea category. `Scan` said nothing: `name` and `category` are both `text`, the compiler doesn't care.
+> **Danya (in chat):** Reordered the columns in the `SELECT` — tests green, but the storefront shows three drinks named coffee and a "Latte" category. `Scan` said nothing: `name` and `category` are both `text`, the compiler doesn't care.
 
 That's this whole class of bugs: as long as the types line up, a swapped column order gets past both the compiler and the tests — it surfaces in production, not at review. `rows.Err()` is in the same bucket: forget it and you'll miss a read error.
 
