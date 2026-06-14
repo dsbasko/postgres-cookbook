@@ -573,9 +573,9 @@ WHERE (03-03) — флешбэк Дани из времени до твоего 
    дойдём до транзакций», но не может ссылаться markdown-ссылкой вперёд
    (валидатор движка).
 10. **RU/EN-инвариант.** Число реплик `> **Имя:**` **именованных персонажей**
-    в RU и EN зеркалах юнита совпадает (механическая проверка в
-    `check_unit.mjs`; реплики `**Ты:**`/`**You:**` в инвариант не входят,
-    пока открыт вопрос о форме реплик читателя в EN — §10.5). Речевые
+    в RU и EN зеркалах юнита совпадает; с ретро пилота (§10.5) отдельным
+    счётчиком совпадает и число реплик читателя `**Ты:**`/`**You:**`
+    (обе проверки механические, в `check_unit.mjs`). Речевые
     маркеры — синтаксические, не лексические (§2), поэтому переживают
     перевод.
 
@@ -769,6 +769,42 @@ Debezium»). Зоя делегирует периметр: «Слот твой. 
 | War-room пула | 00-06 (`FATAL: too many clients`) | 05-06 (advisory утёк), 09-04 (NOTIFY и пул) | 10-04 (PgBouncer, дежурство читателя) | «too many clients» / то же |
 | Тимур | 09 (приходит на планёрке) | 09-03 (гипотеза-антипаттерн), 10-01 (на подхвате) | 10-05 (его вопрос закрывает кольцо) | «Стоп, а почему» / "Wait — why" |
 
+### 7.1. Статус раскатки нитей
+
+Пометки обновляются после каждой волны (консистенси-чек финальной задачи
+плана волны). Веха ✅ — написана в прозе юнита и сверена грепом по маркеру;
+веха без пометки — ещё не написана. «Setup написан, payoff ещё нет» —
+легальное состояние по §5.8: адрес payoff'а зафиксирован реестром выше.
+
+**После пилота** (2026-07-04, план `0-pilot`; юниты 00-01…00-06, 02-04,
+02-06, 04-01):
+
+- «Это было один раз. — Это было два раза.»: setup 00-01 ✅, развитие
+  02-06 ✅; payoff 06-06 — не написан.
+- Мем «просто»: setup 00-01 ✅; развитие 02-02, 07-02 и payoff 09-03 —
+  не написаны.
+- Outbox — «лучшая наша таблица»: setup 00-01 ✅; payoff 09-03 / эхо 10-05 —
+  не написаны.
+- «Маленькая доработка» Стаса: setup 00-01 ✅ (интро Марата); payoff 01-04 —
+  не написан (волна I).
+- Блокнот Зои: setup 02-06 ✅ (заведён на первом постмортеме); развитие
+  (05, 06-06) и payoff 10-05 — не написаны.
+- Чек заказа #1 в рамке: setup 00-01 ✅; развитие (модуль 08) и payoff
+  10-05 — не написаны.
+- Сериал Карины: развитие 04-01 ✅ написано раньше setup'а 01-02 — легально:
+  сцена 04-01 самодостаточна, setup 01-02 — волна I; развитие 04-05 и
+  payoff 08-05 — не написаны.
+- Арка Дани: setup 00-01 ✅ («просто», пророчество о кассе); вехи 03-03,
+  07-02, 10-01 — не написаны.
+- Катехизис Марата: setup 00-01 ✅; эхо 00-03 ✅ («Что база ответила?»);
+  канонный рефрен 04-01 ✅ («Покажи запрос»); рефрен 06-01, остальные эхо
+  и payoff 10-05 — не написаны.
+- War-room пула: setup 00-06 ✅ (`FATAL: too many clients`); развитие 05-06,
+  09-04 и payoff 10-04 — не написаны.
+- Не задеты пилотом (вех не написано): «Салфетки Марата» (setup 01-01 —
+  волна I), «Обучение Стаса» (setup 01-02 — волна I), «Спор Зоя/Марат»
+  (setup 05-02), «Тимур» (setup — модуль 09).
+
 ---
 
 ## §8. Аватары — брифы художнику
@@ -863,6 +899,45 @@ Debezium»). Зоя делегирует периметр: «Слот твой. 
 > что вообще происходит на том конце сокета, когда приложение говорит с
 > Postgres.
 
+#### 9.1-EN. EN-эталон (фактическая сцена 00-01 из репозитория)
+
+> Камертон ритма EN-сцен: длина реплик, прямые реплики `**You:**` (§10.5),
+> прямые кавычки вместо «ёлочек», сухой юмор, переживающий перевод.
+> Текст — verbatim из `lectures/00-getting-connected/00-01-meet-brew/i18n/en/README.md`
+> (принят пилотом); при расхождении с юнитом правится эталон, не юнит.
+
+Day one at Brew. The dev office is the second floor above the chain's very first coffee shop: a grinder rumbles downstairs, a dozen desks sit upstairs, and nobody here is surprised by the smell of espresso.
+
+> **Marat:** Laptop issued, badge works — not bad for ten in the morning. I'm Marat, the backend team lead. The tour is short: our whole system is right here.
+>
+> **You:** One database?
+>
+> **Marat:** One database, nine tables: orders, line items, menu, customers, stock. People somehow expect something grand behind a chain of coffee shops.
+>
+> **Danya:** And the outbox. He always forgets the outbox, and it's our best table — you'll get it closer to winter. I'm Danya, the second backend dev, so now there are three of us. Advice for your first week: don't trust the word "just" around here. "Just add a column," "just fix a price" — that's how the register went down here.
+>
+> **Marat:** That happened once.
+>
+> **Danya:** That happened twice.
+
+From behind a partition, without turning away from her two monitors, a woman with a liter mug — not a single word printed on it — speaks up.
+
+> **Zoya:** Zoya. My database. The sandbox will be up by lunch. Don't ask for prod.
+>
+> **You:** What if I really need it?
+>
+> **Zoya:** Especially if you really need it.
+>
+> **Marat:** The boundary with Zoya is simple: everything inside the server is her territory. Everything that talks to the server with queries is ours. Where exactly that boundary runs, I'll be showing you all year. There's also Stas from marketing, one floor up: he shows up saying "small tweak," and it hasn't been true once yet.
+
+Marat turns his laptop around. On the screen is the orders table, first row highlighted.
+
+> **Marat:** Look. Order number one: Alice Ivanova, January fifteenth, nine o'clock sharp. A cappuccino and a cold brew, status paid. The first order in Brew's history — Viktor, our founder, still keeps the paper receipt framed. On this one row I'll show you just about everything: types, joins, transactions, indexes.
+>
+> **You:** A whole course — on one order?
+>
+> **Marat:** On one order, one database, and one year. Remember the two questions every investigation here starts with: "show me the query" and "what did the database say." By the end of the year these nine tables will ride out as a stream to a neighboring system — and you'll be the one opening that stream. But we'll start with a simpler question: what actually happens on the other end of the socket when an application talks to Postgres.
+
 ### 9.2. Сцена-открытие середины курса (04-01)
 
 > Заменяет прозаический пересказ канонной боли «акция „Мы скучаем“ →
@@ -906,6 +981,38 @@ Debezium»). Зоя делегирует периметр: «Слот твой. 
 Слово, которое возвращает Карину, действительно одно. Но чтобы больше
 никогда не терять клиентов молча, нужно понять, что именно каждый JOIN
 обещает — и чем эти обещания отличаются.
+
+#### 9.2-EN. EN-эталон (фактическая сцена 04-01 из репозитория)
+
+> Камертон EN-сцены середины курса. Текст — verbatim из
+> `lectures/04-querying-across-tables/04-01-joins-inner-left-right-full/i18n/en/README.md`
+> (принят пилотом). Отличие от RU-эталона: формула «отчёт наврал умолчанием»
+> в EN влита в закрывающий абзац сцены (в RU она — проза-связка после сцены);
+> число реплик именованных персонажей и реплик `**You:**` совпадает с RU.
+
+The list for the "We miss you" campaign — customers who signed up but never placed a single order — went to Stas yesterday afternoon. The mailing went out last night. And today Stas is standing at your desk with a customer profile open on his phone.
+
+> **Stas:** Karina Sidorova. Signed up in January, orders — zero. The perfect recipient for this campaign. Never got the email. Why isn't she on the list?
+>
+> **You:** She's in the database. The query is simple: customers, orders, a join on customer_id…
+>
+> **Stas:** I don't need a join, I need Karina. The campaign was for people exactly like her. How many more people did the list lose?
+
+That last question has no answer — and that's the worst part. Marat walks over with his mug and silently nods at the screen.
+
+> **Marat:** Show me the query.
+
+You show it. `customers JOIN orders ON …` — straight out of the textbook.
+
+> **Marat:** The query is honest. INNER JOIN returns only "customer — order" pairs. Karina has no orders, there's no pair — so there's no row. It didn't lose her. It threw her out. By the rules.
+>
+> **You:** And how do you ask for "all customers — even the ones with no pair"?
+>
+> **Marat:** With one word. That's what we'll take apart — along with all four kinds of JOIN: who keeps whom and who throws whom away. Stas, you'll have the full list by lunch.
+>
+> **Stas:** By lunch. And a number — how many of them there are. Viktor will ask about reach.
+
+The report didn't lie in its numbers. It lied by omission: the row that shouldn't have been missing simply wasn't there. The word that brings Karina back is just one. But to stop losing customers silently, you need to understand what each JOIN promises — and how those promises differ.
 
 ### 9.3. Микро-реплика (ступень 3 лестницы; пример для 02-04)
 
@@ -979,9 +1086,13 @@ Debezium»). Зоя делегирует периметр: «Слот твой. 
    для реплик-сообщений «в чате»; обычные реплики Зои — с обычной
    капитализацией.
 5. **Открытые вопросы (не блокируют Фазу 0):**
-   - форма `**You:**` в EN-зеркале — проверить на EN-пилоте (альтернатива —
-     курсивная ремарка); до решения линт-инвариант числа реплик считает
-     только именованных персонажей (§5.10);
+   - форма `**You:**` в EN-зеркале — **решено 2026-07-04 (ретро пилота,
+     Task 1 волны I):** EN-зеркало использует прямые реплики `**You:**`,
+     зеркальные RU-репликам `**Ты:**` (не курсивную ремарку) — по фактическим
+     EN-сценам пилота 00-01 и 04-01 (EN-эталоны §9.1-EN/§9.2-EN); приёмка
+     владельцем зафиксирована запуском волны I. Линт-инвариант §5.10 расширен:
+     число реплик читателя в RU и EN тоже обязано совпадать (отдельный
+     счётчик в `check_unit.mjs`);
    - ревизия маскулинного прошедшего времени о «ты» в существующей прозе
      курса (за пределами сцен) — отдельное решение, объём ~точечные правки;
    - технология вставки аватаров в уроки (пути, размер, тёмная тема) —
