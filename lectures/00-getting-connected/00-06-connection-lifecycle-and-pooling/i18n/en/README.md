@@ -166,6 +166,6 @@ The morning after the war-room the team sits down for a short postmortem — and
 
 Late in the evening, once the site is taking orders again, a message pops up in the team chat from Viktor — the founder you know so far only from the framed receipt of order #1.
 
-> **Viktor (in chat):** The site is alive, guests are ordering. In the morning I want our first report: how much we made today. Down to the cent.
+> **Viktor (in chat):** The site is alive, guests are ordering. In the morning I want our first report: how much we made today. Down to the kopek.
 
-That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with Viktor's report — with money, where `numeric` vs `float` decides whether Brew's till balances down to the cent.
+That closes module **00 "Getting connected"**: you have a sandbox, psql at hand, a working pipeline — "SQL by hand → sqlc → typed pgx code" — and an understanding of what the pool does with connections. Next up is module **01 "Data types"**: which type to pick and why, starting with Viktor's report — with money, where `numeric` vs `float` decides whether Brew's till balances down to the kopek.

@@ -19,6 +19,9 @@ staff-Анной (04-02, ратифицирована §10.2), «неделя и
 - Карта сцен: `docs/story-scene-map.md` — запись юнита = обязательный вход
   задачи; бюджет-заметки модулей — там же.
 - Гейты сцен: `.claude/skills/lecture-writer/references/checklist.md`.
+  Скилл и линтер лежат в гитигноренном `.claude/` — артефакт локальной
+  рабочей копии, в свежем клоне репозитория их нет: волны запускаются
+  из этой рабочей копии.
 - Модули волны: `lectures/04-querying-across-tables/`,
   `lectures/05-transactions-and-mvcc/`, `lectures/06-indexing-and-explain/` —
   правятся только `i18n/{ru,en}/README.md`.

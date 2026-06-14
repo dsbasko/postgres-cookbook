@@ -121,7 +121,7 @@ What we simplified.
 - `EXISTS`/`NOT EXISTS` is usually friendlier to indexes; a giant `IN` list from the application is a candidate for `= ANY($1::type[])` (10-03).
 
 > [!NOTE]
-> **Check yourself.** `SeedPromo` already inserts a "whole menu" promo with `featured_drink_id = NULL`. Imagine you added such a `NULL` to `promo` by hand. What do the two queries from `## Running it` return — `CountNotFeaturedNotIn` (via `NOT IN`) and `CountNotFeaturedNotExists` (via `NOT EXISTS`)? Which one breaks on the `NULL`, and which one counts honestly?
+> **Check yourself.** `SeedPromo` already inserts a "whole menu" promo with `featured_drink_id = NULL`. Why do the two queries from `## Running it` — `CountNotFeaturedNotIn` (via `NOT IN`) and `CountNotFeaturedNotExists` (via `NOT EXISTS`) — return different numbers because of that `NULL`? Which one breaks on the `NULL`, and which one counts honestly?
 
 > [!TIP]
 > **Answer.** `CountNotFeaturedNotExists` (via `NOT EXISTS`) counts honestly: **4**. A `promo` row with `featured_drink_id = NULL` matches no `d.id` (`NULL` equals nothing), so out of five drinks only espresso `#1` is excluded — 4 remain. But `CountNotFeaturedNotIn` (via `NOT IN`) breaks: the list becomes `{1, NULL}`, and for any drink with `id <> 1` that's `NOT (false OR NULL) = NOT (NULL) = NULL`, so the row fails the filter — and the answer collapses to **0** (though the same 4 drinks aren't on promo). A single `NULL` in the set takes down the whole `NOT IN`; `NOT EXISTS` is immune to it.

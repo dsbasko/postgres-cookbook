@@ -64,7 +64,7 @@ Step by step. The `LEFT JOIN` runs first: it honestly keeps Karina, filling in `
 >
 > The fix depends on what you want:
 > - **keep the missing rows** — move the condition into `ON`: `LEFT JOIN orders o ON o.customer_id = c.id::text AND o.status = 'paid'`. Now the filter applies *while matching pairs*, before the `NULL` fill-in: Karina has no matching order → her row stays with `NULL` on the right;
-> - **or** keep the condition in `WHERE` but let the pairless rows through explicitly: `WHERE o.status = 'paid' OR o.id IS NULL`.
+> - **or** keep the condition in `WHERE` but let the pairless rows through explicitly: `WHERE o.status = 'paid' OR o.id IS NULL`. This is not equivalent to the `ON` variant: a customer who has orders but none of them `'paid'` (our Boris with his `created`) drops out here — his `o.id` isn't `NULL`. If you need him too, as a row with `NULL`, take the `ON` variant.
 >
 > A condition on the left (mandatory) table in `WHERE` doesn't break this way — it never gets a `NULL` from the join.
 

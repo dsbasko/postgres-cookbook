@@ -165,10 +165,13 @@ stock      | 40
 > `\timing`? And why can't you call `\d drinks` from `pgx` in Go?
 
 > [!TIP]
-> **Answer.** Only `SELECT count(*) FROM drinks;` goes to the server — it's SQL.
-> The other three start with `\` — they're meta-commands, run by psql itself on the
-> client. That's exactly why `pgx` can't call them: `\d` isn't SQL, the server
-> doesn't understand such a command; from code you get the same facts by querying
+> **Answer.** As text, only `SELECT count(*) FROM drinks;` goes to the server —
+> it's SQL. The other three start with `\` — they're meta-commands, parsed by psql
+> itself. But "itself" doesn't mean "without the server": for `\dt` and `\d drinks`
+> psql sends its own catalog queries to the server (run `psql -E` and you'll see
+> them); only `\timing` runs entirely on the client. That's exactly why `pgx`
+> can't call meta-commands: `\d` isn't SQL, the server doesn't understand such a
+> command; from code you get the same facts by querying
 > `pg_catalog`/`information_schema`.
 
 ## The fence

@@ -121,7 +121,7 @@ make lecture L=04-querying-across-tables/04-05-subqueries-exists-vs-in
 - `EXISTS`/`NOT EXISTS` обычно дружелюбнее к индексам; гигантский `IN`-список из приложения — кандидат на `= ANY($1::тип[])` (10-03).
 
 > [!NOTE]
-> **Проверь себя.** В `SeedPromo` уже лежит акция «на всё меню» с `featured_drink_id = NULL`. Представь, что ты добавил такой `NULL` в `promo` руками. Что вернут два запроса из `## Запуск` — `CountNotFeaturedNotIn` (через `NOT IN`) и `CountNotFeaturedNotExists` (через `NOT EXISTS`)? Какой из них поломается о `NULL`, а какой посчитает честно?
+> **Проверь себя.** `SeedPromo` уже кладёт в `promo` акцию «на всё меню» с `featured_drink_id = NULL`. Почему из-за этого `NULL` два запроса из `## Запуск` — `CountNotFeaturedNotIn` (через `NOT IN`) и `CountNotFeaturedNotExists` (через `NOT EXISTS`) — дают разные числа? Какой из них поломается о `NULL`, а какой посчитает честно?
 
 > [!TIP]
 > **Ответ.** `CountNotFeaturedNotExists` (через `NOT EXISTS`) посчитает честно: **4**. Строка `promo` с `featured_drink_id = NULL` ни с каким `d.id` не совпадёт (`NULL` ни с чем не равен), поэтому из пяти напитков исключается только эспрессо `#1` — остаётся 4. А `CountNotFeaturedNotIn` (через `NOT IN`) поломается: список становится `{1, NULL}`, для любого напитка с `id <> 1` это `NOT (false OR NULL) = NOT (NULL) = NULL`, строка не проходит фильтр — и ответ обнуляется до **0** (хотя «не на акции» те же 4 напитка). Один `NULL` в наборе кладёт весь `NOT IN`; `NOT EXISTS` к нему устойчив.

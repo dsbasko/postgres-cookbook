@@ -25,6 +25,9 @@
   бюджет-заметка модуля перед его юнитами.
 - Гейты сцен: `.claude/skills/lecture-writer/references/checklist.md`
   (внесены планом `0-pilot`).
+  Скилл и линтер лежат в гитигноренном `.claude/` — артефакт локальной
+  рабочей копии, в свежем клоне репозитория их нет: волны запускаются
+  из этой рабочей копии.
 - Модули волны: `lectures/01-data-types/`, `lectures/02-schema-and-constraints/`,
   `lectures/03-crud-fluency/` — правятся только `i18n/{ru,en}/README.md`.
 - Предусловия окружения: команды из корня репозитория; `pnpm install`
