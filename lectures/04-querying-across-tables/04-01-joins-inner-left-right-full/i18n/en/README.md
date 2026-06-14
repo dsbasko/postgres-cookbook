@@ -1,12 +1,32 @@
 # 04-01 — JOIN: inner / left / right / full
 
-Marketing dreamed up a "we miss you" campaign: send a promo code to everyone who created a Brew account but hasn't ordered even once. They need a list of customers with their order counts. You write the obvious thing: join `customers` to `orders` by customer, count the rows, hand it over. The list goes to marketing, ticket closed.
+The list for the "We miss you" campaign — customers who signed up but never placed a single order — went to Stas yesterday afternoon. The mailing went out last night. And today Stas is standing at your desk with a customer profile open on his phone.
 
-The next day a question lands: "Where's Karina? She signed up last week, she's in the admin panel, but she's not in your list." You open it — and indeed she isn't. The query didn't fail and didn't raise an error. It silently dropped exactly the people the campaign was for — customers with no orders at all. The report didn't lie in its numbers. It lied by omission: the row that shouldn't have been missing simply wasn't there.
+> **Stas:** Karina Sidorova. Signed up in January, orders — zero. The perfect recipient for this campaign. Never got the email. Why isn't she on the list?
+>
+> **You:** She's in the database. The query is simple: customers, orders, a join on customer_id…
+>
+> **Stas:** I don't need a join, I need Karina. The campaign was for people exactly like her. How many more people did the list lose?
+
+That last question has no answer — and that's the worst part. Marat walks over with his mug and silently nods at the screen.
+
+> **Marat:** Show me the query.
+
+You show it. `customers JOIN orders ON …` — straight out of the textbook.
+
+> **Marat:** The query is honest. INNER JOIN returns only "customer — order" pairs. Karina has no orders, there's no pair — so there's no row. It didn't lose her. It threw her out. By the rules.
+>
+> **You:** And how do you ask for "all customers — even the ones with no pair"?
+>
+> **Marat:** With one word. That's what we'll take apart — along with all four kinds of JOIN: who keeps whom and who throws whom away. Stas, you'll have the full list by lunch.
+>
+> **Stas:** By lunch. And a number — how many of them there are. Viktor will ask about reach.
+
+The report didn't lie in its numbers. It lied by omission: the row that shouldn't have been missing simply wasn't there. The word that brings Karina back is just one. But to stop losing customers silently, you need to understand what each JOIN promises — and how those promises differ.
 
 This unit builds on single-table `SELECT` / `WHERE` / `ORDER BY` from module 03 and on the Brew table map from 00-01 — from here on we join `customers` and `orders`, so it helps to remember what columns they carry.
 
-It's not the whole query — it's one word in it: which `JOIN` you picked. There are four ways to connect two tables, and they differ precisely in whom they keep and whom they throw away. There's also a fifth, set apart — the Cartesian product (`CROSS JOIN`), which pairs every left row with every right row with no condition at all; it gives the handy model "`JOIN` = product + filter," and we'll cover it in detail in module 08. Karina dropped because we used the kind that keeps only matched pairs. Now all four in turn, on the same pair `customers` and `orders`, swapping one word at a time.
+Alongside the four kinds of JOIN there's a fifth, set apart — the Cartesian product (`CROSS JOIN`), which pairs every left row with every right row with no condition at all; it gives the handy model "`JOIN` = product + filter," and we'll cover it in detail in module 08. Now all four in turn, on the same pair `customers` and `orders`, swapping one word at a time.
 
 ## INNER JOIN — matches only
 
