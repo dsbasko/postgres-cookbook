@@ -1,8 +1,20 @@
 # 01-04 — uuid and uuidv7
 
-Brew decided to give customers a link to their loyalty-program signup and didn't want to expose a sequential numeric id in the URL (`/signup/42` reveals that there are only 42 signups, and adjacent ones are trivial to enumerate). They switched to `uuid` — and immediately hit a second problem: new signups, now keyed by a random `uuid`, started inserting "all over the place" in the index, the "latest signups" page stopped sorting by the key, and inserts got a bit slower. That's how Brew met the difference between a random `uuid` (version 4) and a time-based `uuidv7` (version 7).
+Marat's prophecy from 00-01 comes true: Stas comes down from his floor in person for the first time — phone already turned screen-first toward you.
 
-The goal of this unit is to choose a key deliberately. A numeric `IDENTITY` (which we saw on the base tables) is good, but it reveals order and count. A random `gen_random_uuid()` (v4) is unpredictable but doesn't sort and fragments the index. PG18 added `uuidv7()` — a `uuid` with a timestamp embedded at the front: its tail is just as unpredictable, but it **grows monotonically over time**, so it works as a time-sortable primary key. We demonstrate it on a **new** table — the Brew base schema is byte-compatible with kafka-cookbook (`customers.id` is `BIGINT` there) and must not be touched.
+> **Stas:** Small tweak. Every loyalty member gets a personal link to their signup. The mock-up is ready: `brew.app/signup/42`. Flyers go to print by Friday.
+>
+> **You:** And 42 is the sequential number from the database? It's right there in the URL.
+>
+> **Stas:** A number's a number. Who'd care about it besides us?
+
+The tweak really does turn out small: the id is already there, the link takes an evening. The answer to Stas's question arrives a week later — a competitor publishes a post, "Brew has only 42 loyalty signups," and the number is exact: `/signup/42` enumerates, adjacent numbers respond happily, a sequential id leaks both volume and order. The obvious first fix is to switch the key to a random `uuid` (`gen_random_uuid()`, version 4): you can't enumerate that. Another week later, Zoya shows up in the team chat.
+
+> **Zoya (in chat):** loyalty_signups. inserts dropped after the move to v4. "latest signups" no longer sorts by the key. who picked the type.
+
+The second hit lands harder than the first: a random key scatters new rows "all over the place" across the index, and the "latest signups" page dies.
+
+The goal of this unit is to choose a key deliberately. A numeric `IDENTITY` (which we saw on the base tables) is good, but it reveals order and count. A random `gen_random_uuid()` (v4) is unpredictable but doesn't sort and fragments the index. PG18 adds `uuidv7()` — a `uuid` with a timestamp embedded at the front: its tail is just as unpredictable, but it **grows monotonically over time**, so it works as a time-sortable primary key. We demonstrate it on a **new** table — the Brew base schema is byte-compatible with kafka-cookbook (`customers.id` is `BIGINT` there) and must not be touched.
 
 ## v4 vs v7: what's embedded in them
 
@@ -88,6 +100,8 @@ Output:
 (The demo prints in Russian.) The versions are `4` and `7`; v4 has no embedded time, v7 does. And the key point: three rows inserted in a row are ordered by the `uuidv7` key exactly as by the insertion counter — `uuidv7` is monotonic. The "latest signups" page sorts by the key again, and inserts go "to the right" in the index.
 
 ## The fence
+
+> **Zoya — in review, one line:** `customers.id` stays untouched. It's a contract with the neighboring team.
 
 What we simplified:
 
