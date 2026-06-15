@@ -1,6 +1,10 @@
 # 01-05 — enums, arrays, and a jsonb intro
 
-Brew's menu gained drink sizes (S/M/L), the blog's articles gained tags, and marketing wanted to stash "arbitrary options" into an order, like "oat milk, +1 shot." Three different tasks — and three different "container" types in Postgres: `enum` for a fixed set of sizes, an array for tags, `jsonb` for flexible options. Each is handy exactly in its niche, and each is easy to apply in the wrong place.
+A rare week: nothing at Brew is on fire. Stas comes down to the open space without an emergency — with a plan and three requests at once.
+
+> **Stas:** Look what's piled up. Drinks need sizes — S, M, L, that's every other order. The blog needs tags. And guests keep asking for syrup, cinnamon, "no lid" — where do we put that?
+
+Three different tasks — and three different "container" types in Postgres: `enum` for a fixed set of sizes, an array for tags, `jsonb` for flexible options like "oat milk, +1 shot." Each is handy exactly in its niche, and each is easy to apply in the wrong place.
 
 The goal of this unit is to meet the three containers and develop a feel for when each fits. This is an **introduction**: a deep dive into `jsonb`, GIN indexes, and full-text search is coming in module 07; here it's basic operators and the "when to normalize, when not to" intuition.
 
@@ -90,5 +94,9 @@ The rule is simple: **what you filter / count / join on is a column; `jsonb` is 
 - Arrays (`text[]`) + the `@>` ("contains") operator are handy for simple lists; in the base schema tags are a string, `string_to_array` gives `text[]` → Go `[]string`.
 - `jsonb`: `->>` extracts `text`, `->` extracts `jsonb` (with quotes), `jsonb_exists`/`?` tests key presence. This is an intro; the depth is module 07.
 - A container is not a substitute for normalization: keep what you filter/count/join on as columns.
+
+Meanwhile, a message pops up in the team chat.
+
+> **Stas (in chat):** The second location is approved — Viktor signed off on the plan. Next week I'm bringing the task list: menu, customers, orders — everything has to be able to run across two addresses.
 
 Next up — module **02 "Schema, DDL, and constraints"**: how to assemble a reliable schema from the right types — `IDENTITY` vs `serial`, `NOT NULL`, primary and foreign keys, `UNIQUE`/`CHECK`, generated columns, and a migration mindset.
