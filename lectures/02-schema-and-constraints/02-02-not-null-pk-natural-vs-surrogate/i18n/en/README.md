@@ -1,6 +1,14 @@
 # 02-02 — NOT NULL, PK, natural vs surrogate key
 
-Brew created a shops table and made the primary key a human-readable code: `BREW-CENTRAL`, `BREW-NORTH`. Reasonable — the code is short, meaningful, easy to look up by. Stock levels and order line items referenced that code via foreign keys. And then marketing renamed `BREW-NORTH` to `BREW-NEVA`. That's when it turned out "renaming" means changing the **value of the primary key**: they had to cascade-update the code across every referencing table, and reports that cached the old code started pointing into the void. The pain came not from the rename, but from making a **mutable business code the row's identity**.
+Stas comes down from his floor — phone already turned screen-first toward you: a signage mockup, `BREW-NEVA` where `BREW-NORTH` used to be.
+
+> **Stas:** Rebranding. The second location hasn't even opened yet, and Viktor has already signed off: NEVA, not NORTH. In the database that's just one UPDATE, right? By Monday.
+>
+> **You:** Sounds about right. One row in shops, an UPDATE by code…
+>
+> **Marat:** What references that code?
+
+Plenty does. Brew's shops table got a human-readable code as its primary key: `BREW-CENTRAL`, `BREW-NORTH`. Reasonable — the code is short, meaningful, easy to look up by. But stock levels and order line items reference that code via foreign keys, and "renaming" here means changing the **value of the primary key**: cascade-updating the code across every referencing table, while reports that cache the old code start pointing into the void. "That's just one UPDATE" is exactly the "just" Danya warned about on day one. The pain isn't in the rename — it's in making a **mutable business code the row's identity**.
 
 This unit has two goals. First: what `PRIMARY KEY` actually is — `NOT NULL` plus `UNIQUE` in one declaration (so the key is never empty and never repeats). Second: when to key on a **natural** code (a business value) versus a **surrogate** id (synthetic, meaningless). Short answer: surrogate for identity, the natural code as a separate `UNIQUE` column for lookups.
 
