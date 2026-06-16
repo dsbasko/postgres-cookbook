@@ -83,7 +83,9 @@ Output:
 
 ## The fence
 
-What we simplified: `CASCADE` looks convenient — "deleted the customer, everything related cleaned itself up" — but in production it's a double-edged tool your DBA watches closely:
+> **Zoya — in review, one line:** A cascade once took out half my database. Default — RESTRICT.
+
+What we simplified: `CASCADE` looks convenient — "deleted the customer, everything related cleaned itself up" — but in production it's a double-edged tool:
 
 - A cascade can silently wipe far more than you expected (deleting one row drags tens of thousands in child tables — a long lock and bloated WAL), and it hurts auditing: data vanishes without a trace.
 - Often it's safer to use `RESTRICT` + an explicit "soft delete" (`deleted_at`) in the app, so deletion is deliberate and reversible.
