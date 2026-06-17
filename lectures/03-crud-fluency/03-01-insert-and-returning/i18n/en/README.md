@@ -1,6 +1,14 @@
 # 03-01 — INSERT and RETURNING
 
-Brew launches a loyalty program. The app issues a card to a new customer, and right after the insert it needs that card's `id` — to show it to the customer, attach bonuses, write it to a log. Naive code does two queries: first `INSERT`, then `SELECT ... WHERE card_no = ...` to learn the generated `id`. That's an extra round-trip to the database, an extra chance for a race (between the insert and the read someone could have changed the row), and simply more code.
+Brew launches a loyalty program. Stas comes down to the open space, phone screen-first: on it, a mockup of the register screen with an empty field for the card number.
+
+> **Stas:** Monday we issue the first card — to Alice Ivanova. Our order number one, so she gets card number one. One requirement: the number goes on the screen right away. The guest is standing at the register and won't wait.
+>
+> **You:** The database hands out the card's `id`. Insert the row, then read it back with a `SELECT` — and the number's on the screen?
+>
+> **Marat:** That's two queries. What happens between your `INSERT` and your `SELECT`?
+
+Between them there's an extra round-trip to the database and a window for a race: while the app goes back for the row it just inserted, someone can manage to change it. And simply more code out of thin air.
 
 The goal of this unit is to collapse that into one query. `INSERT` (like `UPDATE`/`DELETE`) has a `RETURNING` clause: it returns the rows the command just wrote, including the values the server filled in — the generated `id`, columns with a `DEFAULT`. No second `SELECT`.
 
