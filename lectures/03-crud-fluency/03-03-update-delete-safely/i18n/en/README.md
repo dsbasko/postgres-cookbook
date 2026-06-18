@@ -1,8 +1,22 @@
 # 03-03 — UPDATE/DELETE safely
 
-The most expensive database incident fits on one line: `UPDATE orders SET status = 'cancelled'` — and someone forgot `WHERE id = 42`. The command ran without a single error and marked **every** Brew order cancelled. `DELETE FROM customers` with no condition is the same, only worse. The database did exactly what it was told; the trouble is that it was told the wrong thing.
+On your screen — an `UPDATE` on orders. Danya spins his chair around before you can hit Enter.
 
-The goal of this unit is to build the habits that turn such a mistake from a catastrophe into a harmless typo. There are three: always know the **blast radius** of a change (how many rows are affected and which ones), and run risky writes inside a **transaction** so you can roll them back until you've confirmed the right rows are hit.
+> **Danya:** Friday, evening, an UPDATE on orders. My most expensive incident started exactly like that.
+>
+> **You:** The one? A single line?
+>
+> **Danya:** A single line. `UPDATE orders SET status = 'cancelled'` — the `WHERE` stayed in my head. Zero errors — and every Brew order cancelled. Every one. Before your time: calls from the shop, a backup restore until midnight.
+>
+> **Marat:** The query was syntactically flawless — that's the horror. The database did exactly what it was told.
+>
+> **You:** And how do you see the blast radius before it's forever?
+>
+> **Marat:** Between the command and "forever" there's a window. Today we learn how to open it.
+>
+> **Danya:** Ever since, my fingers hit BEGIN before my head finishes the thought. An expensive habit — as in, it cost a lot.
+
+This unit builds the habits that turn this mistake from a catastrophe into a harmless typo: know the **blast radius** of a change (how many rows are hit and which ones) and run risky writes inside a **transaction** you can roll back until you've confirmed the right rows are hit.
 
 ## Blast radius: RETURNING and RowsAffected
 
