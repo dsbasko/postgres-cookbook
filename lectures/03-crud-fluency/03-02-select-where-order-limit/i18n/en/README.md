@@ -1,6 +1,10 @@
 # 03-02 — SELECT: WHERE / ORDER / LIMIT and keyset pagination
 
-The Brew menu is shown page by page in the app: "20 more drinks," "next page." While there are few pages, everything works. But as soon as the catalog grows and the user scrolls to page 500, a query with `OFFSET 10000` suddenly slows down — even though it returns the same 20 rows. The reason isn't the amount returned but the amount traversed: `OFFSET` makes the server compute and **discard** the first 10000 rows before returning the ones you want.
+The Brew menu is shown page by page in the app: "20 more drinks," "next page." While there are few pages, everything works. And today Stas comes down with his phone screen facing out — a guest complaint from the app on it.
+
+> **Stas:** A guest scrolled the menu to page five hundred — and the app stopped to think. Why is the bottom of the menu slower than the top? The coffee's the same.
+
+You open the query: page 500 is `OFFSET 10000`, and that's exactly what's slow — even though it returns the same 20 rows. The reason isn't the amount returned but the amount traversed: `OFFSET` makes the server compute and **discard** the first 10000 rows before returning the ones you want.
 
 The goal of this unit is to learn to fetch exactly the rows you need (`WHERE`), in the right order (`ORDER BY`), in the right batch (`LIMIT`), and to page so the cost of a page doesn't depend on its depth. That's keyset pagination (a.k.a. "seek"): instead of "skip N rows" it's "give me the rows after this one."
 
@@ -26,6 +30,12 @@ ORDER BY base_price DESC, id DESC
 `(a, b) < (x, y)` in Postgres is a lexicographic comparison: by `a` first, by `b` on ties. It exactly mirrors `ORDER BY base_price DESC, id DESC`, so "rows after the cursor" coincides with the sort order. With an index on `(base_price, id)` the server jumps straight to the right place (an index range scan) and reads only `LIMIT` rows — no discarding. Page 1000 costs the same as page 1.
 
 The price: keyset can't "jump to page 500" (there's no cursor without traversing) and requires a total `ORDER BY`. But for an "infinite feed" / "show more" it's exactly what you want.
+
+> **Danya:** Confession: I've used LIMIT/OFFSET all my life and cached the deep pages. It flew in testing.
+>
+> **Marat:** Count how many rows the database read for page five hundred.
+
+Counting is easier on a picture — let's lay both methods out row by row.
 
 ## OFFSET vs keyset: what the server does
 
