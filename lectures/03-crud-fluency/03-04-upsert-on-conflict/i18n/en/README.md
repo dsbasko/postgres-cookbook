@@ -1,6 +1,12 @@
 # 03-04 — upsert via ON CONFLICT
 
-Every night Brew updates drink stock levels per shop: the accounting system sends an export of `(shop, drink, on_hand)`. Some pairs are already in the database — they need updating; some are new — they need inserting. Naive code, for each row, first does a `SELECT`, and based on the result decides: `INSERT` or `UPDATE`. That's three queries where one would do, and — worse — between the `SELECT` and the `INSERT` another process can insert the same pair, and your `INSERT` fails on a uniqueness violation (or, if it doesn't fail, a duplicate appears).
+The morning starts with two overnight messages from Pasha.
+
+> **Pasha (in chat, 23:50):** The nightly stock sync failed. duplicate key.
+>
+> **Pasha (in chat, 23:57):** Restarted it — went through. The file's just a file, what's wrong with it?
+
+"Restarted it — went through" is the worst kind of bug: it doesn't reproduce, so it hasn't gone anywhere. The nightly sync takes the stock export `(shop, drink, on_hand)` from the accounting system; some pairs are already in the database — they need updating, some are new — they need inserting. Naive code first does a `SELECT` for each row and decides: `INSERT` or `UPDATE`. That's three queries where one would do, and — worse — a race: between the `SELECT` and the `INSERT` the second shop sent the same pair, and the `INSERT` failed with that very `duplicate key` — SQLSTATE `23505` from module 02. On the restart the race didn't recur — hence "went through."
 
 The goal of this unit is to do it in one atomic, concurrency-safe command: `INSERT ... ON CONFLICT (...) DO UPDATE`. That's an upsert — "insert, and if such a key already exists, update."
 
