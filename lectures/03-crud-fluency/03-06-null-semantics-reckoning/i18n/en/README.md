@@ -1,14 +1,40 @@
 # 03-06 — Sober NULL semantics
 
-In 01-02 there was a teaser: `NULL` is not "empty" but "unknown." Here is the reckoning. The Brew app has a query "show drinks that aren't currently on the stop-list": `... WHERE id NOT IN (SELECT drink_id FROM unavailable)`. One day it started returning **zero** drinks — as if the whole menu were unavailable. No error, no warning. The cause: a single `NULL` slipped into the `unavailable` table (an external feed, a `LEFT JOIN`, a manual edit — doesn't matter), and that was enough for `NOT IN` to silently "switch off" the entire result.
+The morning starts with a report in the team chat.
 
-The goal of this unit is to understand why, and never fall into it again. The root is three-valued logic: a comparison with `NULL` yields not `true`/`false` but `NULL` (UNKNOWN). And `WHERE` lets a row through only if the condition is exactly `true`; to it, `NULL` is the same as `false`.
+> **Anna (in chat, 09:20):** The app. Menu's empty. 09:20. Guests are ordering at the counter.
+
+The "drinks not on the stop-list" query — `... WHERE id NOT IN (SELECT drink_id FROM unavailable)` — returned **zero** drinks, as if the whole menu were unavailable. No error, no warning: the logs are clean.
+
+> **Marat:** Show me the query.
+>
+> **You:** Here. It ran for a year — what broke overnight?
+>
+> **Marat:** The query is honest. Second question: what did the database say?
+>
+> **You:** Zero rows. Not a single error — that's the scary part.
+
+The trail leads into `unavailable`: yesterday the stop-list was edited by hand, and in one row a `NULL` sits where a drink id should be. The edit itself was needed — Stas was pulling a seasonal raf off sale. Marat writes on a napkin: `true AND NULL = NULL`.
+
+> **Stas:** The same NULL that eats my customers? Now it's gone after the menu?
+>
+> **Marat:** It doesn't eat anyone. For every drink the database answered "unknown" — and to WHERE, "unknown" means "no."
+
+So here is the reckoning for the teaser in 01-02: `NULL` is not "empty" but "unknown." The goal of this unit is to take that three-valued logic apart for good — and never fall into it again.
 
 ## Three-valued logic: a comparison with NULL → NULL
 
 `NULL` means "unknown," so any comparison with it returns "unknown": `1 = NULL` isn't `false`, it's `NULL`. `NULL = NULL` is also `NULL` (two unknowns aren't required to be equal). So checking for `NULL` with the `=` operator is meaningless — that's what `IS NULL` / `IS NOT NULL` are for.
 
 For `WHERE`/`CHECK`/`ON` this matters: they let a row through only if the predicate is `true`. A `NULL` (UNKNOWN) predicate is treated as "didn't pass," exactly like `false`. Hence all the traps.
+
+> **Danya:** Hold on, NULL = NULL has to be true: "don't know" on the left, "don't know" on the right. They're identical.
+>
+> **Marat:** NULL isn't a value, it's "don't know." Does "don't know" equal "don't know"?
+>
+> **Danya:** …I don't know.
+>
+> **Marat:** That's exactly how the database answers.
 
 ## The NOT IN + NULL trap
 
@@ -120,4 +146,8 @@ The best defense against the trap is to not allow `NULL` where it isn't needed: 
 - `COALESCE` — a default value; `NULLIF(a,b)` — `NULL` on equality (a divide-by-zero guard); `IS [NOT] DISTINCT FROM` — `NULL`-safe comparisons.
 - Where a value must exist — put `NOT NULL`: the best trap is the one that can't be armed.
 
-This is the end of module 03 — "CRUD fluency." Next up — module **04 "Querying across tables"**: tying data together with `JOIN`s, aggregating via `GROUP BY`/`HAVING`, taking "the latest per customer" via `DISTINCT ON`, and meeting the `NOT IN` + `NULL` trap again — now as part of the choice between `EXISTS` and `IN`.
+This is the end of module 03 — "CRUD fluency." In the evening Stas finishes reading the stop-list postmortem — and lingers at your desk.
+
+> **Stas:** I've got NULL memorized. Now tell me: how many more are out there like Karina — signed up and gone quiet?
+
+There's no honest single number to answer that with yet — for that you need to tie tables together. Next up — module **04 "Querying across tables"**: tying data together with `JOIN`s, aggregating via `GROUP BY`/`HAVING`, taking "the latest per customer" via `DISTINCT ON`, and meeting the `NOT IN` + `NULL` trap again — now as part of the choice between `EXISTS` and `IN`.
