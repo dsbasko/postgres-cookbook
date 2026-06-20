@@ -1,28 +1,28 @@
 # 01-01 — Numbers and money
 
-The first revenue report went out to Viktor in the morning. Before lunch he comes up to the dev floor — Brew's founder, once a barista himself. He's carrying two printouts.
+The first revenue report went out to Emil in the morning. Before lunch he comes up to the dev floor — Brew's founder, once a barista himself. He's carrying two printouts.
 
-> **Viktor:** Two reports — two numbers. The register says one thing, your numbers are a couple of kopeks short, and it's like that on every line. Where's my money?
+> **Emil:** Two reports — two numbers. The register says one thing, your numbers are a couple of kopeks short, and it's like that on every line. Where's my money?
 >
 > **You:** Maybe the register is rounding?
 >
-> **Viktor:** The register rings up what the guest paid. Guests pay exact amounts.
+> **Emil:** The register rings up what the guest paid. Guests pay exact amounts.
 
-Marat scans the totals column, pulls a napkin and writes one line: `0.1 + 0.2 ≠ 0.3`.
+Dmitry scans the totals column, pulls a napkin and writes one line: `0.1 + 0.2 ≠ 0.3`.
 
 > **You:** Every addition?
 >
-> **Marat:** Every one. Nobody stole anything. Summed in float.
+> **Dmitry:** Every one. Nobody stole anything. Summed in float.
 >
-> **Viktor:** I don't care what it's called. Make the kopeks add up.
+> **Emil:** I don't care what it's called. Make the kopeks add up.
 
-Viktor heads back down to the guests; the printouts stay with you.
+Emil heads back down to the guests; the printouts stay with you.
 
 The export script predates you: it sums in `float`. This unit closes that class of bug up front: understand why `float` is wrong for money, and pick a representation that adds up exactly and maps cleanly into Go. Postgres has `numeric` (exact, arbitrary precision), but in an application money is usually kept simpler — as an integer count of cents: that's how the Brew base schema is built, `drinks.base_price` is a `BIGINT` in cents.
 
 ## Why float breaks money
 
-`float8` (a.k.a. `double precision`) stores numbers in binary floating point. Decimal fractions like `0.1` are repeating in binary — they have to be rounded, and when you add them the rounding errors surface. The classic demonstration: `0.1 + 0.2` gives `0.30000000000000004`, not `0.3`. The comparison `0.1 + 0.2 = 0.3` returns `false`. On a single receipt that's the seventeenth digit after the decimal point; over thousands of orders it's the very kopek-sized hole on Viktor's printouts.
+`float8` (a.k.a. `double precision`) stores numbers in binary floating point. Decimal fractions like `0.1` are repeating in binary — they have to be rounded, and when you add them the rounding errors surface. The classic demonstration: `0.1 + 0.2` gives `0.30000000000000004`, not `0.3`. The comparison `0.1 + 0.2 = 0.3` returns `false`. On a single receipt that's the seventeenth digit after the decimal point; over thousands of orders it's the very kopek-sized hole on Emil's printouts.
 
 In `numeric` the same numbers have no error: it's a decimal type with an exact representation, and `0.1 + 0.2 = 0.3` is `true` there. You pay for it in speed, and in the fact that in Go `numeric` arrives not as a plain number but as `pgtype.Numeric` (which you have to unwrap).
 
@@ -103,7 +103,7 @@ ID  НАЗВАНИЕ     ЦЕНТЫ  ЦЕНА
 
 ## The fence
 
-> **Zoya — in review, one line:** Cents — correct. Currency and rounding will be on you in production.
+> **Pavel — in review, one line:** Cents — correct. Currency and rounding will be on you in production.
 
 `numeric` is not a "bad" type: for money it's exact, and storing sums in `numeric(12,2)` is perfectly fine. We choose integer cents because they map into Go `int64` without the `pgtype.Numeric` wrapper, and arithmetic over them is faster. What we simplified, and what your billing module adds in production:
 
@@ -121,4 +121,4 @@ One thing is non-negotiable: **money is never computed in `float`**.
 - In an application, money is most convenient as an integer count of minor units (cents) in a `BIGINT` → Go `int64`; unfold into `₽.kop` only at output. That's how the Brew base schema is built.
 - `sum()` over `BIGINT` returns `numeric` — cast the result to `::bigint` if you expect `int64`.
 
-The kopeks add up — Viktor's printouts can go back downstairs. Next up — the **01-02 "text, boolean, and the NULL teaser"** unit: we'll look at three "boring" types that applications actually trip over — why we keep `text` and not `char(n)`, what the three-valued logic of `boolean` is, and why `NULL` is not "empty" but "unknown".
+The kopeks add up — Emil's printouts can go back downstairs. Next up — the **01-02 "text, boolean, and the NULL teaser"** unit: we'll look at three "boring" types that applications actually trip over — why we keep `text` and not `char(n)`, what the three-valued logic of `boolean` is, and why `NULL` is not "empty" but "unknown".

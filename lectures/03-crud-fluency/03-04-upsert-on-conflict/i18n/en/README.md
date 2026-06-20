@@ -1,10 +1,10 @@
 # 03-04 — upsert via ON CONFLICT
 
-The morning starts with two overnight messages from Pasha.
+The morning starts with two overnight messages from Nodyr.
 
-> **Pasha (in chat, 23:50):** The nightly stock sync failed. duplicate key.
+> **Nodyr (in chat, 23:50):** The nightly stock sync failed. duplicate key.
 >
-> **Pasha (in chat, 23:57):** Restarted it — went through. The file's just a file, what's wrong with it?
+> **Nodyr (in chat, 23:57):** Restarted it — went through. The file's just a file, what's wrong with it?
 
 "Restarted it — went through" is the worst kind of bug: it doesn't reproduce, so it hasn't gone anywhere. The nightly sync takes the stock export `(shop, drink, on_hand)` from the accounting system; some pairs are already in the database — they need updating, some are new — they need inserting. Naive code first does a `SELECT` for each row and decides: `INSERT` or `UPDATE`. That's three queries where one would do, and — worse — a race: that night a repeated export from the accounting system overlapped the first pass, and between one sync instance's `SELECT` and `INSERT` the second instance managed to insert the same pair. The `INSERT` failed with that very `duplicate key` — SQLSTATE `23505` from module 02. The manual restart ran alone, no race — hence "went through."
 

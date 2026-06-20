@@ -1,16 +1,16 @@
 # 01-02 — text, boolean, and the NULL teaser
 
-The "how many orders does each customer have" report at Brew was quick to write — and the loyalty mailing has already gone out based on it. In the morning, Stas shows up in the team chat.
+The "how many orders does each customer have" report at Brew was quick to write — and the loyalty mailing has already gone out based on it. In the morning, Evgeny shows up in the team chat.
 
-> **Stas (in chat):** Cross-checking the loyalty mailing against the "orders per customer" report. Karina Sidorova — didn't get one. I have her profile open: signed up, but she's not in the report. Where did she go?
+> **Evgeny (in chat):** Cross-checking the loyalty mailing against the "orders per customer" report. Karina Sidorova — didn't get one. I have her profile open: signed up, but she's not in the report. Where did she go?
 >
 > **You:** She's in `customers`, the row is right there. Where does she disappear on the way into the report?
 >
-> **Marat:** How are the orders counted — `count(*)` or `count` on a column? Recount with `count(*)` and compare. And look at what Karina has in `order_id`.
+> **Dmitry:** How are the orders counted — `count(*)` or `count` on a column? Recount with `count(*)` and compare. And look at what Karina has in `order_id`.
 
 You recount: `count(*)` finds one row more than the old `count(order_id)` did. The extra row is Karina: the customer is right there, orders — none, and her empty `order_id` is what the old count was silently skipping.
 
-> **Stas (in chat):** She's back, I can see her. Noting it down: there's some NULL living in the database, and it eats my customers. When you figure it out — explain it in human terms.
+> **Evgeny (in chat):** She's back, I can see her. Noting it down: there's some NULL living in the database, and it eats my customers. When you figure it out — explain it in human terms.
 
 Not a join bug: Karina has no orders, so her `order_id` is `NULL`, and `NULL` behaves differently than it looks.
 

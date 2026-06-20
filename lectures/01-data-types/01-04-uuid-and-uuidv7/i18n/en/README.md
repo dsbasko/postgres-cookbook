@@ -1,16 +1,16 @@
 # 01-04 — uuid and uuidv7
 
-Marat's prophecy from 00-01 comes true: Stas comes down from his floor in person for the first time — phone already turned screen-first toward you.
+Dmitry's prophecy from 00-01 comes true: Evgeny comes down from his floor in person for the first time — phone already turned screen-first toward you.
 
-> **Stas:** Small tweak. Every loyalty member gets a personal link to their signup. The mock-up is ready: `brew.app/signup/42`. Flyers go to print by Friday.
+> **Evgeny:** Small tweak. Every loyalty member gets a personal link to their signup. The mock-up is ready: `brew.app/signup/42`. Flyers go to print by Friday.
 >
 > **You:** And 42 is the sequential number from the database? It's right there in the URL.
 >
-> **Stas:** A number's a number. Who'd care about it besides us?
+> **Evgeny:** A number's a number. Who'd care about it besides us?
 
-The tweak really does turn out small: the id is already there, the link takes an evening. The answer to Stas's question arrives a week later — a competitor publishes a post, "Brew has only 42 loyalty signups," and the number is exact: `/signup/42` enumerates, adjacent numbers respond happily, a sequential id leaks both volume and order. The obvious first fix is to switch the key to a random `uuid` (`gen_random_uuid()`, version 4): you can't enumerate that. Another week later, Zoya shows up in the team chat.
+The tweak really does turn out small: the id is already there, the link takes an evening. The answer to Evgeny's question arrives a week later — a competitor publishes a post, "Brew has only 42 loyalty signups," and the number is exact: `/signup/42` enumerates, adjacent numbers respond happily, a sequential id leaks both volume and order. The obvious first fix is to switch the key to a random `uuid` (`gen_random_uuid()`, version 4): you can't enumerate that. Another week later, Pavel shows up in the team chat.
 
-> **Zoya (in chat):** loyalty_signups. inserts dropped after the move to v4. "latest signups" no longer sorts by the key. who picked the type.
+> **Pavel (in chat):** loyalty_signups. inserts dropped after the move to v4. "latest signups" no longer sorts by the key. who picked the type.
 
 The second hit lands harder than the first: a random key scatters new rows "all over the place" across the index, and the "latest signups" page dies.
 
@@ -101,7 +101,7 @@ Output:
 
 ## The fence
 
-> **Zoya — in review, one line:** `customers.id` stays untouched. It's a contract with the neighboring team.
+> **Pavel — in review, one line:** `customers.id` stays untouched. It's a contract with the neighboring team.
 
 What we simplified:
 

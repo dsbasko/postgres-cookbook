@@ -1,14 +1,14 @@
 # 00-04 — Connecting from Go
 
-The first feature is yours: search drinks by category. The query is built by gluing a string: `"... WHERE category = '" + input + "'"`. In the demo it all worked. Today is the review: Marat silently types `' OR 1=1 --` into the search field and turns the screen toward you. The storefront returns **the entire menu** — bypassing any filter.
+The first feature is yours: search drinks by category. The query is built by gluing a string: `"... WHERE category = '" + input + "'"`. In the demo it all worked. Today is the review: Dmitry silently types `' OR 1=1 --` into the search field and turns the screen toward you. The storefront returns **the entire menu** — bypassing any filter.
 
 > **You:** But it worked in the demo!
 >
-> **Marat:** It worked. The field got `coffee` — not a quote with a tail. Your input became the text of the query.
+> **Dmitry:** It worked. The field got `coffee` — not a quote with a tail. Your input became the text of the query.
 >
-> **Danya:** Same story with me in my first month. It flew in testing with ten clients — but in production the search field gets more than coffee. Ever since, anything from outside travels only through `$1`, separately from the query text.
+> **Botyr:** Same story with me in my first month. It flew in testing with ten clients — but in production the search field gets more than coffee. Ever since, anything from outside travels only through `$1`, separately from the query text.
 >
-> **Marat:** No dressing-down. Let's work out together what goes to the server.
+> **Dmitry:** No dressing-down. Let's work out together what goes to the server.
 
 That's SQL injection — the number-one mistake from every list of web vulnerabilities. The goal of this unit is to make the first query to Postgres from Go correctly: a `pgxpool` pool, a `$1` parameter — and on one and the same input see the difference between string gluing and parameter binding. This is a raw-pgx unit: we deliberately write `rows.Scan` by hand so that in the next unit (00-05) we can see exactly what sqlc takes off our plate.
 

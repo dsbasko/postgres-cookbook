@@ -1,12 +1,12 @@
 # 02-04 — UNIQUE and CHECK (NULLS NOT DISTINCT)
 
-The nightly price-list import finished "successfully" — at least that's what the script said. It was run by Pasha, Brew's procurement man: suppliers, the stockroom, nightly exports.
+The nightly price-list import finished "successfully" — at least that's what the script said. It was run by Nodyr, Brew's procurement man: suppliers, the stockroom, nightly exports.
 
-> **Pasha (in chat, 23:50):** Price list loaded, all green. The file's just a file.
+> **Nodyr (in chat, 23:50):** Price list loaded, all green. The file's just a file.
 >
-> **Anna (in chat, 08:12):** Ringing up a raf from the new price list — zero rubles. Is that right?
+> **Ruslan (in chat, 08:12):** Ringing up a raf from the new price list — zero rubles. Is that right?
 
-Anna manages the chain's first coffee shop and knows her menu prices to the ruble. And the raf isn't the only casualty: a couple of drinks have a price of `0` (the register was giving them away for free all morning), the menu shows duplicates of the same item, and one drink has a size `XXL` that fits no cup. All of it reached the register because the database **allowed** it: the schema forbade nothing. None of this is fixed in the importer's code, but with two declarative constraints right on the table: `UNIQUE` against duplicates and `CHECK` against meaningless values.
+Ruslan manages the chain's first coffee shop and knows his menu prices to the ruble. And the raf isn't the only casualty: a couple of drinks have a price of `0` (the register was giving them away for free all morning), the menu shows duplicates of the same item, and one drink has a size `XXL` that fits no cup. All of it reached the register because the database **allowed** it: the schema forbade nothing. None of this is fixed in the importer's code, but with two declarative constraints right on the table: `UNIQUE` against duplicates and `CHECK` against meaningless values.
 
 This unit has two constraints and one trap. `UNIQUE` forbids a repeated value — but it behaves unexpectedly with `NULL`: by default `NULL ≠ NULL`, so a `UNIQUE` column accepts any number of `NULL` rows. PG15 added `NULLS NOT DISTINCT` — a mode where `NULL = NULL` and the second `NULL` is already a duplicate. `CHECK` validates the value itself (`price > 0`, `size` from a set) and rejects a violator with `SQLSTATE 23514`. We'll work out which `NULL` behavior you want when.
 
@@ -14,7 +14,7 @@ This unit has two constraints and one trap. `UNIQUE` forbids a repeated value �
 
 `UNIQUE (slot)` promises: no two rows will share the same `slot`. But `NULL` in SQL means "unknown," and two unknowns aren't equal (`NULL = NULL` → `unknown`, not `true`). That's one facet of `NULL`'s three-valued logic — 03-06 works it out in full; here we take only the consequence for uniqueness. So a standard `UNIQUE` treats all `NULL`s as **distinct** and lets through as many as you like. Often that's exactly right: `NULL` means "unset / not applicable," and there can be many such rows (dozens of drinks with no promo slot). Non-null values are still unique, though: a second `'A'` is a duplicate (`SQLSTATE 23505`).
 
-`UNIQUE NULLS NOT DISTINCT` (PG15+) flips this for `NULL`: now `NULL` is considered equal to `NULL`, and the second `NULL` is rejected with the same `23505`. You need this when `NULL` isn't "many N/A" but one specific state that there should be at most one of (the classic — "exactly one active record": say, at most one of Stas's promos with an empty end date). This invariant used to require a partial unique index `WHERE col IS NULL`; now it's a single clause in the declaration.
+`UNIQUE NULLS NOT DISTINCT` (PG15+) flips this for `NULL`: now `NULL` is considered equal to `NULL`, and the second `NULL` is rejected with the same `23505`. You need this when `NULL` isn't "many N/A" but one specific state that there should be at most one of (the classic — "exactly one active record": say, at most one of Evgeny's promos with an empty end date). This invariant used to require a partial unique index `WHERE col IS NULL`; now it's a single clause in the declaration.
 
 ## CHECK: value validation in the schema
 

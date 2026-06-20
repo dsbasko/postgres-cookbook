@@ -1,8 +1,8 @@
 # 03-02 — SELECT: WHERE / ORDER / LIMIT and keyset pagination
 
-The Brew menu is shown page by page in the app: "20 more drinks," "next page." While there are few pages, everything works. And today Stas comes down with his phone screen facing out — a guest complaint from the app on it.
+The Brew menu is shown page by page in the app: "20 more drinks," "next page." While there are few pages, everything works. And today Evgeny comes down with his phone screen facing out — a guest complaint from the app on it.
 
-> **Stas:** A guest scrolled the menu to page five hundred — and the app stopped to think. Why is the bottom of the menu slower than the top? The coffee's the same.
+> **Evgeny:** A guest scrolled the menu to page five hundred — and the app stopped to think. Why is the bottom of the menu slower than the top? The coffee's the same.
 
 You open the query: page 500 is `OFFSET 10000`, and that's exactly what's slow — even though it returns the same 20 rows. The reason isn't the amount returned but the amount traversed: `OFFSET` makes the server compute and **discard** the first 10000 rows before returning the ones you want.
 
@@ -31,9 +31,9 @@ ORDER BY base_price DESC, id DESC
 
 The price: keyset can't "jump to page 500" (there's no cursor without traversing) and requires a total `ORDER BY`. But for an "infinite feed" / "show more" it's exactly what you want.
 
-> **Danya:** Confession: I've used LIMIT/OFFSET all my life and cached the deep pages. It flew in testing.
+> **Botyr:** Confession: I've used LIMIT/OFFSET all my life and cached the deep pages. It flew in testing.
 >
-> **Marat:** Count how many rows the database read for page five hundred.
+> **Dmitry:** Count how many rows the database read for page five hundred.
 
 Counting is easier on a picture — let's lay both methods out row by row.
 

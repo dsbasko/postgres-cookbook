@@ -1,20 +1,20 @@
 # 03-03 — UPDATE/DELETE safely
 
-On your screen — an `UPDATE` on orders. Danya spins his chair around before you can hit Enter.
+On your screen — an `UPDATE` on orders. Botyr spins his chair around before you can hit Enter.
 
-> **Danya:** Friday, evening, an UPDATE on orders. My most expensive incident started exactly like that.
+> **Botyr:** Friday, evening, an UPDATE on orders. My most expensive incident started exactly like that.
 >
 > **You:** The one? A single line?
 >
-> **Danya:** A single line. `UPDATE orders SET status = 'cancelled'` — the `WHERE` stayed in my head. Zero errors — and every Brew order cancelled. Every one. Before your time: calls from the shop, a backup restore until midnight.
+> **Botyr:** A single line. `UPDATE orders SET status = 'cancelled'` — the `WHERE` stayed in my head. Zero errors — and every Brew order cancelled. Every one. Before your time: calls from the shop, a backup restore until midnight.
 >
-> **Marat:** The query was syntactically flawless — that's the horror. The database did exactly what it was told.
+> **Dmitry:** The query was syntactically flawless — that's the horror. The database did exactly what it was told.
 >
 > **You:** And how do you see the blast radius before it's forever?
 >
-> **Marat:** Between the command and "forever" there's a window. Today we learn how to open it.
+> **Dmitry:** Between the command and "forever" there's a window. Today we learn how to open it.
 >
-> **Danya:** Ever since, my fingers hit BEGIN before my head finishes the thought. An expensive habit — as in, it cost a lot.
+> **Botyr:** Ever since, my fingers hit BEGIN before my head finishes the thought. An expensive habit — as in, it cost a lot.
 
 This unit builds the habits that turn this mistake from a catastrophe into a harmless typo: know the **blast radius** of a change (how many rows are hit and which ones) and run risky writes inside a **transaction** you can roll back until you've confirmed the right rows are hit.
 

@@ -1,8 +1,8 @@
 # 01-05 — enums, arrays, and a jsonb intro
 
-A rare week: nothing at Brew is on fire. Stas comes down to the open space without an emergency — with a plan and three requests at once.
+A rare week: nothing at Brew is on fire. Evgeny comes down to the open space without an emergency — with a plan and three requests at once.
 
-> **Stas:** Look what's piled up. Drinks need sizes — S, M, L, that's every other order. The blog needs tags. And guests keep asking for syrup, cinnamon, "no lid" — where do we put that?
+> **Evgeny:** Look what's piled up. Drinks need sizes — S, M, L, that's every other order. The blog needs tags. And guests keep asking for syrup, cinnamon, "no lid" — where do we put that?
 
 Three different tasks — and three different "container" types in Postgres: `enum` for a fixed set of sizes, an array for tags, `jsonb` for flexible options like "oat milk, +1 shot." Each is handy exactly in its niche, and each is easy to apply in the wrong place.
 
@@ -97,6 +97,6 @@ The rule is simple: **what you filter / count / join on is a column; `jsonb` is 
 
 Meanwhile, a message pops up in the team chat.
 
-> **Stas (in chat):** The second location is approved — Viktor signed off on the plan. Next week I'm bringing the task list: menu, customers, orders — everything has to be able to run across two addresses.
+> **Evgeny (in chat):** The second location is approved — Emil signed off on the plan. Next week I'm bringing the task list: menu, customers, orders — everything has to be able to run across two addresses.
 
 Next up — module **02 "Schema, DDL, and constraints"**: how to assemble a reliable schema from the right types — `IDENTITY` vs `serial`, `NOT NULL`, primary and foreign keys, `UNIQUE`/`CHECK`, generated columns, and a migration mindset.

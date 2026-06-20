@@ -1,12 +1,12 @@
 # 03-01 — INSERT and RETURNING
 
-Brew's loyalty program is graduating from signups to cards. Stas comes down to the open space, phone screen-first: on it, a mockup of the register screen with an empty field for the card number.
+Brew's loyalty program is graduating from signups to cards. Evgeny comes down to the open space, phone screen-first: on it, a mockup of the register screen with an empty field for the card number.
 
-> **Stas:** Monday we issue the first card — to Alice Ivanova. Our order number one, so she gets card number one. One requirement: the number goes on the screen right away. The guest is standing at the register and won't wait.
+> **Evgeny:** Monday we issue the first card — to Alice Ivanova. Our order number one, so she gets card number one. One requirement: the number goes on the screen right away. The guest is standing at the register and won't wait.
 >
 > **You:** The database hands out the card's `id`. Insert the row, then read it back with a `SELECT` — and the number's on the screen?
 >
-> **Marat:** That's two queries. What happens between your `INSERT` and your `SELECT`?
+> **Dmitry:** That's two queries. What happens between your `INSERT` and your `SELECT`?
 
 Between them there's an extra round-trip to the database and a window for a race: while the app goes back for the row it just inserted, someone can manage to change it. And simply more code out of thin air.
 

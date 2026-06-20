@@ -1,12 +1,12 @@
 # 00-02 — Client, server, and the sandbox
 
-The course map from 00-01 is behind you — now the first technical step. Around lunchtime a message from Zoya lands in the team chat — the promise from day one, delivered.
+The course map from 00-01 is behind you — now the first technical step. Around lunchtime a message from Pavel lands in the team chat — the promise from day one, delivered.
 
-> **Zoya (in chat):** sandbox is up. docker compose up -d — postgres is yours. break it all you want.
+> **Pavel (in chat):** sandbox is up. docker compose up -d — postgres is yours. break it all you want.
 >
 > **You:** And the production database?
 >
-> **Zoya (in chat):** everything inside the server is mine. you're a client on the other side of the socket. don't ask for prod.
+> **Pavel (in chat):** everything inside the server is mine. you're a client on the other side of the socket. don't ask for prod.
 
 Telegraphic, but precise: your role for the whole course is the client. Write an application that reads and writes data — not administer the server. Before touching types, indexes, and transactions, understand two boring but mandatory things: what is actually on the other end of the connection — and how the local copy you're not afraid to break is put together.
 

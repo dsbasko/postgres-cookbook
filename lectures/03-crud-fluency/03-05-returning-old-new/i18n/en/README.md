@@ -1,10 +1,10 @@
 # 03-05 — RETURNING old/new
 
-A Brew order changes status: `created → paid → shipped`, and every transition sends the guest a push. Today Stas comes down from the marketing floor, phone screen toward you — a support ticket on it.
+A Brew order changes status: `created → paid → shipped`, and every transition sends the guest a push. Today Evgeny comes down from the marketing floor, phone screen toward you — a support ticket on it.
 
-> **Stas:** The "order status changed" push goes out. What it changed to — the guest sees. What it changed from — nobody sees, and there's nothing to settle the "I paid and you cancelled" dispute with. Get me the "was."
+> **Evgeny:** The "order status changed" push goes out. What it changed to — the guest sees. What it changed from — nobody sees, and there's nothing to settle the "I paid and you cancelled" dispute with. Get me the "was."
 
-Stas is right: for an audit trail and for notifications the app needs not just the new value but the **previous** one — "was `created`, became `paid`." Classically you reach for it two ways — either a `SELECT` of the status before the `UPDATE` (an extra query plus a race: between the read and the write the status could change), or a trigger that writes `OLD`/`NEW` into a separate table (powerful, but that's logic on the database side — see module 09).
+Evgeny is right: for an audit trail and for notifications the app needs not just the new value but the **previous** one — "was `created`, became `paid`." Classically you reach for it two ways — either a `SELECT` of the status before the `UPDATE` (an extra query plus a race: between the read and the write the status could change), or a trigger that writes `OLD`/`NEW` into a separate table (powerful, but that's logic on the database side — see module 09).
 
 PG18 added a third, direct path: in `RETURNING` you can now refer to the row **before** the change and **after** — via the `old.` and `new.` prefixes. `UPDATE ... RETURNING old.status, new.status` returns both values in one command, in the same transaction, with no second query and no trigger.
 

@@ -1,16 +1,16 @@
 # 00-03 — psql survival kit
 
-The morning after the sandbox setup — and the first live ticket. Danya, without turning from his monitor, flips it over to you.
+The morning after the sandbox setup — and the first live ticket. Botyr, without turning from his monitor, flips it over to you.
 
-> **Danya:** All yours. "Cold brew disappeared from the menu on the site." Congratulations — this is what a trial by fire looks like around here.
+> **Botyr:** All yours. "Cold brew disappeared from the menu on the site." Congratulations — this is what a trial by fire looks like around here.
 >
 > **You:** Check the storefront code?
 
-You're already reaching for the repository when Marat, passing by with his mug, nods at the terminal.
+You're already reaching for the repository when Dmitry, passing by with his mug, nods at the terminal.
 
-> **Marat:** The code can wait. What did the database say? Three commands and you'll know.
+> **Dmitry:** The code can wait. What did the database say? Three commands and you'll know.
 
-Marat has a point: before digging into code, it's worth a thirty-second peek into the database itself — is that drink even there, what's its `stock`, did the table structure break? You could open Adminer and click around, but that's slow and doesn't fit a terminal workflow. The working tool for this is `psql`: the official Postgres console client, installed alongside the server (`brew install libpq` on macOS).
+Dmitry has a point: before digging into code, it's worth a thirty-second peek into the database itself — is that drink even there, what's its `stock`, did the table structure break? You could open Adminer and click around, but that's slow and doesn't fit a terminal workflow. The working tool for this is `psql`: the official Postgres console client, installed alongside the server (`brew install libpq` on macOS).
 
 The goal of this unit is narrow: not to learn all of psql, but to assemble a "first-aid kit" of a handful of commands that covers 90% of "I need a quick look in the DB" cases. This is an escape-hatch unit — there's no Go and no sqlc here, because the lesson is about the client itself.
 

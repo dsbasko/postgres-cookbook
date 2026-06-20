@@ -1,8 +1,8 @@
 # 02-05 — generated columns and domains (PG18 virtual vs stored)
 
-At Brew the line-item total (`qty × unit_price`) was computed in application code. Computed in three places: on the cart page, in the receipt email, and in the nightly revenue report. In the morning Stas comes down from his floor — phone screen toward you, a chat with a guest open on it.
+At Brew the line-item total (`qty × unit_price`) was computed in application code. Computed in three places: on the cart page, in the receipt email, and in the nightly revenue report. In the morning Evgeny comes down from his floor — phone screen toward you, a chat with a guest open on it.
 
-> **Stas:** A guest sent two screenshots: the receipt email shows one total, the cart shows another. They're asking which one is real. What do I tell them?
+> **Evgeny:** A guest sent two screenshots: the receipt email shows one total, the cart shows another. They're asking which one is real. What do I tell them?
 
 There's nothing to tell: the nightly report shows a third number. The usual cause: the formula was copied three times, and then one place added rounding and another forgot the discount. The source of truth had crept across the codebase. Meanwhile the rule "a price in cents is strictly positive" lived as a `CHECK` on five tables at once — five copies of one invariant to remember and keep in sync.
 
@@ -39,9 +39,9 @@ The formula is one and the same — only the moment of computation and the cost 
 | PK/FK, domain types | yes | no |
 | When to use | a value in `WHERE`/`ORDER BY`/an index | a cheap, rarely-read derived value |
 
-> **Danya:** But `VIRTUAL` is free: writes cost nothing, zero space. So why not make everything `VIRTUAL`?
+> **Botyr:** But `VIRTUAL` is free: writes cost nothing, zero space. So why not make everything `VIRTUAL`?
 >
-> **Marat:** Free on write. Who pays on read?
+> **Dmitry:** Free on write. Who pays on read?
 
 The answer is in the "read cost" row: every `SELECT` recomputes the formula, and such a column can't be indexed. "Everything `VIRTUAL`" shifts the cost from an occasional write onto every read.
 

@@ -1,10 +1,10 @@
 # 01-03 — Date, time, and timestamptz
 
-Brew has its first partner — a delivery service that pulls the coffee shops' orders into its analytics; its servers live in UTC. The morning after the first sync, Stas brings two exports of one and the same day into the chat.
+Brew has its first partner — a delivery service that pulls the coffee shops' orders into its analytics; its servers live in UTC. The morning after the first sync, Evgeny brings two exports of one and the same day into the chat.
 
-> **Stas (in chat):** Same order in both. Our export says 12:00 Moscow time, the partner's says 09:00. Which one is real?
+> **Evgeny (in chat):** Same order in both. Our export says 12:00 Moscow time, the partner's says 09:00. Which one is real?
 >
-> **Zoya (in chat):** zero of them are real. column has no zone. the database stores what it was given.
+> **Pavel (in chat):** zero of them are real. column has no zone. the database stores what it was given.
 
 Both exports were honestly reading one and the same column — of type `timestamp` (without a zone). It stores "wall-clock" time with no zone attached, and every service interprets it its own way: whoever's zone it is, that's whose "truth" it is.
 
@@ -38,13 +38,13 @@ The value doesn't change — only the projection does. A `timestamp` without a z
 | For events | yes, the right choice | a trap: services read it differently |
 | In Go (pgx) | `time.Time` — an instant | `time.Time` with no zone attached |
 
-> **Danya:** On my last project we "just" stored time as bigint — milliseconds since the epoch. No zones, no problems.
+> **Botyr:** On my last project we "just" stored time as bigint — milliseconds since the epoch. No zones, no problems.
 >
-> **Marat:** What time does the coffee shop open?
+> **Dmitry:** What time does the coffee shop open?
 >
-> **Danya:** Eight. Local.
+> **Botyr:** Eight. Local.
 >
-> **Marat:** And the "morning" in a "coffee till eleven" promo — whose morning? The moment your milliseconds hold, same as timestamptz. The business's wall clocks — they don't. The zone didn't disappear — it moved into your head.
+> **Dmitry:** And the "morning" in a "coffee till eleven" promo — whose morning? The moment your milliseconds hold, same as timestamptz. The business's wall clocks — they don't. The zone didn't disappear — it moved into your head.
 
 ## What our code shows
 
@@ -102,7 +102,7 @@ Output:
  2025-01-15 09:00:00 | 2025-01-15 12:00:00+03
 ```
 
-(The demo prints in Russian.) `09:00+00`, `12:00+03`, `04:00-05` are three renderings of **one** moment. And at the bottom you see the type difference: `timestamp` without a zone is stuck at `09:00` (it doesn't know its zone), while `timestamptz` honestly shifted by `+03`. The two exports from Stas's chat diverged precisely because time was stored without a zone. For now the only foreign time zone comes from the partner; the chain is growing — there will only be more wall clocks around the database.
+(The demo prints in Russian.) `09:00+00`, `12:00+03`, `04:00-05` are three renderings of **one** moment. And at the bottom you see the type difference: `timestamp` without a zone is stuck at `09:00` (it doesn't know its zone), while `timestamptz` honestly shifted by `+03`. The two exports from Evgeny's chat diverged precisely because time was stored without a zone. For now the only foreign time zone comes from the partner; the chain is growing — there will only be more wall clocks around the database.
 
 ## The fence
 

@@ -83,7 +83,7 @@ Output:
 
 ## The fence
 
-> **Zoya — in review, one line:** A cascade once took out half my database. Default — RESTRICT.
+> **Pavel — in review, one line:** A cascade once took out half my database. Default — RESTRICT.
 
 What we simplified: `CASCADE` looks convenient — "deleted the customer, everything related cleaned itself up" — but in production it's a double-edged tool:
 

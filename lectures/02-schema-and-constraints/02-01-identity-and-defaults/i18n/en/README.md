@@ -2,7 +2,7 @@
 
 Brew was migrating off an old orders table and backfilling history with a script. The table was on `serial`, the script inserted rows with **explicit** ids from the export (`1001..1500`) — but nobody moved the sequence past those values; it stayed where it was. Everything worked for a few weeks, orders flowed. Then one morning began with a report in the team chat:
 
-> **Zoya (in chat):** orders_pkey. duplicate key. been failing since six a.m.
+> **Pavel (in chat):** orders_pkey. duplicate key. been failing since six a.m.
 
 The sequence had climbed to `1500`, tried to hand out an already-taken id, and crashed into its own history. The classic `serial` foot-gun.
 
