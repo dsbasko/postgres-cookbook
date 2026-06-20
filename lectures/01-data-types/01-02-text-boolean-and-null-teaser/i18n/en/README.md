@@ -6,9 +6,9 @@ The "how many orders does each customer have" report at Brew was quick to write 
 >
 > **You:** She's in `customers`, the row is right there. Where does she disappear on the way into the report?
 >
-> **Marat:** How are the orders counted — `count(*)` or `count` on a column? Recount with `count(*)`. And look at what Karina has in `order_id`.
+> **Marat:** How are the orders counted — `count(*)` or `count` on a column? Recount with `count(*)` and compare. And look at what Karina has in `order_id`.
 
-You recount — and Karina comes back into the report, with zero orders.
+You recount: `count(*)` finds one row more than the old `count(order_id)` did. The extra row is Karina: the customer is right there, orders — none, and her empty `order_id` is what the old count was silently skipping.
 
 > **Stas (in chat):** She's back, I can see her. Noting it down: there's some NULL living in the database, and it eats my customers. When you figure it out — explain it in human terms.
 
