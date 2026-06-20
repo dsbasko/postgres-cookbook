@@ -221,6 +221,9 @@ working; it is enforced by a test and documented in [`CLAUDE.md`](CLAUDE.md).
    [`docs/course-canon.md`](docs/course-canon.md) prescribes one. Every simplification gets a
    "fence" — render it as bullets (one production concern each), not a comma-wall. The canon
    (skeleton §6, playbook §7, Appendix A) is the prose source of truth — read it before writing.
+   The cold open is a *scene* from the course story: check the unit's entry in
+   [`docs/story-scene-map.md`](docs/story-scene-map.md) for its form and cast, and follow
+   [`docs/story-canon.md`](docs/story-canon.md) (voices, dialogue hygiene, RU/EN replica parity).
 6. Run the verification gate: `make db-reset` idempotent, `make gen` no diff, `make run` output
    matches the README, `make build` green. Then write `i18n/en/README.md` before marking the unit
    released.

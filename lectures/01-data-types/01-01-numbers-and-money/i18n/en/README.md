@@ -22,7 +22,7 @@ The export script predates you: it sums in `float`. This unit closes that class 
 
 ## Why float breaks money
 
-`float8` (a.k.a. `double precision`) stores numbers in binary floating point. Decimal fractions like `0.1` are repeating in binary — they have to be rounded, and when you add them the rounding errors surface. The classic demonstration: `0.1 + 0.2` gives `0.30000000000000004`, not `0.3`. The comparison `0.1 + 0.2 = 0.3` returns `false`. On a single receipt that's the seventeenth digit after the decimal point; over a month of orders it's the very kopek-sized hole on Viktor's printouts.
+`float8` (a.k.a. `double precision`) stores numbers in binary floating point. Decimal fractions like `0.1` are repeating in binary — they have to be rounded, and when you add them the rounding errors surface. The classic demonstration: `0.1 + 0.2` gives `0.30000000000000004`, not `0.3`. The comparison `0.1 + 0.2 = 0.3` returns `false`. On a single receipt that's the seventeenth digit after the decimal point; over thousands of orders it's the very kopek-sized hole on Viktor's printouts.
 
 In `numeric` the same numbers have no error: it's a decimal type with an exact representation, and `0.1 + 0.2 = 0.3` is `true` there. You pay for it in speed, and in the fact that in Go `numeric` arrives not as a plain number but as `pgtype.Numeric` (which you have to unwrap).
 

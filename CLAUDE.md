@@ -277,6 +277,15 @@ so course data resolves via `process.cwd()`.
   EN READMEs present, `make web-check-coverage` green.
 - RU-first: write `i18n/ru/README.md` first; `i18n/en/README.md` must exist
   before a unit is marked released.
+- **Story layer.** Unit prose carries a course-wide story. The bible is
+  `docs/story-canon.md` (cast, voice registry, scene-form ladder, dialogue
+  hygiene, threads); the per-unit scene spec is `docs/story-scene-map.md`;
+  `docs/course-canon.md` stays the source of truth for data characters and
+  off-screen roles. Any edit to README prose must preserve scenes: named
+  characters keep the same replica count in the RU and EN mirrors, reader
+  lines are `**Ты:**`/`**You:**` (gender-neutral, present tense), Zoya's chat
+  lines are lowercase (only hers), and no dialogue inside theory blocks or
+  `## Запуск`. A humanizer/`writer` pass must not rewrite scene dialogue.
 - **Prose typography.** Keep em-dashes (`—`) and Russian guillemets («…») — the
   whole course (all 124 READMEs, including the 08-01 reference) uses them as
   correct punctuation. Apply a humanizer/`writer` pass for *substantive* rules

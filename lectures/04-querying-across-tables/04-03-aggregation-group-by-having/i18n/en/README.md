@@ -144,7 +144,7 @@ Output:
 What we simplified.
 
 - `count(*)` and `count(column)` aren't "style" but different questions: "how many rows" vs "how many non-empty values." Reports confuse them most often, and the bug is silent — the numbers look plausible.
-- We rounded the `numeric` average to whole cents deliberately. In production an "average ticket" to the hundredth of a kopeck is usually pointless, but you must round explicitly, not rely on display.
+- We rounded the `numeric` average to whole cents deliberately. In production an "average ticket" to the hundredth of a kopek is usually pointless, but you must round explicitly, not rely on display.
 - We computed revenue from `orders.amount` (the order's recorded header total), not by recomputing from the `order_items` lines — that's a different source and, in general, a different total (the header legitimately drifts from the sum of lines). In a real report it matters to pin down what exactly counts as revenue, or two "correct" figures won't agree.
 - On large tables the grouping itself wants suitable indexes and sometimes hits memory limits sorting groups — but that's plan territory (module 06).
 

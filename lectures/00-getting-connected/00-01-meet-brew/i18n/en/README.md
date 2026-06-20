@@ -36,7 +36,7 @@ The socket question is the next unit's topic. This one isn't about SQL. It's a m
 
 ## What Brew is
 
-Brew started as a single coffee shop, and by the start of the course it's already a chain: a spot in Moscow (`BREW-CENTRAL`), a spot in St. Petersburg (`BREW-NORTH`), a shared menu, a shared customer base, and its own application — the register, the site, promo campaigns, reports. All of it talks in queries to that same "one database" from the tour. Brew will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one register turns into lost orders and a register that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
+Brew started as a single coffee shop, and now it's becoming a chain: the Moscow spot (`BREW-CENTRAL`) is up and running, the second one — St. Petersburg's `BREW-NORTH` — is already set up in the database and waiting to open, its stock being pre-loaded. Plus a shared menu, a shared customer base, and its own application — the register, the site, promo campaigns, reports. All of it talks in queries to that same "one database" from the tour. Brew will keep growing — and that's not just backdrop. The bigger Brew gets, the more expensive a mistake becomes: what went unnoticed at one register turns into lost orders and a register that froze mid-shift across the chain. That's why the pain in this course escalates from module to module, along with Brew itself.
 
 The data you'll live with for the whole course is exactly what Marat's tour named: the drinks menu (`drinks`), customers (`customers`), orders (`orders`) and their line items (`order_items`), shops (`shops`), per-shop stock (`inventory`), a blog (`articles`), and `outbox` — the very table Danya vouched for, through which order events leave for the outside world. The same set of tables runs through the entire course: from the first connection to the final capstone.
 
@@ -76,7 +76,7 @@ One detail that keeps coming up: the demo output in the README is real and deter
 
 ## How each unit is built
 
-Units follow one template, and it's worth learning now — it repeats some sixty times ahead. A unit opens with a Brew business pain (a drink vanished from the menu, a report didn't add up to the kopeck, the register froze under load), then the concept is assembled in prose stage by stage — the why before the how. Then comes the `## Running it` section with the real demo output, which we read back right away by facts. And at the very end of each unit there are two sections worth calling out separately, because they repeat everywhere.
+Units follow one template, and it's worth learning now — it repeats some sixty times ahead. A unit opens with a Brew business pain (a drink vanished from the menu, a report didn't add up to the kopek, the register froze under load), then the concept is assembled in prose stage by stage — the why before the how. Then comes the `## Running it` section with the real demo output, which we read back right away by facts. And at the very end of each unit there are two sections worth calling out separately, because they repeat everywhere.
 
 **"The fence"** is the boundary of simplifications. Any teaching example cuts something for clarity: one database for the whole course, `sslmode=disable`, the password `brew`/`brew` right in the connection string. The fence is where the unit honestly shows where it simplified and how the same thing is done in production (often in the words "your DBA would do this instead"). The name is literal: past this fence the teaching sandbox ends and production begins. Read it so you don't carry a simplification from the lesson into shipping code — that's the difference people later get burned on in review.
 
@@ -163,7 +163,7 @@ inventory             5
 Итого 24 строки — на этих данных поедет весь курс.
 ```
 
-(The demo prints in Russian.) Read the output back. First, the version starts with `PostgreSQL 18` — on the other end of the socket is exactly the version this course targets (the tail about architecture and gcc may differ on your machine; that depends on how the `postgres:18-alpine` image was built). Second, the canon has 9 tables, and some are still empty: `outbox` and `processed_outbox_ids` are waiting for the eventing module — we'll fill them ourselves. Third, there are exactly three orders, including Alice's order #1; five drinks on the menu and two shops — that's the world we'll spend the next ten modules in.
+(The demo prints in Russian.) Read the output back. First, the version starts with `PostgreSQL 18` — on the other end of the socket is exactly the version this course targets (the tail about architecture and gcc may differ on your machine; that depends on how the `postgres:18-alpine` image was built). Second, the canon has 9 tables, and some are still empty: `outbox` and `processed_outbox_ids` are waiting for the eventing module — we'll fill them ourselves. Third, there are exactly three orders, including Alice's order #1; five drinks on the menu and two shops — the Moscow one open for business and the St. Petersburg one waiting for launch — that's the world we'll spend the next ten modules in.
 
 > [!NOTE]
 > **Check yourself.** Without peeking at the output: how many of the 9 canon

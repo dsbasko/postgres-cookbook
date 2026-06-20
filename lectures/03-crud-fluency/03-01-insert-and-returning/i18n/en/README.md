@@ -1,6 +1,6 @@
 # 03-01 — INSERT and RETURNING
 
-Brew launches a loyalty program. Stas comes down to the open space, phone screen-first: on it, a mockup of the register screen with an empty field for the card number.
+Brew's loyalty program is graduating from signups to cards. Stas comes down to the open space, phone screen-first: on it, a mockup of the register screen with an empty field for the card number.
 
 > **Stas:** Monday we issue the first card — to Alice Ivanova. Our order number one, so she gets card number one. One requirement: the number goes on the screen right away. The guest is standing at the register and won't wait.
 >
