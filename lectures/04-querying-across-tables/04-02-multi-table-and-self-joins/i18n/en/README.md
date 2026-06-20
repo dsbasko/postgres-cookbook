@@ -1,6 +1,10 @@
 # 04-02 — Multi-table and self-joins
 
-Last lesson you brought Karina back into the report — but "customer and order count" is a summary. The moment support opens a specific order to answer a customer, a summary isn't enough: you need a **receipt** — what was ordered, at what price, under whose name. And a raw `orders` row is useless to a human: `customer_id` sits in it as a string identifier, and what's inside the order isn't in `orders` at all. The order number is in `orders`, the customer name in `customers`, the line items in `order_items`, the drink names in `drinks`. To print "order #1, Alice, cappuccino ×1" you have to assemble rows from all four tables — in one query, not four round-trips to the database.
+Last lesson you brought Karina back into the report — but "customer and order count" is a summary. And midday a report from the coffee shop drops into the chat:
+
+> **Ruslan (in chat, 12:07):** Guest at the counter. Asking what's in their order. In the admin panel — one row: customer_id, that's all. No name, no drinks. Need a receipt.
+
+The moment support opens a specific order to answer a customer, a summary isn't enough: you need a **receipt** — what was ordered, at what price, under whose name. And a raw `orders` row is useless to a human: `customer_id` sits in it as a string identifier, and what's inside the order isn't in `orders` at all. The order number is in `orders`, the customer name in `customers`, the line items in `order_items`, the drink names in `drinks`. To print "order #1, Alice, cappuccino ×1" you have to assemble rows from all four tables — in one query, not four round-trips to the database.
 
 And a separate, initially counterintuitive technique: a table can be joined **to itself**. It sounds odd until you meet a hierarchy: a barista has a manager, and a manager is just another employee from the same `staff` table. To show the manager's name next to the employee's, you join `staff` twice — that's a self-join.
 
