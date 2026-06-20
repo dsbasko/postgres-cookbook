@@ -39,6 +39,24 @@ brand:
     title: { ru: PostgreSQL Cookbook, en: PostgreSQL Cookbook }
     footerTag: "PostgreSQL · Go"
 
+# Story cast → chat avatars. The engine's remark-chat plugin turns dialogue
+# blockquotes (`> **Имя:** …`) into a messenger-style thread: each turn is
+# matched (case-insensitively, ignoring "(…)" asides) against `names` and gets
+# the member's `avatar`. The reader ("Ты"/"You") is the protagonist —
+# right-aligned, no photo. Names/roles come from docs/story-canon.md §2;
+# avatar files live in web/public/persons/.
+cast:
+  reader: [Ты, You]
+  members:
+    - { key: dmitriy, avatar: /persons/dmitriy.png, names: [Дмитрий, Dmitry, Dmitriy] }
+    - { key: pavel,   avatar: /persons/pavel.png,   names: [Павел, Pavel] }
+    - { key: botyr,   avatar: /persons/botir.png,   names: [Ботыр, Botyr, Botir] }
+    - { key: evgeny,  avatar: /persons/evgeniy.png, names: [Евгений, Evgeny, Evgeniy] }
+    - { key: emil,    avatar: /persons/emil.png,    names: [Эмиль, Emil] }
+    - { key: ruslan,  avatar: /persons/ruslan.png,  names: [Руслан, Ruslan] }
+    - { key: nodyr,   avatar: /persons/nodir.png,   names: [Нодыр, Nodyr, Nodir] }
+    - { key: oleg,    avatar: /persons/oleg.png,    names: [Олег, Oleg] }
+
 modules:
   - id: 00-getting-connected
     title: { ru: Подключение и ориентация, en: Getting connected }
