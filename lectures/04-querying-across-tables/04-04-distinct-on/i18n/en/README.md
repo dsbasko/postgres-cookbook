@@ -1,6 +1,10 @@
 # 04-04 — DISTINCT ON
 
-A frequent request in Brew: "show the latest order of each customer." Not the date of the latest order — the whole order: its number, amount, status. Via `GROUP BY` that's awkward: `max(created_at)` returns only the date, and to pull the other columns of that exact row you have to make a second pass (join the result back to `orders` on customer and date). Clunky, and easy to get wrong on equal dates.
+A frequent request in Brew: "show the latest order of each customer." It comes from Evgeny — he needs a customer card, and this time he frames the request himself:
+
+> **Evgeny:** I need a row, not a number — we've been through max(date). Not when the last order was, but which one it was.
+
+Not the date of the latest order — the whole order: its number, amount, status. Via `GROUP BY` that's awkward: `max(created_at)` returns only the date, and to pull the other columns of that exact row you have to make a second pass (join the result back to `orders` on customer and date). Clunky, and easy to get wrong on equal dates.
 
 Postgres offers a shortcut — `DISTINCT ON`. It isn't standard SQL (a Postgres-specific feature), but it solves "one row per group, and the whole row" in a single expression.
 
