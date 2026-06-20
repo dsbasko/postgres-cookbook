@@ -1,6 +1,14 @@
 # 04-03 — Aggregation, GROUP BY / HAVING
 
-The business rarely asks "show me all the rows." It asks in summaries: "how many drinks in each category and at what price?", "how many orders does each customer have and for how much?", "who has ordered at least twice?". The answer to such questions is aggregation: collapse many rows into one summary row per group.
+The first monthly revenue report is ready — and a pleased line drops into the chat:
+
+> **Emil (in chat):** Revenue for the month — +40%. Good news?
+
+Dmitry doesn't trust a number that good. He opens the query, runs down it top to bottom — and where the line items were pulled onto the orders to count drinks along the way, he finds the cause:
+
+> **Dmitry:** The addends multiplied, not the money.
+
+The report lies not in its figures but in its wiring — and there's more than one such spot in aggregates. The business rarely asks "show me all the rows." It asks in summaries: "how many drinks in each category and at what price?", "how many orders does each customer have and for how much?", "who has ordered at least twice?". The answer to such questions is aggregation: collapse many rows into one summary row per group.
 
 And this is exactly where one of the costliest reporting mistakes lives: `count(*)` and `count(column)` look almost identical but count **different things**. On a customer with no orders the discrepancy shows immediately — and if you mix them up, a "customer activity" report quietly lies.
 
@@ -60,6 +68,14 @@ GROUP BY c.id, c.name;
 
 > [!TIP]
 > How to catch the double-counting without knowing in advance: put `count(*)` and `count(DISTINCT o.id)` side by side. If they diverge, the JOIN multiplied rows, and any `sum`/`avg` over a parent column in that query is already inflated. It's the same move that distinguishes `count(*)` from `count(column)`, except now `DISTINCT` catches duplicates rather than `NULL`s.
+
+Dmitry looks up from the whiteboard.
+
+> **Dmitry:** What will you tell Emil?
+>
+> **You:** That it wasn't the money that grew, but the addends?
+>
+> **Dmitry:** And that the report now counts the money before the join.
 
 ## HAVING filters groups, not rows
 
