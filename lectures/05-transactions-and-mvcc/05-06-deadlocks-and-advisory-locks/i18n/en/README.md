@@ -1,6 +1,26 @@
 # 05-06 — Deadlocks and advisory locks
 
-Two Brew processes handle returns. The first locks the order row, then reaches for the item row. The second does the reverse: item first, then order. Each is flawless on its own. But if they start at the same time, the worst happens: the first holds the order and waits for the item, the second holds the item and waits for the order. Each waits for what the other holds. Neither will let go first — they're stuck forever. This is a **deadlock**.
+Morning, a review at the whiteboard. Pavel is already here — earlier than anyone, with a printout of the overnight server log and his notebook open.
+
+> **Pavel:** Night. Returns. Half rolled back. The log says: mutual lock.
+>
+> **Botyr:** My worker takes the order first, then the item. It flew in testing.
+>
+> **You:** And mine — item first, then order. Also straight out of the textbook.
+>
+> **Dmitry:** Show me both.
+
+Two workers, two tidy transactions — and, taken apart, not a single error.
+
+> **Dmitry:** Apart, both are flawless. But overnight they took the same rows in opposite order — and locked each other out. The order is to blame, not a person.
+>
+> **You:** So how do we fix it — does one of us rewrite a worker?
+>
+> **Dmitry:** Both, the same way: always lock in one order. And a shared gate on stock recomputation, so the workers queue up instead of colliding.
+
+Pavel writes the incident into his notebook. It has gained pages this week.
+
+What happened overnight is called a **deadlock**: two transactions hold each other's resources and wait toward each other — nobody proceeds.
 
 The good news: Postgres won't hang. It detects the lock cycle on its own (on the `deadlock_timeout` timer, 1 second by default) and breaks it — it picks a "victim" and aborts its transaction with error `40P01` (`deadlock_detected`); the other proceeds. This unit is about two things: `40P01` (what it is and where it comes from) and `pg_advisory_lock` — the application-level lock most often used to **prevent** deadlocks.
 
@@ -145,4 +165,8 @@ The step order in the sessions is held by `\prompt` — in a real race everythin
 - An **advisory lock** (`pg_advisory_lock` / `pg_advisory_xact_lock`) is an application-level lock on a numeric key, not tied to rows: it serializes an *operation*. The transaction-scoped variant releases itself on `COMMIT` — prefer it.
 - `40P01` (a physical wait cycle) is cured by lock order; `40001` (a logical serialization conflict) is not. Both are transient and both are retried.
 
-This is the last unit of module 05. Next is module **06 "Indexing and EXPLAIN"**: with locks and snapshots covered, it's time to understand how Postgres *finds* rows and to learn to read a query plan (`EXPLAIN ANALYZE` with buffers — on by default in PG18).
+This is the last unit of module 05. Pavel closes his notebook.
+
+> **Pavel:** We survived concurrency. Now — why one query flies and the next one crawls.
+
+Next is module **06 "Indexing and EXPLAIN"**: with locks and snapshots covered, it's time to understand how Postgres *finds* rows and to learn to read a query plan (`EXPLAIN ANALYZE` with buffers — on by default in PG18).
