@@ -2,6 +2,10 @@
 
 A Brew shift has an unwritten rule: at least one barista must always be on the floor — the room can't go empty. Right now two are on the floor — baristas Alice and Boris (namesakes of the customers Alice Ivanova and Boris Petrov from other modules: different people, shift staff). Both decide to step into the stockroom — **at the same time**. Each glances at the room: "there are two of us, I'll step away, one stays." Each reasons flawlessly. But they leave together — and the room empties. No `UPDATE` "clobbered" another (Alice changed her own row, Boris his own), the row locks from 05-03 are useless here: they touch **different** rows. And yet the invariant is broken.
 
+> **Ruslan (in chat, 12:30):** Floor. Empty. Line out the door. Both baristas in the stockroom.
+
+Ruslan manages this shop: for him a broken invariant isn't a log line, it's a queue of guests at an empty counter. He doesn't blame the shift, and rightly so: the baristas reasoned flawlessly — what failed is the way two simultaneous transactions read the shared floor.
+
 This is **write-skew** — an anomaly that neither `FOR UPDATE` (the rows differ) nor even the fixed snapshot of `REPEATABLE READ` catches. Only the strictest isolation level catches it — `SERIALIZABLE`. This unit is about the three available isolation levels, and what exactly sets the top one apart.
 
 This is an escape-hatch unit (like 05-02): isolation anomalies are concurrent by nature, and we teach the lesson with psql scripts.
@@ -23,6 +27,14 @@ The three levels and what each catches (there's no dirty read at any of them in 
 | **READ COMMITTED** (default) | per statement | slips through | slips through | cheap |
 | **REPEATABLE READ** | whole transaction | caught | slips through | cheap |
 | **SERIALIZABLE** | transaction + SSI | caught | **caught** (`40001`) | retries under load |
+
+Before we get into what exactly makes write-skew dangerous — a short exchange from the next desk over.
+
+> **Botyr:** Let's "just" put everything on SERIALIZABLE and forget about anomalies?
+>
+> **Dmitry:** You can. It'll hurt. The price is retries. We'll do the math tomorrow.
+
+"We'll do the math tomorrow" is about the next unit: the strictness of `SERIALIZABLE` has a price, and you only see it under load.
 
 ## Why write-skew is sneaky
 
