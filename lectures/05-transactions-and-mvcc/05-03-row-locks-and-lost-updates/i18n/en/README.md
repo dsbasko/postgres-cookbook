@@ -1,6 +1,10 @@
 # 05-03 — Row locks and lost updates
 
-Every Brew shop runs a barista app: it shows a drink's stock and decrements it by one on each sale. The code looks innocent: read `on_hand`, subtract 1, write it back. On a single register it works. But at rush hour two baristas at two registers sell the last cold brew **at the same time**: both read stock `10`, both write `9`. Two sold — stock dropped by one. One decrement is **lost**. A week later the inventory count doesn't add up, and no one knows why.
+Every Brew shop runs a barista app: it shows a drink's stock and decrements it by one on each sale. The code looks innocent: read `on_hand`, subtract 1, write it back. On a single register it works. But at rush hour two baristas at two registers sell the last cold brew **at the same time**: both read stock `10`, both write `9`. Two sold — stock dropped by one. One decrement is **lost**. And a week later the discrepancy surfaces not in the app's logs but in the team chat:
+
+> **Ruslan (in chat, 21:30):** Inventory. Cold brew: down one against the books. Second week now. Not the shift's fault.
+
+Ruslan's right: the shift really isn't to blame — the culprit is the way the app updates the stock. But so far no one knows exactly where the decrement goes missing.
 
 This is a **lost update** — the classic concurrency bug. Its root is the "read into the app, compute, write back" pattern (read-modify-write): between the read and the write, the value goes stale. This unit covers three ways to deal with it, from the simplest to the most general.
 
