@@ -1,6 +1,16 @@
 # 04-05 — Subqueries: EXISTS vs IN
 
-A query often answers a question through another question: "drinks above the average price" (what's the average?), "customers who have orders" (do they?), "drinks not in any promo." The inner question is a **subquery**: a query inside a query. It comes in three forms, and the choice between two of them — `IN` and `EXISTS` — isn't a matter of taste: on data with `NULL` they give **different** answers, and `NOT IN` can silently return "nothing."
+Evgeny launched a "whole menu" promo — and the next morning he showed up with an empty report.
+
+> **Evgeny:** "Drinks not on promo" — the report came back blank. And half the menu isn't in any promo, I compiled the list myself.
+>
+> **Dmitry:** The "whole menu" promo — which drink is recorded in it?
+>
+> **Evgeny:** None. It's for everything, the field is empty. …Don't tell me it's NULL again.
+>
+> **Dmitry:** The very same — the one from the stop-list. And it has a favorite way of being written that quietly returns blank on data like this. Let's sort out which form to take instead.
+
+Evgeny's report tripped over a **subquery** — a query inside a query. A query often answers a question through another question: "drinks above the average price" (what's the average?), "customers who have orders" (do they?), "drinks not in any promo." The inner question is the subquery. It comes in three forms, and the choice between two of them — `IN` and `EXISTS` — isn't a matter of taste: on data with `NULL` they give **different** answers, and `NOT IN` can silently return "nothing" — exactly like the report Evgeny brought in.
 
 We already saw this trap in 03-06 as a lesson on three-valued `NULL` logic. Here we look at it from another angle — as the main reason to choose `EXISTS` for "not among."
 
