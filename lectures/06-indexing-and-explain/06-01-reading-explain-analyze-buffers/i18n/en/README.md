@@ -1,6 +1,14 @@
 # 06-01 — Reading EXPLAIN ANALYZE
 
-The order-status dashboard in Brew's admin panel opened instantly — while the register's event table was small. At a million rows the same page took two or three seconds to load, and under the evening rush the whole section hung. The backend developer stared at the query — `SELECT * FROM events WHERE ref_no = ?` — and couldn't see it: the query is trivial, one row out. The problem wasn't the query but **how** the database ran it: with no index on `ref_no`, it had to read and check every one of a million rows to find the single match. One command makes this visible — `EXPLAIN ANALYZE`.
+Evening rush. You're on ticket duty today, and the first thing to land in chat is a report.
+
+> **Ruslan (in chat, 19:12):** The order-status dashboard is hanging. I open an order — it thinks for two or three seconds, and at the evening peak it's dead solid. Both shops.
+>
+> **You:** The query is trivial — `SELECT * FROM events WHERE ref_no = ?`, one row out. Why two seconds?
+>
+> **Dmitry:** The question isn't what you asked, it's how the database answered. Show me the plan.
+
+The dashboard opened instantly — while the register's event table was small. At a million rows the same page took seconds to load: the problem isn't the query but **how** the database ran it. With no index on `ref_no`, it had to read and check every one of a million rows to find the single match. One command makes this visible — `EXPLAIN ANALYZE`.
 
 The goal of this unit is to learn to **read a query plan** and spot exactly that difference: "read the whole million" versus "go straight to the one row we need." This is the first unit of the indexing module, and it's about the tool we'll use through the rest of it. The specifics of indexes (composite, partial, GIN) come later; here is the alphabet: what each plan node means, where to find the number of rows processed, and why in PG18 the buffers show up right under the plan.
 
