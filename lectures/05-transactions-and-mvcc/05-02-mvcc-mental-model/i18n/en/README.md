@@ -18,6 +18,14 @@ The naive model of a row is "a cell you overwrite with a new value." In Postgres
 
 The answer about the report grows straight out of this. Each transaction works against its own **snapshot**: a fixed set of "which versions are visible to me." Visibility is decided by comparing a version's `xmin`/`xmax` against that snapshot. So a reader never waits on a writer, nor a writer on a reader: they look at *different versions* of the same row. Brew's report sees the price that held at the moment of its snapshot — whole and consistent, with no "half the old way."
 
+> **Botyr:** Hold on. `UPDATE` doesn't overwrite, `DELETE` doesn't delete… so the database just keeps growing?
+>
+> **Dmitry:** It grows. Dead versions sit there until `VACUUM` clears them.
+>
+> **Botyr:** And if it doesn't?
+>
+> **Dmitry:** Then Pavel shows up. Keep transactions short — and he won't.
+
 ## What our code shows
 
 The lesson lives in two psql scripts. The first, `demo.sql`, shows the mechanics inside a single transaction — what `UPDATE` physically does to a row version. To keep `ctid`/`xmin` clean (not muddied by past transactions over the base tables), we work on a separate lab table `mvcc_lab`, which we drop at the end:
@@ -114,6 +122,8 @@ A3  base_price = 500,  xmin = 863   ← a new snapshot: B's version now visible
 A2, inside the open transaction, reads the old price with the old `xmin` even though B has already committed — A's snapshot was taken before that commit. After `COMMIT` A itself takes a new snapshot, and A3 shows both the new price and the new `xmin` (that's the version created by transaction B). After the demo, restore the menu: `make db-reset`.
 
 ## The fence: the simplification and where it bites
+
+> **Pavel — in review, one line:** Your forgotten BEGIN is holding VACUUM across my whole database.
 
 We showed `xmin`/`xmax`/`ctid` directly and said "the old version lingers and gets cleaned up by `VACUUM`." In production a whole class of problems sits behind that — problems your DBA handles, but the code provokes:
 
