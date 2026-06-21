@@ -1,6 +1,10 @@
 # 06-03 — When indexes don't help
 
-Brew had a "log in by e-mail" button, and an index on the `email` column. Makes sense — we search by e-mail, the index is there. But login is case-insensitive: a user registered as `Alice@Brew.example` signs in typing `alice@brew.example`. To make that match, the backend wrote `WHERE lower(email) = lower($1)`. And the query suddenly fell back to a `Seq Scan`, even though the index on `email` was right there. No one dropped it — Postgres simply couldn't use it: the index stores `email` as-is, but the condition has `lower(email)` — a **different value**, one that isn't in the index.
+Brew had a "log in by e-mail" button, and an index on the `email` column. Makes sense — we search by e-mail, the index is there. Until Evgeny came down from the marketing floor and turned his phone screen-out toward the table — on it, a complaint from a guest, Alice Ivanova (the very owner of anchor order #1):
+
+> **Evgeny:** Alice can't log in. She types in her e-mail — and the login just hangs. Nobody dropped the e-mail index, right?
+
+He's right: the index is there. But login is case-insensitive: a user registered as `Alice@Brew.example` signs in typing `alice@brew.example`. To make that match, the backend wrote `WHERE lower(email) = lower($1)`. And the query suddenly fell back to a `Seq Scan`, even though the index on `email` was right there. No one dropped it — Postgres simply couldn't use it: the index stores `email` as-is, but the condition has `lower(email)` — a **different value**, one that isn't in the index.
 
 The goal of this unit is to understand the class of conditions that "switch off" an index (they're called **non-sargable** — non-Search-ARGument-ABLE) and the main fix: an **expression index**. This explains the common riddle "the index exists, yet `EXPLAIN` shows a Seq Scan."
 
