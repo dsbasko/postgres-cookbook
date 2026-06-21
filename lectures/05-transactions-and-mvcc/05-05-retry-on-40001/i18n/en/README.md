@@ -1,6 +1,26 @@
 # 05-05 — Retrying on 40001
 
-In the previous unit `SERIALIZABLE` saved Brew's invariant at the cost of an error: Alice's transaction (Alice and Boris are the shift baristas from 05-04, namesakes of the customers Alice Ivanova and Boris Petrov — different people) failed with `40001` (`serialization_failure`) because it committed second and closed a "dangerous pair" of dependencies. The hint in the error read `The transaction might succeed if retried`. This is where many make the fatal mistake: they show the user a "500 Internal Error" and go off to debug a "random database glitch."
+> **Botyr:** I filed a ticket: "the database is unstable." Overnight transactions started failing on their own — out of nowhere, not our bug. That `SERIALIZABLE` we turned on yesterday.
+
+> **Dmitry:** Show me the query.
+
+Botyr turns his laptop around: the same shift calculation from 05-04, and next to it a serialization error.
+
+> **Dmitry:** The database didn't break. It answered you. It even told you what to do next: retry.
+
+> **You:** Retry it?
+
+> **Dmitry:** Retry it. It's a contract. Not a failure.
+
+Dmitry closes the ticket.
+
+> **Botyr:** So catch this and rerun the transaction — by hand, in every handler?
+
+> **You:** And if there are forty handlers?
+
+> **Dmitry:** Then one loop for all of them. `withRetry` — wrap any transaction in it instead of copy-pasting a `try` all over the code.
+
+Yesterday's incident from 05-04: Alice's transaction (Alice and Boris are the shift baristas, namesakes of the customers Alice Ivanova and Boris Petrov — different people) failed with `40001` (`serialization_failure`) because it committed second and closed a "dangerous pair" of dependencies. The hint in the error read `The transaction might succeed if retried`. The ticket "the database is unstable" is an understandable first reaction; a wrong one.
 
 `40001` is not a glitch. It's the **expected** answer from `SERIALIZABLE`: "I couldn't line your transaction up into a consistent order with the others — start over." The level's contract is two-sided — the database gives you serializability, and you must **retry** transactions on `40001`. You can't use `SERIALIZABLE` without a retry loop. This unit is about that loop: how to write it in Go and why a retry almost always succeeds.
 
