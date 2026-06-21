@@ -1,6 +1,10 @@
 # 06-02 — B-tree and column order in a composite index
 
-Brew created one index on the menu-items table — on `(category, price)` — and considered "menu search" handled. The query "cappuccinos under 500" flew. But the report "all items priced at 250 across every category" unexpectedly crawled: same index, the `price` column is right there inside it — yet the query seemed not to see it. The reason: **column order in a composite index isn't cosmetic**. A B-tree stores rows sorted by the first column first, and only within equal values of the first column — by the second. Asking "by the second without knowing the first" is like looking up a word in a dictionary sorted by word length first: knowing the second letter doesn't help until you know the first.
+Brew created one index on the menu-items table — on `(category, price)` — and considered "menu search" handled. The query "cappuccinos under 500" flew — until Evgeny came down from the marketing floor.
+
+> **Evgeny:** People look at the price, not the category. Get me a report by lunch: all items priced at 250, across every category at once. There's an index — this is quick.
+
+The report unexpectedly crawled: same index, the `price` column is right there inside it — yet the query seemed not to see it. The reason: **column order in a composite index isn't cosmetic**. A B-tree stores rows sorted by the first column first, and only within equal values of the first column — by the second. Dmitry pulls out a napkin and sketches: asking "by the second without knowing the first" is like looking up a word in a dictionary sorted by word length first; knowing the second letter doesn't help until you know the first.
 
 The goal of this unit is the **left-prefix rule**: which queries a composite index speeds up and which it doesn't, and why that depends on column order. And right away — what **PG18 skip-scan** changes about that picture: it can pull the index in even where there used to be only a Seq Scan.
 
@@ -21,6 +25,12 @@ Previously, "second column only" meant a guaranteed `Seq Scan`. **PostgreSQL 18 
 You can spot skip-scan by the **`Index Searches`** field in `EXPLAIN ANALYZE`: for ordinary index access it equals `1`, and for skip-scan it's greater than one (the index was "searched" once per leading-column value). In our demo, `Index Searches: 9` versus `Index Searches: 1` on the ordinary queries — that's the fingerprint of skip-scan.
 
 > ⚠️ Skip-scan **softens** the left-prefix rule but doesn't repeal it. It pays off only with **low** cardinality of the leading column: iterating 4 categories is cheap, but 100,000 customers is already more expensive than a `Seq Scan`. The planner decides on cost; betting on "PG18 will figure it out" instead of the right column order is a bad bet.
+
+> **Botyr:** In the PG18 release notes — skip-scan for B-trees. So column order doesn't matter anymore, the database sorts it out itself?
+>
+> **Dmitry:** A safety net, not a design.
+>
+> **Botyr:** …so the order's still on me. Got it.
 
 ## How a composite index is laid out
 
