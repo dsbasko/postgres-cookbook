@@ -1,5 +1,13 @@
 # 05-01 — Transactions and ACID
 
+The previous module ended on Botyr's question: what happens when two registers reach for the same rows at once? The answer starts with money — with a message Ruslan sent to the chat late in the evening.
+
+> **Ruslan (chat, 22:47):** Evening reconciliation doesn't add up. I moved the day's takings from Register-1 to Register-2 at end of shift — the first has the debit, the second has no credit. Where's the money?
+
+The next morning Dmitry nods at that message over your shoulder.
+
+> **Dmitry:** Money doesn't vanish. "Debit" and "credit" are two separate commands, and something got stuck between them. The fix isn't more care at the register, it's making the database hold both commands as one job. That's exactly what today is about.
+
 Brew is moving the day's takings from one shop's register to another's: debit the first account, credit the second. Two commands. Between them lies a sliver of milliseconds, and that sliver hides the worst-case scenario: the debit goes through, the credit fails (the network blinked, the process died, the disk filled up). Money debited and never credited — it vanished. Or the reverse: the credit lands, the debit doesn't, and money appears out of thin air. In a system that counts other people's money, that isn't a bug — it's a disaster.
 
 The fix isn't "write more carefully," it's a tool the database already gives you: the **transaction**. `BEGIN`, both commands, `COMMIT` — and Postgres guarantees they apply **together or not at all**. This unit is about the four letters behind that guarantee: **ACID**.
