@@ -1,8 +1,22 @@
 # 04-06 — CTEs and materialization
 
-Brew reports rarely fit into one flat `SELECT`. "How much each customer spent" is: first compute each order's total from its line items, then collapse orders per customer, then substitute the name. You can cram all that into nested subqueries, but reading such a query is like unpacking a matryoshka from the inside out.
+At the reports-sprint retro the team gathers at the whiteboard: what dragged over the two weeks, what got rewritten twice, where a report stayed silent instead of erroring.
 
-A `CTE` (Common Table Expression, the `WITH` clause) flips this: it gives each intermediate step a name, and the query reads top to bottom, step by step. And along the way we'll unpack materialization — whether Postgres computes a `CTE` separately (and caches the result) or inlines it into the main query.
+> **Dmitry:** Last item — your report, "how much each customer spent." The numbers add up, all green. Open it and show everyone.
+
+You open it. Three `SELECT`s nested one inside another: the inner one sums an order, the middle collapses per customer, the outer substitutes the name. The parentheses close somewhere at the very bottom.
+
+> **Botyr:** I reviewed it. Tried to, rather. You can only read it inside out — by the third bracket you've already forgotten what the first `SELECT` computed.
+>
+> **You:** It works, though. What's wrong with it?
+>
+> **Dmitry:** Working isn't the same as readable. In a month you'll fix this blind. Give each step a name — and the matryoshka unfolds into a top-down pipeline: order totals, roll-up per customer, name substitution. Three steps, each visible.
+>
+> **Botyr:** And while we're at it, let's knock all the sprint's rakes into one sheet. Five of them already — exactly one per unit.
+>
+> **Dmitry:** Do it. We'll pin it above review.
+
+Named steps are a `CTE`, the `WITH` clause; the sheet of rakes is the checklist at the end of this unit. Along the way we'll unpack materialization: whether Postgres computes a `CTE` separately or inlines it into the main query. We'll start with the `CTE`.
 
 > [!NOTE]
 > Useful from earlier units: subqueries as "a question inside a question" (04-05), `JOIN` and row multiplication fan-out (04-02), `GROUP BY` + `sum` (04-03), and prices as cents-`BIGINT` (01-01). This is the last unit of the module; at the end we'll assemble a checklist of the whole module 04's traps.
@@ -59,6 +73,16 @@ WITH order_totals AS (...)    step 1 · each order's total from line items
 ```
 
 The main value of a `CTE` for an application is readability and reuse of an intermediate result — not "speedup." A `CTE` on its own doesn't make a query faster.
+
+Over coffee Botyr circles back to the topic:
+
+> **Botyr:** Listen, I always pull a subquery into a `CTE` — read that it's faster that way.
+>
+> **Dmitry:** Read it where?
+>
+> **Botyr:** …in an article from '12.
+>
+> **Dmitry:** PG12 rewrote the rule since then. "Faster" lives in the plan, not the query text — and plans we read in module 06. Below is what makes Postgres compute a `CTE` separately at all.
 
 ## Materialization: a fence vs inlining
 
@@ -136,7 +160,7 @@ What we simplified.
 
 ## Common mistakes in module 04
 
-This is the last unit of the module, so here in one place are the rakes the module stepped on one by one. They all share a trait: the query doesn't fail or raise an error — it silently returns a wrong number or the wrong row. Pin this table above your code review.
+This is the very sheet the retro agreed to pin above review — the rakes the module stepped on one by one: Karina, dropped from the report twice (04-01 and 04-05), and the "+40% revenue" that was never there (fan-out, 04-03). They all share a trait: the query doesn't fail or raise an error — it silently returns a wrong number or the wrong row. Pin it above your code review.
 
 | trap | unit | the right way |
 |---|---|---|
@@ -156,7 +180,7 @@ This is the last unit of the module, so here in one place are the rakes the modu
 
 > [!NOTE]
 > **Check yourself.**
-> 1. A colleague rewrote a slow subquery into a `WITH` and expects it to be faster. What do you tell them?
+> 1. Botyr from the smoke-break rewrote a slow subquery into a `WITH` and is still waiting for a speedup. What do you tell him?
 > 2. A `CTE` is referenced exactly once and has no write inside. Will Postgres inline or materialize it — and which keyword forces the opposite?
 > 3. In the `OrderShareOfTotal` query, drop `AS MATERIALIZED` — does the printed output (`доля,%`) change?
 
@@ -167,3 +191,9 @@ This is the last unit of the module, so here in one place are the rakes the modu
 > 3. No. `order_totals` is referenced twice → the default already materializes the `CTE`, so the output stays the same: `#1 → 43.5`, `#2 → 13.5`, `#3 → 43.0`. The inline/materialize difference is visible in the plan (`EXPLAIN`), not in the result.
 
 That completes module 04, "Querying across tables": you can connect tables (`JOIN`/self-join), collapse rows into summaries (`GROUP BY`/`HAVING`, `DISTINCT ON`), ask questions with questions (subqueries, `EXISTS` vs `IN`), and assemble readable pipelines (`CTE`). Next up — module **05 "Transactions, MVCC, and concurrency"**: what happens when several sessions reach for this data at once.
+
+At that same retro, already closing his laptop, Botyr nods at the sheet of rakes:
+
+> **Botyr:** And all of this — it's about one session. What happens when two registers reach for these rows at once?
+
+That's where module 05 begins.
