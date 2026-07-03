@@ -109,12 +109,35 @@ Output:
 
 (The demo prints in Russian.) Step 1 — the pool is empty (lazy). Step 2 — the acquire opened exactly 4 backends, and the server confirms them at step 3: the `pg_stat_activity` count matched the number of acquired connections. Step 4 — `Release` returned them to the pool without closing: `acquired=0`, but `total=4` — four backends are still alive, ready for reuse.
 
+> [!NOTE]
+> **Check yourself.** The demo acquires 4 connections, then returns all 4. After
+> the return, `pool.Stat()` shows `acquired` (`AcquiredConns`) and `total`
+> (`TotalConns`) — what are those numbers? Which one is surprising, and why?
+
+> [!TIP]
+> **Answer.** `acquired=0` and `total=4` — as in step 4 of the output above. The
+> surprising one is `total=4`: it may seem returning a connection means closing it,
+> but `Release` only marks the backend free, without closing it. Four processes stay
+> alive on the server, ready for the next `Acquire` — that's the whole point of the
+> pool. They'd close only on `pool.Close()` when the application exits.
+
 ## The fence
 
 - "More connections = faster" is a myth. Each backend costs the server memory and a slot in the OS scheduler, and beyond the number of cores extra connections only add contention, not throughput. Pool size is a trade-off, not "the more the better"; in production it's tuned to the load and to `max_connections`, not left at the default.
 - When there are many application instances and their pools collectively hit the server limit, an external pooler (PgBouncer) goes between them and Postgres; it has its own pitfalls (transaction mode breaks session-level things like advisory locks and `LISTEN/NOTIFY`) — that's the subject of capstone 10-04.
 - Every `Acquire` must have a matching `Release` (usually a `defer`), or the connection "leaks" from the pool forever — a slow-motion version of Brew's very mistake.
 - Don't hold an acquired connection across long external I/O: you're blocking a scarce resource while waiting on someone else's service.
+
+## Common mistakes in module 00
+
+This is the last unit of the module, so here in one place are the first-contact rakes. What they share: the demo doesn't show them — some silently return the wrong thing (injection, a swapped `Scan`), others pile up and take the app down only in production under load (a connection per request, a pool leak). Pin this table above your code review.
+
+| trap | unit | the right way |
+|---|---|---|
+| gluing SQL from strings with input: `' OR 1=1 --` closes the quote and bypasses the filter — "works" in the demo, leaks the whole table at review | 00-04 | values only as parameters (`$1`, `$2`, …): SQL text and data travel to the server separately, the value past the parser, and it cannot become code |
+| manual `rows.Scan` with a swapped order of same-type columns: the compiler stays silent, `name` lands in the `category` field | 00-04 → 00-05 | write `query.sql` and generate the mapping via sqlc — a type mismatch is caught by the compiler after `make gen`, not by a user at runtime |
+| a new `pgx.Connect` connection per request: under load it hits `max_connections` and `FATAL: too many clients` for everyone, including healthy requests | 00-06 | open the pool once at application startup and reuse connections |
+| `Acquire` without a matching `Release`: the connection "leaks" from the pool forever — a slow-motion version of the same mistake | 00-06 | close every `Acquire` with a `Release` (usually a `defer`) |
 
 ## Takeaways
 

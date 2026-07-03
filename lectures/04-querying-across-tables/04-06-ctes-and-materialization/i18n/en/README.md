@@ -4,9 +4,31 @@ Brew reports rarely fit into one flat `SELECT`. "How much each customer spent" i
 
 A `CTE` (Common Table Expression, the `WITH` clause) flips this: it gives each intermediate step a name, and the query reads top to bottom, step by step. And along the way we'll unpack materialization — whether Postgres computes a `CTE` separately (and caches the result) or inlines it into the main query.
 
+> [!NOTE]
+> Useful from earlier units: subqueries as "a question inside a question" (04-05), `JOIN` and row multiplication fan-out (04-02), `GROUP BY` + `sum` (04-03), and prices as cents-`BIGINT` (01-01). This is the last unit of the module; at the end we'll assemble a checklist of the whole module 04's traps.
+
 ## CTE: named building blocks
 
-`WITH name AS (query)` declares a temporary result that you then reference by name, like a table. `CTE`s can be chained: the second references the first, the main query references both. This turns "a subquery inside a subquery" into a linear pipeline:
+`WITH name AS (query)` declares a temporary result that you then reference by name, like a table. `CTE`s can be chained: the second references the first, the main query references both.
+
+First look at how the same three steps read without `WITH` — a subquery in the `FROM` of another subquery. You can only read it from the inside out, holding in your head what each nested level computes:
+
+```sql
+SELECT c.name, p.orders, p.spent
+FROM (
+    SELECT customer_id, count(*) AS orders, sum(cents)::bigint AS spent
+    FROM (
+        SELECT o.id, o.customer_id,
+               sum(oi.quantity * oi.unit_price)::bigint AS cents
+        FROM orders o JOIN order_items oi ON oi.order_id = o.id
+        GROUP BY o.id, o.customer_id
+    ) AS order_totals
+    GROUP BY customer_id
+) AS p JOIN customers c ON c.id::text = p.customer_id
+ORDER BY p.spent DESC;
+```
+
+Same meaning, but the parentheses nest, the step names hide in `AS` aliases at the very bottom, and you read from the inner `SELECT` outward. A `CTE` flips this into a linear top-down pipeline:
 
 ```sql
 WITH order_totals AS (        -- step 1: each order's total from line items
@@ -45,7 +67,7 @@ Here's the subtlety. Postgres can treat a `CTE` in two ways:
 - **Inline** — substitute the `CTE`'s body into the main query, like an ordinary subquery. Then the planner sees the whole query and can, for example, push a filter into the `CTE`.
 - **Materialize (fence)** — compute the `CTE` separately, once, store the result in a temporary buffer, and read from it afterwards. The optimizer doesn't peek behind that "fence."
 
-Since PG12 the default rule is: if a `CTE` is referenced **once** — it's inlined; if **more than once** (or it contains a write/`VOLATILE` function) — it's materialized (logically: computing once and reusing is cheaper than twice). These defaults can be overridden with keywords: `AS MATERIALIZED` forces the fence, `AS NOT MATERIALIZED` forces inlining.
+Since PG12 the default rule is: if a `CTE` is referenced **once** — it's inlined; if **more than once** (or it contains a write/`VOLATILE` function) — it's materialized (logically: computing once and reusing is cheaper than twice). A `VOLATILE` function is one whose result may change from call to call on the same arguments (`random()` or `now()`, say); inlining copies of it and calling it several times would be unsafe, so Postgres puts up a fence (volatility in detail — module 09). These defaults can be overridden with keywords: `AS MATERIALIZED` forces the fence, `AS NOT MATERIALIZED` forces inlining.
 
 |   | inline | materialize (fence) |
 |---|---|---|
@@ -112,6 +134,18 @@ What we simplified.
 - A `CTE` is about readability, not speed. The belief "I'll rewrite the subquery into a `WITH` and it'll be faster" is a myth (before PG12 materialization was always on and sometimes even hurt).
 - A recursive `CTE` (`WITH RECURSIVE`) is a separate big topic: traversing trees and graphs; unit 08-04 is devoted to it.
 
+## Common mistakes in module 04
+
+This is the last unit of the module, so here in one place are the rakes the module stepped on one by one. They all share a trait: the query doesn't fail or raise an error — it silently returns a wrong number or the wrong row. Pin this table above your code review.
+
+| trap | unit | the right way |
+|---|---|---|
+| `count(*)` over a `LEFT JOIN` counts result rows, not entities: a customer with no orders yields a row with `NULL` and is counted as 1 | 04-03 | count the child table's non-`NULL` key — `count(o.id)`; a customer with no pair then counts as 0 |
+| `NOT IN (subquery)` over a nullable column: one `NULL` in the set and the condition collapses to `NULL`, so the result is empty for everyone | 04-05 | for "not among," use `NOT EXISTS` (or guarantee the subquery has no `NULL`) |
+| `DISTINCT ON` without a tie-break in the `ORDER BY` tail: with equal sort keys the "first" row is undefined and the report floats between runs | 04-04 | extend `ORDER BY` with a unique column (`id DESC`) so the row choice is deterministic |
+| a condition on the right table of a `LEFT JOIN` placed in `WHERE` (not `ON`): rows with `NULL` on the right get filtered out, and `LEFT` silently degrades into `INNER` | 04-01 | keep a filter on the right table in `ON`; in `WHERE` on the right side only an `IS NULL` check makes sense (the anti-join) |
+| `sum`/`count` over fan-out: joining a parent to a child multiplies the parent's rows, so an aggregate over the parent double-counts | 04-02 | aggregate before the `JOIN` (collapse the children in a `CTE`/subquery, then join) or use `count(DISTINCT …)` |
+
 ## Takeaways
 
 - A `CTE` (`WITH name AS (...)`) gives an intermediate result a name; the query turns from a "subquery matryoshka" into a linear pipeline of steps.
@@ -119,5 +153,17 @@ What we simplified.
 - A `CTE` on its own doesn't speed up a query; it's about code structure, not performance.
 - Since PG12: one reference → the `CTE` is inlined; more than one (or a write inside) → it's materialized. The levers are `AS MATERIALIZED` / `AS NOT MATERIALIZED`.
 - The inline/materialize difference shows up in the plan (`EXPLAIN`, module 06), not in the result.
+
+> [!NOTE]
+> **Check yourself.**
+> 1. A colleague rewrote a slow subquery into a `WITH` and expects it to be faster. What do you tell them?
+> 2. A `CTE` is referenced exactly once and has no write inside. Will Postgres inline or materialize it — and which keyword forces the opposite?
+> 3. In the `OrderShareOfTotal` query, drop `AS MATERIALIZED` — does the printed output (`доля,%`) change?
+
+> [!TIP]
+> **Answer.**
+> 1. A `CTE` on its own doesn't speed up a query — it's about readability and code structure, not speed; before PG12 materialization was always on and sometimes even hurt. If the subquery was being inlined before, moving it into a `WITH` could even slow it down.
+> 2. It inlines it (the PG12+ default for a single reference with no write/`VOLATILE`); to force the fence, use `AS MATERIALIZED`.
+> 3. No. `order_totals` is referenced twice → the default already materializes the `CTE`, so the output stays the same: `#1 → 43.5`, `#2 → 13.5`, `#3 → 43.0`. The inline/materialize difference is visible in the plan (`EXPLAIN`), not in the result.
 
 That completes module 04, "Querying across tables": you can connect tables (`JOIN`/self-join), collapse rows into summaries (`GROUP BY`/`HAVING`, `DISTINCT ON`), ask questions with questions (subqueries, `EXISTS` vs `IN`), and assemble readable pipelines (`CTE`). Next up — module **05 "Transactions, MVCC, and concurrency"**: what happens when several sessions reach for this data at once.

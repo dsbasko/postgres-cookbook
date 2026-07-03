@@ -78,6 +78,14 @@ SELECT entity, n FROM (
 ORDER BY ord;
 ```
 
+> [!NOTE]
+> The query looks imposing, but you don't need to write anything like it yet —
+> we're just "taking a census." `UNION ALL` glues several `SELECT`s into one list
+> (one row per table), `'customers'::text` labels the row with the table's name
+> (`::` is a type cast), and the `ord` column sets the output order. We'll cover
+> `UNION` and working with row sets in module 08 — for now read this as a single
+> "census" and move on.
+
 `main.go` stays thin — connect, run two typed queries, print the result:
 
 ```go
@@ -126,6 +134,18 @@ inventory             5
 ```
 
 (The demo prints in Russian.) Read the output back. First, the version starts with `PostgreSQL 18` — on the other end of the socket is exactly the version this course targets (the tail about architecture and gcc may differ on your machine; that depends on how the `postgres:18-alpine` image was built). Second, the canon has 9 tables, and some are still empty: `outbox` and `processed_outbox_ids` are waiting for the eventing module — we'll fill them ourselves. Third, there are exactly three orders, including Alice's order #1; five drinks on the menu and two shops — that's the world we'll spend the next ten modules in.
+
+> [!NOTE]
+> **Check yourself.** Without peeking at the output: how many of the 9 canon
+> tables are empty right after the seed — and why those ones? How many rows total
+> sit in the Brew world at the course's start?
+
+> [!TIP]
+> **Answer.** Two are empty — `outbox` and `processed_outbox_ids`: these are the
+> order-eventing tables, filled by module 09, not by the seed. The other seven are
+> populated, 24 rows in total — as in the output above ("Итого 24 строки"). It may
+> look like an empty table means "unfinished schema," but no: both belong to the
+> canon from the start — their data just arrives later in the course.
 
 ## The fence
 

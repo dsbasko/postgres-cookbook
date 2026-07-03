@@ -44,7 +44,7 @@ And here's how the operations themselves compare by cost:
 | `VALIDATE CONSTRAINT` | scans the old rows | background, `SHARE UPDATE EXCLUSIVE` (doesn't block writes) |
 | `ALTER COLUMN ... TYPE` (representation change) | rewrites every row | long `ACCESS EXCLUSIVE` |
 | `ADD COLUMN ... DEFAULT now()` (volatile) | rewrites the table | long `ACCESS EXCLUSIVE` |
-| `ADD COLUMN ... NOT NULL` (no valid CHECK) | scans the whole table | lock for the duration of the scan |
+| `ALTER COLUMN ... SET NOT NULL` (existing column) | scans the table to verify no NULLs | lock for the duration of the scan (PG12+ skips it with a valid `CHECK (col IS NOT NULL)`) |
 
 ## What our code shows
 
@@ -108,7 +108,7 @@ What we simplified: `relfilenode` is a good "rewrote / didn't" indicator, but no
 
 - **The lock matters more than the rewrite.** Even an instant `ADD COLUMN` takes `ACCESS EXCLUSIVE`, and if a long transaction hangs ahead of it, the lock queue will stall writes out of nowhere — so migrations run with a short `lock_timeout` and retries, not "dry."
 - **A big rewrite isn't done head-on.** `ALTER TYPE` on a hot table is split into steps in production: you add a new column, backfill data in batches in the background, then swap it atomically — or use online tools (`pg_repack`, orchestrators like Reshape).
-- **Version nuances.** `ADD COLUMN` with a **volatile** default (`now()`, a function) already rewrites; adding `NOT NULL` historically scans the table (PG12 can skip the scan if a valid `CHECK (col IS NOT NULL)` exists).
+- **Version nuances.** `ADD COLUMN` with a **volatile** default (`now()`, a function) already rewrites the table. And `NOT NULL` depends on how it appeared: `ADD COLUMN ... NOT NULL` with a constant default is instant (the new column has no `NULL`s anyway — that's what our demo shows), while `ALTER COLUMN ... SET NOT NULL` on an existing column scans the table to check the old rows (PG12+ skips the scan if a valid `CHECK (col IS NOT NULL)` exists).
 
 The course boundary: orchestrating zero-downtime migrations leans toward DBA/DevOps; your job is to **recognize a dangerous `ALTER` in a migration review** and not ship a hot-table rewrite during business hours.
 

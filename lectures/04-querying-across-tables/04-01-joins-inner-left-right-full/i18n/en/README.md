@@ -4,7 +4,9 @@ Marketing dreamed up a "we miss you" campaign: send a promo code to everyone who
 
 The next day a question lands: "Where's Karina? She signed up last week, she's in the admin panel, but she's not in your list." You open it — and indeed she isn't. The query didn't fail and didn't raise an error. It silently dropped exactly the people the campaign was for — customers with no orders at all. The report didn't lie in its numbers. It lied by omission: the row that shouldn't have been missing simply wasn't there.
 
-It's not the whole query — it's one word in it: which `JOIN` you picked. There are four ways to connect two tables, and they differ precisely in whom they keep and whom they throw away. Karina dropped because we used the kind that keeps only matched pairs. Now all four in turn, on the same pair `customers` and `orders`, swapping one word at a time.
+This unit builds on single-table `SELECT` / `WHERE` / `ORDER BY` from module 03 and on the Brew table map from 00-01 — from here on we join `customers` and `orders`, so it helps to remember what columns they carry.
+
+It's not the whole query — it's one word in it: which `JOIN` you picked. There are four ways to connect two tables, and they differ precisely in whom they keep and whom they throw away. There's also a fifth, set apart — the Cartesian product (`CROSS JOIN`), which pairs every left row with every right row with no condition at all; it gives the handy model "`JOIN` = product + filter," and we'll cover it in detail in module 08. Karina dropped because we used the kind that keeps only matched pairs. Now all four in turn, on the same pair `customers` and `orders`, swapping one word at a time.
 
 ## INNER JOIN — matches only
 
@@ -21,6 +23,30 @@ The report was supposed to answer a different question: "all customers, and orde
 `customers LEFT JOIN orders` reads as "all customers, and their orders for those who have them." Karina comes back into the result — with `order_id = NULL` and `status = NULL`. This is the most common `JOIN` in applications: "show the entity and its related data without losing entities that have no relations."
 
 That property gives a handy trick. `LEFT JOIN` plus an `IS NULL` check on the right side is "find rows with no pair at all" (it's called an anti-join). The query `... LEFT JOIN orders o ON ... WHERE o.id IS NULL` returns only customers with no orders — the very list for the campaign the lesson opened with, assembled in a single query.
+
+## The trap: a condition on the right table in WHERE kills LEFT JOIN
+
+You wrote `LEFT JOIN`, brought Karina back — and then added a filter, say "paid orders only." It seems natural to tack it onto `WHERE`:
+
+```sql
+SELECT c.name, o.id, o.status
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id::text
+WHERE o.status = 'paid';
+```
+
+Karina vanished again. The query didn't fail again — it silently dropped exactly her, just as in the cold open, even though you'd already switched to `LEFT`.
+
+Step by step. The `LEFT JOIN` runs first: it honestly keeps Karina, filling in `o.status = NULL` (no order, nothing to fill in). Then `WHERE` comes along and tests `o.status = 'paid'` on every row. For Karina that's `NULL = 'paid'` — and a comparison with `NULL` yields not `false` but `NULL` (the three-valued logic from 03-06), and a row with a `NULL` condition does **not** pass the filter. So a condition on the right table in `WHERE` quietly drops all the missing pairs — and the `LEFT JOIN` degenerates into an `INNER`. You changed the word in `FROM`, but the result is the same as before.
+
+> [!WARNING]
+> A condition on the "right" (optional) table of a `LEFT JOIN` placed in `WHERE` turns `LEFT` back into `INNER`: rows with no pair have `NULL` there, and `NULL <operator> value` is never true, so `WHERE` throws them out. This is semantics, not performance — the plan has nothing to do with it.
+>
+> The fix depends on what you want:
+> - **keep the missing rows** — move the condition into `ON`: `LEFT JOIN orders o ON o.customer_id = c.id::text AND o.status = 'paid'`. Now the filter applies *while matching pairs*, before the `NULL` fill-in: Karina has no matching order → her row stays with `NULL` on the right;
+> - **or** keep the condition in `WHERE` but let the pairless rows through explicitly: `WHERE o.status = 'paid' OR o.id IS NULL`.
+>
+> A condition on the left (mandatory) table in `WHERE` doesn't break this way — it never gets a `NULL` from the join.
 
 ## RIGHT JOIN — the same, mirrored
 
@@ -84,7 +110,7 @@ Same columns, same pair of tables, same `ON` — the difference is one word, and
 
 A subtlety visible only in Go: sqlc notices that after a `LEFT JOIN` the `orders` columns can become `NULL` and types them as nullable — `pgtype.Int8` and `pgtype.Text`. In the `INNER` variant the same columns arrive as plain `int64` and `string`: there a match is guaranteed. One word in SQL changes even the types in the generated code.
 
-The fourth query is the `FULL JOIN` of the two count sheets; the drink name comes from `drinks` via `COALESCE(f.drink_id, s.drink_id)` (the key exists on at least one side):
+The fourth query is the `FULL JOIN` of the two count sheets. `count_floor` and `count_storage` are local lab tables this unit adds on top of the Brew schema (like `promo` in 04-05): two "count sheets" of stock, floor and storage, here only to create mismatches on both sides. The drink name comes from `drinks` via `COALESCE(f.drink_id, s.drink_id)` (the key exists on at least one side):
 
 ```sql
 -- name: ReconcileFull :many
@@ -141,6 +167,12 @@ Output:
 ```
 
 (The demo prints in Russian.) Read the output in order. INNER gave three rows: Alice's two orders and Boris's one. Karina isn't in it — exactly the loss the lesson opened with. LEFT and RIGHT gave four rows each: the same three plus Karina with `order_id` and `status` as `NULL`. The set of customers is the same, but now no one dropped. FULL merged the two count sheets: Cappuccino landed in both (5 and 3), Espresso was counted only on the floor, Cold Brew only in storage, and each discrepancy showed up as "—", i.e. `NULL` on the side where the drink is missing. The same dataset, four `JOIN`s — four different answers to "whom to keep."
+
+> [!NOTE]
+> **Check yourself.** In the `LeftCustomersOrders` query, change `LEFT JOIN` back to `JOIN` (i.e. `INNER`) — how many rows do you get and who disappears? And second: if you add `WHERE o.status = 'paid'` to the original `LeftCustomersOrders`, does Karina stay?
+
+> [!TIP]
+> **Answer.** You get 3 rows (like `InnerCustomersOrders` in the output above) — Karina disappears: she has no matching order, and `INNER` keeps only pairs. As for the second: Karina does not stay — her `o.status` is `NULL`, the comparison `NULL = 'paid'` is not true, and `WHERE` drops the row, so `LEFT` collapses back into `INNER`. To keep Karina, move the condition into `ON` or add `OR o.id IS NULL`.
 
 ## The fence
 

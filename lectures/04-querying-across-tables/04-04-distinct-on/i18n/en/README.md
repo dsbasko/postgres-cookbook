@@ -4,9 +4,20 @@ A frequent request in Brew: "show the latest order of each customer." Not the da
 
 Postgres offers a shortcut — `DISTINCT ON`. It isn't standard SQL (a Postgres-specific feature), but it solves "one row per group, and the whole row" in a single expression.
 
+> [!NOTE]
+> Worth recalling from earlier lessons: the tie-break on a unique column (`id`) from 03-02 — there it gave a stable order for pagination; here the same idea decides which row of a group to keep when sort keys are equal. Also — `JOIN` from 04-01 and prices as cents-`BIGINT` from 01-01.
+
 ## How DISTINCT ON works
 
-`SELECT DISTINCT ON (expression) ...` keeps the **first** row for each unique value of `expression`. And what counts as "first" is set by `ORDER BY`. Hence the iron rule: `ORDER BY` must **begin** with the same expression as `DISTINCT ON`, and then comes the criterion "which row of the group to pick."
+First, recall plain `DISTINCT`. It removes **fully duplicate** rows: it keeps only the rows that are unique as a whole. "Which categories are on the menu?" is exactly that:
+
+```sql
+SELECT DISTINCT category FROM drinks;
+```
+
+`drinks` has many entries, but few categories (`coffee`, `tea`, …) — `DISTINCT` collapses the repeats and returns each category once. The key point: it looks at the **whole** selected row (here, the single `category` field) and keeps the unique values.
+
+`DISTINCT ON` works differently. `SELECT DISTINCT ON (expression) ...` keeps the **first** row for each unique value of `expression` — but returns the WHOLE row, not just that expression. And what counts as "first" is set by `ORDER BY`. Hence the iron rule: `ORDER BY` must **begin** with the same expression as `DISTINCT ON`, and then comes the criterion "which row of the group to pick."
 
 "The latest order per customer" reads like this:
 
@@ -92,6 +103,12 @@ Output:
 ```
 
 (The demo prints in Russian.) Alice has two orders; the first query kept the freshest (#3), the second the most expensive (#1). Only the `ORDER BY` tail changed — and the group's "winner" changed with it. Karina isn't in the result: we select from `orders`, and she has none (this isn't a `LEFT JOIN`).
+
+> [!NOTE]
+> **Check yourself.** Drop the trailing tie-break `id DESC` from `LatestOrderPerCustomer`, leaving `ORDER BY o.customer_id, o.created_at DESC`. Is the output the same on the current data? And what stops being guaranteed?
+
+> [!TIP]
+> **Answer.** On our seed the output doesn't change: Alice's two orders have **different** `created_at` (2025-01-15 and 2025-01-16), so `created_at DESC` alone already pins the "first" row of the group — #3 wins. But the guarantee is gone. The moment a group holds two rows with an **equal** leading sort key (here, the same `created_at`), `DISTINCT ON` picks the "first" of them **arbitrarily** — the order of such rows is undefined, and the output stops being stable between runs. `id DESC` is exactly that insurance from 03-02: it completes the order into a total one, so the winner is predictable always, not only while the data happens to have no ties.
 
 ## The fence
 

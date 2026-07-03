@@ -93,6 +93,21 @@ ID  SKU     НАЗВАНИЕ  КАТЕГОРИЯ  ЦЕНА
 
 (The demo prints in Russian.) `:many` returned three drinks in the `coffee` category, `:one` returned one row by SKU, and the `:one` scalar returned `1` (there's one green tea in the menu). The same data as in 00-04, but all the manual mapping is gone from the code.
 
+> [!NOTE]
+> **Check yourself.** (1) `CountDrinksByCategory("tea")` is declared `:one` with a
+> scalar — what Go type does the method return, and what value? (2) You added a
+> column to the `SELECT` but forgot to fix the mapping — where does that surface: at
+> build time or for the user at runtime?
+
+> [!TIP]
+> **Answer.** (1) `int64`, no wrapper struct, value `1` — there's one tea on the
+> menu (`TEA-01`), as in the output above. It may seem `:one` always returns a
+> struct, but for a scalar (one column) sqlc unwraps it and returns the column type
+> itself. (2) At build time: after `make gen` the method's type changes and the
+> compiler flags every place that no longer lines up. That's the whole win over the
+> manual `Scan` from 00-04, where a swapped column order would surface only at
+> runtime.
+
 ## The fence
 
 - sqlc is type-safe exactly to the extent its schema is truthful. It checks queries against the DDL listed in `sqlc.yaml` (`../../../schema/brew.sql` + `schema.sql`) — if the real database has drifted from the schema files, sqlc won't know (it doesn't connect to the DB during generation). So the source of truth about structure is migrations (module 02), and the schema files in `sqlc.yaml` must stay in step with them.

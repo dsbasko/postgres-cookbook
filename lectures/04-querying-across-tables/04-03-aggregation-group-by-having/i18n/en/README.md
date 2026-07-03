@@ -4,11 +4,17 @@ The business rarely asks "show me all the rows." It asks in summaries: "how many
 
 And this is exactly where one of the costliest reporting mistakes lives: `count(*)` and `count(column)` look almost identical but count **different things**. On a customer with no orders the discrepancy shows immediately — and if you mix them up, a "customer activity" report quietly lies.
 
+> [!NOTE]
+> Worth carrying over from earlier lessons: `JOIN` chains and row multiplication (fan-out) when joining a parent to its children from 04-02, and sober `NULL` semantics from 03-06 (`NULL` means "unknown," and aggregates treat it specially).
+
 ## GROUP BY and aggregate functions
 
 `GROUP BY` slices the table into groups by a column's value (or several), and an aggregate function computes one number per group: `count` — how many, `sum` — the total, `min`/`max` — the bounds, `avg` — the average. The rule: everything in `SELECT` that isn't an aggregate must appear in `GROUP BY` — otherwise it's unclear which of the group's values to show. So `SELECT category, count(*) ... GROUP BY category` is correct, while `SELECT name, count(*) ... GROUP BY category` is not (`name` is many within a group).
 
 We round the average price and cast it to `bigint` (`round(avg(base_price))::bigint`): `avg` returns `numeric`, but we want a whole number of cents and an `int64` in Go.
+
+> [!TIP]
+> Two refinements to `count` that aren't covered elsewhere in the course but come up constantly in reports. `count(DISTINCT col)` counts **distinct** values, not rows: "how many different drinks a customer ordered" is `count(distinct oi.drink_id)` (a cappuccino taken three times is one drink, not three). And `FILTER (WHERE …)` aggregates a subset of the group's rows without splitting it into a separate query: `count(*) FILTER (WHERE o.amount >= 1000)` — how many "large" orders a customer has, alongside the plain `count(*)` over the same group. Both forms are standard SQL and work with any aggregate.
 
 ## count(\*) vs count(column) — not the same thing
 
@@ -29,6 +35,31 @@ All four forms on the very same Karina row (`LEFT JOIN`, no orders) give differe
 | `count(o.id)` | `0` | counts only non-`NULL`; `o.id` is empty |
 | `sum(o.amount)` | `NULL` → `0` via `COALESCE` | no addends — that's `NULL`, not `0` |
 | `avg(o.amount)` | `NULL` | an empty group has nothing to average |
+
+## An aggregate over fan-out double-counts sums
+
+The costliest unspoken trap of the module isn't the empty group — it's **extra** rows. In 04-02 you saw row multiplication (fan-out): joining a parent table to a child repeats each parent row once per matching child row. For a receipt report that's fine. For an aggregate it's a disaster: `sum` will add the multiplied parent column once per child.
+
+Say we compute per-customer revenue and pull in the line items to count drinks along the way:
+
+```sql
+SELECT c.name, sum(o.amount) AS revenue          -- ❌ double-counted
+FROM customers c
+JOIN orders o      ON o.customer_id = c.id::text
+JOIN order_items oi ON oi.order_id = o.id
+GROUP BY c.id, c.name;
+```
+
+`order_items` multiplied each order's row: for an order with two items `o.amount` appears in the group **twice**, and `sum(o.amount)` counts the order's amount once per item. An order with three items — three times over. The numbers come out plausible (not negative, not zero, just "bigger than they should be"), which is why the bug survives in production for months: "revenue is up" — but it's the addends that multiplied.
+
+> [!WARNING]
+> Any `sum`/`avg`/`count` over a **parent column** on top of a parent→child `JOIN` is inflated by exactly the number of children each parent row has. Three fixes, depending on the case:
+> - aggregate the child table **separately** — in a subquery or CTE — and join the finished total (we'll get to CTEs in 04-06); the cleanest path when you need both the order total and the item count;
+> - sum a **child column**, not a parent one: `sum(oi.quantity * oi.unit_price)` is correct, because each line item has its own row and there's no multiplication;
+> - if you need a **count** of parents, not a sum, use `count(DISTINCT o.id)` — `DISTINCT` collapses the duplicated ids back into the number of unique orders.
+
+> [!TIP]
+> How to catch the double-counting without knowing in advance: put `count(*)` and `count(DISTINCT o.id)` side by side. If they diverge, the JOIN multiplied rows, and any `sum`/`avg` over a parent column in that query is already inflated. It's the same move that distinguishes `count(*)` from `count(column)`, except now `DISTINCT` catches duplicates rather than `NULL`s.
 
 ## HAVING filters groups, not rows
 
@@ -102,6 +133,12 @@ Output:
 
 (The demo prints in Russian.) Karina is the vivid case: `count(*)` and `count(o.id)` diverge precisely because the `LEFT JOIN` gave her a row with no order. `HAVING` left the single customer with two orders — Alice.
 
+> [!NOTE]
+> **Check yourself.** (1) In the `CustomerOrderStats` query Karina's `count(*)` is `1` while `count(o.id)` is `0`. Which one changes if Karina gets a single order, and what do both become? (2) Predict the output: the same query now also joins `JOIN order_items oi ON oi.order_id = o.id` and keeps `sum(o.amount)` — what revenue does Alice show (her order #1 is 10.50 with two line items, order #3 is 9.60 with one)? And what's the correct revenue?
+
+> [!TIP]
+> **Answer.** (1) Both change: `count(*)` becomes `1` (the `NULL` row is now one real order row) and `count(o.id)` also becomes `1` (`o.id` is no longer `NULL`) — on a customer *with* orders the two forms agree; they diverge only on an empty group. (2) `order_items` multiplies order #1's row (two items → `o.amount = 10.50` twice), while order #3 stays one row. `sum(o.amount)` adds `10.50 + 10.50 + 9.60 = 30.60` instead of the correct `20.10` (as in the output above) — the classic fan-out double-counting. The correct form here is `sum(oi.quantity * oi.unit_price)` or aggregating orders separately in a CTE.
+
 ## The fence
 
 What we simplified.
@@ -117,6 +154,7 @@ What we simplified.
 - Everything in `SELECT` that isn't an aggregate must be in `GROUP BY`.
 - `count(*)` counts rows; `count(column)` counts only rows with a non-NULL value. On a `LEFT JOIN` they're different numbers.
 - `sum`/`avg` over an empty group give `NULL`, not 0 — wrap in `COALESCE` if you need zero.
+- `sum`/`avg` over a parent column on top of a parent→child `JOIN` is double-counted by fan-out: aggregate the children separately (subquery/CTE), sum a child column, or use `count(DISTINCT)`.
 - `WHERE` filters rows before grouping, `HAVING` filters finished groups by an aggregate's value.
 
 Aggregates collapsed each group into one number — how many, for how much, on average. But the business often needs not a figure but a specific row from the group: not "how many orders Alice has" but her **latest** order in full — date, amount, status. Fetching exactly one row per group with one concise technique that's specific to Postgres is the **04-04 "DISTINCT ON"** unit.

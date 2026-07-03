@@ -26,7 +26,7 @@ A query with a parameter looks like this:
 rows, err := pool.Query(ctx, "SELECT ... FROM drinks WHERE category = $1", "coffee")
 ```
 
-`$1` is a **placeholder**, and `"coffee"` travels as a separate argument. The key point is how this goes to the server: the SQL text and the parameter values are sent **separately**, in different fields of the protocol. The server parses the SQL (with placeholders) once, builds a plan — and only then substitutes the values into the finished plan. The value of `$1` physically cannot become part of the SQL: it never passes through the query parser.
+`$1` is a **placeholder**, and `"coffee"` travels as a separate argument. The key point is how this goes to the server: the SQL text and the parameter values are sent **separately**, in different fields of the protocol. The server parses the SQL with placeholders apart from the values, and `$1` arrives in its own field and reaches the executor as a parameter — it isn't pasted into the query text and never passes through the SQL parser at all. The value of `$1` physically cannot become part of the command.
 
 Compare with string gluing:
 
@@ -53,8 +53,8 @@ Drawn as it goes to the server:
 
    the $1 parameter — TWO envelopes, the value travels past the parser:
 
-     envelope 1 (text):   "… WHERE category = $1"   ─▶  parser ─▶ plan with a $1 hole
-     envelope 2 (value):  "coffee"  ───────────────────────────▶ bound into the plan
+     envelope 1 (text):   "… WHERE category = $1"   ─▶  parser ─▶ parsed query with $1
+     envelope 2 (value):  "coffee"  ──────────────────────────▶ parameter to the executor
                                                                  (never goes through the parser)
 ```
 
@@ -121,6 +121,19 @@ ID  SKU     НАЗВАНИЕ  КАТЕГОРИЯ  ЦЕНА
 ```
 
 (The demo prints in Russian.) The normal search returned 3 drinks in the `coffee` category. The same malicious input: with gluing, all 5 menu rows leaked; with binding, zero. One and the same text — a different outcome, decided solely by how the value got into the query.
+
+> [!NOTE]
+> **Check yourself.** The anti-demo feeds `' OR 1=1 --` into the "category" field.
+> Predict: how many rows does the unsafe gluing return, and how many does the `$1`
+> parameter? And why exactly that many in each case?
+
+> [!TIP]
+> **Answer.** Gluing — 5 rows, the whole menu: the input closed the quote and
+> appended `OR 1=1`, making the condition always true, the filter bypassed (as in
+> the output above). The `$1` parameter — 0 rows: the same text went in a separate
+> field, past the parser, and stayed the string category value `' OR 1=1 --`, which
+> isn't in the menu. What decides is not how "dangerous" the input is, but whether
+> it landed in the query text or in a parameter.
 
 ## The fence
 

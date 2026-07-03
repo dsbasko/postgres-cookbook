@@ -4,6 +4,8 @@ A query often answers a question through another question: "drinks above the ave
 
 We already saw this trap in 03-06 as a lesson on three-valued `NULL` logic. Here we look at it from another angle — as the main reason to choose `EXISTS` for "not among."
 
+Coming in, you already know the pairing: we covered `NOT IN` + `NULL` in 03-06 (there it illustrated three-valued logic). So below we recap the `NOT (… OR NULL) = NULL` mechanics briefly and go straight to the conclusion: which subquery form to choose.
+
 ## Three subquery forms
 
 **Scalar** — the subquery returns one value and is substituted like a plain number/string:
@@ -14,9 +16,17 @@ WHERE base_price > (SELECT avg(base_price) FROM drinks)
 
 The average is computed once, and the comparison is against that number. If such a subquery returns more than one row, it's a runtime error (that's what makes it scalar).
 
+That "more than one row → error" has a missing twin — **zero rows**. A scalar subquery with no rows returns neither emptiness nor an error, but `NULL`. Then `WHERE base_price > (subquery)` becomes `base_price > NULL` — which is `NULL` (UNKNOWN), and the row silently drops out of the result. The loud case (`> 1` row) stops you with an error; the quiet one (`0` rows) silently trims rows — far harder to notice.
+
+> [!WARNING]
+> A scalar subquery with zero rows is more dangerous than one with extra rows. `> 1` row throws an error and stops the query — you see it at once. But `0` rows yields `NULL`: the comparison `x > NULL` becomes `NULL`, the row is filtered out silently, and the query returns a plausible-looking but incomplete result. In a module where `NULL` is the running villain, it's this quiet case that bites: add a `WHERE` to the scalar subquery that one day selects nobody, and the outer query starts silently losing rows. If "no rows" is a valid outcome, wrap the subquery in `coalesce((SELECT …), <fallback value>)` or pull it into a separate step and check it explicitly.
+
 **IN** — checks that a value is in the set from the subquery: `id IN (SELECT drink_id FROM order_items)` — "a drink whose id appears among the ordered ones."
 
 **EXISTS** — a correlated subquery: for each outer row it asks "is there at least one matching row inside." `EXISTS` doesn't care about values — only the fact of existence, so inside you write `SELECT 1` and it stops at the first match.
+
+> [!NOTE]
+> There's a fourth form too — a **derived table**: a subquery in `FROM` that behaves like an ordinary table (`FROM (SELECT …) AS t`). We leave it aside here; we'll get to the idea in 04-06 via `WITH` steps (CTEs) — the same subquery, but named and readable top-down.
 
 ## IN vs EXISTS: why it matters
 
@@ -104,10 +114,16 @@ What we simplified.
 
 ## Takeaways
 
-- A scalar subquery is substituted as one value; return more than one row and it's a runtime error.
+- A scalar subquery is substituted as one value; return more than one row and it's a runtime error, while **zero** rows is a silent `NULL`, and comparing against it quietly trims rows.
 - `IN (subquery)` is "the value is in the set"; `EXISTS (subquery)` is "there's at least one matching row" (values don't matter, you write `SELECT 1`).
 - `NOT IN` with a list that contains a `NULL` returns empty for everyone — `NOT (… OR NULL)` collapses to `NULL`.
 - For "not among," use `NOT EXISTS` (or `NOT IN` with a guaranteed non-`NULL` subquery).
 - `EXISTS`/`NOT EXISTS` is usually friendlier to indexes; a giant `IN` list from the application is a candidate for `= ANY($1::type[])` (10-03).
+
+> [!NOTE]
+> **Check yourself.** `SeedPromo` already inserts a "whole menu" promo with `featured_drink_id = NULL`. Imagine you added such a `NULL` to `promo` by hand. What do the two queries from `## Running it` return — `CountNotFeaturedNotIn` (via `NOT IN`) and `CountNotFeaturedNotExists` (via `NOT EXISTS`)? Which one breaks on the `NULL`, and which one counts honestly?
+
+> [!TIP]
+> **Answer.** `CountNotFeaturedNotExists` (via `NOT EXISTS`) counts honestly: **4**. A `promo` row with `featured_drink_id = NULL` matches no `d.id` (`NULL` equals nothing), so out of five drinks only espresso `#1` is excluded — 4 remain. But `CountNotFeaturedNotIn` (via `NOT IN`) breaks: the list becomes `{1, NULL}`, and for any drink with `id <> 1` that's `NOT (false OR NULL) = NOT (NULL) = NULL`, so the row fails the filter — and the answer collapses to **0** (though the same 4 drinks aren't on promo). A single `NULL` in the set takes down the whole `NOT IN`; `NOT EXISTS` is immune to it.
 
 Subqueries solve "a question inside a question," but nest them two or three levels deep and the query stops being readable. You can pull them out into named steps with `WITH` and assemble a top-down pipeline — far clearer than nesting. Next up — the **04-06 "CTEs and materialization"** unit: we'll assemble a readable pipeline from steps and unpack when Postgres "materializes" a CTE into an intermediate table versus inlining it into the main query.

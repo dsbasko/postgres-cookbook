@@ -28,3 +28,6 @@ web/public/static/lectures/
 
 # pnpm workspace install output at the repo root (root pnpm-lock.yaml IS tracked).
 /node_modules/
+
+# Local scratch space: AI reviews, scraped reference material. Never committed.
+/temp/

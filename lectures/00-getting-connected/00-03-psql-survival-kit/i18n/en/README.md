@@ -4,6 +4,11 @@ A bug lands at Brew: "cold brew disappeared from the menu in the app." Before di
 
 The goal of this unit is narrow: not to learn all of psql, but to assemble a "first-aid kit" of a handful of commands that covers 90% of "I need a quick look in the DB" cases. This is an escape-hatch unit — there's no Go and no sqlc here, because the lesson is about the client itself.
 
+> [!NOTE]
+> Builds on 00-02: the sandbox is up (`docker compose up -d`), and the "client
+> sends SQL — server executes" boundary is already familiar. psql is just another
+> client to the same server — an interactive one, for hands-on work.
+
 ## Meta-commands: what sets psql apart from "just SQL"
 
 psql takes two kinds of input. Plain SQL (`SELECT ...;`) goes to the server and is executed there. Commands starting with a backslash (`\dt`, `\d`, `\x`) are **meta-commands**: psql processes them on the client, before and instead of sending anything to the server. They aren't part of SQL and don't work from the driver in your application — they're a tool for interactive, hands-on work.
@@ -143,6 +148,18 @@ stock      | 40
 ```
 
 (The demo's headers print in Russian; the data is Brew's seed.) Cold brew is right there (`stock = 40`) — so the bug isn't in the data, it's in the application code. That took three commands and ten seconds.
+
+> [!NOTE]
+> **Check yourself.** Which of these does psql send to the server, and which does
+> it run itself without sending: `\dt`, `SELECT count(*) FROM drinks;`, `\d drinks`,
+> `\timing`? And why can't you call `\d drinks` from `pgx` in Go?
+
+> [!TIP]
+> **Answer.** Only `SELECT count(*) FROM drinks;` goes to the server — it's SQL.
+> The other three start with `\` — they're meta-commands, run by psql itself on the
+> client. That's exactly why `pgx` can't call them: `\d` isn't SQL, the server
+> doesn't understand such a command; from code you get the same facts by querying
+> `pg_catalog`/`information_schema`.
 
 ## The fence
 

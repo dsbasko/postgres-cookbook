@@ -107,6 +107,17 @@ ID  SKU     НАЗВАНИЕ     КАТЕГОРИЯ  ЦЕНА
 
 (The demo prints in Russian; the menu is Brew's seed data.) Your version line may differ in its tail — `aarch64` vs `x86_64`, the gcc version — that depends on the architecture the `postgres:18-alpine` image was built for. What matters is the `PostgreSQL 18.x` at the start: on the other end of the socket is exactly the version this course targets. The menu table reproduces verbatim — ids, prices, and order are fixed by the seed data.
 
+> [!NOTE]
+> **Check yourself.** (1) `ListDrinks` orders by `id` — how many rows does it
+> return, and which drink comes first? (2) Why might the version line's tail differ
+> from the output above, while the menu table doesn't?
+
+> [!TIP]
+> **Answer.** (1) Five rows — the whole Brew menu; Espresso comes first (`id = 1`),
+> as in the output above. (2) The version line depends on the image and the machine
+> architecture that built `postgres:18-alpine`; the menu is deterministic seed data
+> — ids, prices, and order are fixed, so it reproduces byte for byte.
+
 ## The fence
 
 - The sandbox is `docker compose` on your laptop. In production a DBA runs and owns the server: the Postgres version and upgrades, `max_connections`, memory, disk, backups — their turf, not yours. You're on the other end of the socket, a client, not the server's operator.

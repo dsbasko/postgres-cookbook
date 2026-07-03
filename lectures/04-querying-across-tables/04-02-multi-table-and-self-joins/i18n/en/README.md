@@ -4,9 +4,12 @@ Last lesson you brought Karina back into the report — but "customer and order 
 
 And a separate, initially counterintuitive technique: a table can be joined **to itself**. It sounds odd until you meet a hierarchy: a barista has a manager, and a manager is just another employee from the same `staff` table. To show the manager's name next to the employee's, you join `staff` twice — that's a self-join.
 
+> [!NOTE]
+> Carried over from earlier lessons: `LEFT JOIN` and why it keeps an unmatched row (04-01), prices as cents-`BIGINT` (01-01), and the Brew table map from 00-01 (`orders`, `customers`, `order_items`, `drinks`).
+
 ## A JOIN chains through any number of tables
 
-`JOIN` isn't limited to two tables: each additional `JOIN` attaches one more via its key. The chain `orders → customers → order_items → drinks` links the order to the customer (`c.id::text = o.customer_id`), the order to its items (`oi.order_id = o.id`), and the item to the drink (`d.id = oi.drink_id`). The order of `JOIN`s doesn't affect the result of an `INNER` chain (the planner picks how to join them), but it reads more easily "along the thread": from the order to its details.
+`JOIN` isn't limited to two tables: each additional `JOIN` attaches one more via its key. The chain `orders → customers → order_items → drinks` links the order to the customer (`c.id::text = o.customer_id`), the order to its items (`oi.order_id = o.id`), and the item to the drink (`d.id = oi.drink_id`). The order of `JOIN`s doesn't affect the result of an `INNER` chain (the query planner — the server component that decides how to physically run a query; covered in module 06 — picks how to join them), but it reads more easily "along the thread": from the order to its details.
 
 `orders` here is the trunk: the customer hangs off it by `customer_id`, the line items by `order_id`, and each item's drink by `drink_id`.
 
@@ -17,13 +20,16 @@ orders ──┬─▶ customers      c.id::text = o.customer_id   → customer 
                   └─▶ drinks  d.id = oi.drink_id           → drink name
 ```
 
-One order yields as many receipt rows as it has items: that's why order #1 with two items unfolds into two rows.
+One order yields as many receipt rows as it has items: that's why order #1 with two items unfolds into two rows. This consequence has a name — row multiplication (fan-out): joining a parent table to a child repeats each parent row once per matching child row. In a receipt that's exactly what you want: one row per item. But this same multiplication quietly breaks the count the moment an aggregate sits on top of such a `JOIN`: `count(o.id)` would count items, not orders. Keep fan-out as a name — the next lesson 04-03 leans on it, where it becomes a trap.
 
 We compute the line total (`quantity × price`) right in SQL: `oi.quantity * oi.unit_price`. The price is `BIGINT` (cents, see 01-01), the quantity is `INT`; we cast the product to `::bigint` so it's `int64` in Go too (without the cast sqlc would infer the type from the first operand — `int32` — which could overflow on large totals).
 
 ## Self-join: one table under two aliases
 
 A self-join is an ordinary `JOIN` where both sides are the same table but under **different aliases**. The aliases are mandatory: without them `SELECT name FROM staff JOIN staff` is ambiguous — whose `name`? We give `staff e` ("employee") and `staff m` ("manager") and link them by the reference inside the row:
+
+> [!NOTE]
+> There's no `staff` table in the Brew map from 00-01 — it's a local table of this unit, defined in its `schema.sql` (applied on `db-reset` on top of the canon). It doesn't touch the Brew canon: it's here only as a clear example of a hierarchy with a reference to "one of its own" (a row points to another row of the same table) — the canonical tables have no such self-reference.
 
 ```sql
 FROM staff e
@@ -65,6 +71,12 @@ ORDER BY o.id, oi.id;
 ```
 
 And the hierarchy self-join (`StaffWithManager`, above). In `main.go` both reads are thin: the receipt is printed line by line, summing `line_total` into a grand total; the hierarchy as "employee → manager," substituting "— (старший)" where there's no manager.
+
+> [!NOTE]
+> **Check yourself.** How many rows will `OrderReceipt` return for order #1, and why? And why does the hierarchy self-join use `LEFT JOIN` rather than `INNER` — what would happen to Anna?
+
+> [!TIP]
+> **Answer.** Order #1 yields **two** rows — by fan-out, one per item (cappuccino and cold brew), as you can see in the "Running it" output. The `LEFT JOIN` is needed because Anna's `manager_id` is empty: an `INNER JOIN` would drop the unmatched row, and Anna (the top of the hierarchy) would vanish from the result; `LEFT JOIN` keeps her with `NULL` for the manager.
 
 ## Running it
 
