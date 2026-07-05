@@ -2,7 +2,7 @@
 
 The previous module ended on Botyr's question: what happens when two registers reach for the same rows at once? The answer starts with money — with a message Ruslan sent to the chat late in the evening.
 
-> **Ruslan (chat, 22:47):** Evening reconciliation doesn't add up. I moved the day's takings from Register-1 to Register-2 at end of shift — the first has the debit, the second has no credit. Where's the money?
+> **Ruslan (in chat, 22:47):** Evening reconciliation doesn't add up. I moved the day's takings from Register-1 to Register-2 at end of shift — the first has the debit, the second has no credit. Where's the money?
 
 The next morning Dmitry nods at that message over your shoulder.
 
