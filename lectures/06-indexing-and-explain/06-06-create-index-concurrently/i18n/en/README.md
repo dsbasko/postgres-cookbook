@@ -1,6 +1,26 @@
 # 06-06 — CREATE INDEX CONCURRENTLY
 
-In the previous five units we chose the right index. One question remains — the one that hits you in production: how do you **add** that index to a table that's being written to right now. Brew decided to drop an index onto the hot orders table during the lunch peak — with a plain `CREATE INDEX`. The command took a `SHARE` lock on the table, and every `INSERT`/`UPDATE`/`DELETE` queued up until the build finished. The register couldn't take orders while the index was building. The build itself was "correct" — but the method turned out to be destructive.
+In the previous five units we chose the right index. One question remains — the one that hits you in production: how do you **add** that index to a table that's being written to right now. At the lunch peak Brew ships a new index onto the hot orders table — with a plain `CREATE INDEX`, just like in testing.
+
+> **Ruslan (in chat, 13:12):** Registers. Both. 13:12.
+>
+> **You:** Looking. Nothing fresh except the index rollout on orders.
+>
+> **Pavel:** `CREATE INDEX` without `CONCURRENTLY`. `SHARE` holds writes. The register is stuck behind the build. Killing it.
+
+Pavel silently flips his paper incident notebook to the page dated 02-06 — the same register — and adds a new line.
+
+> **Botyr:** At lunch I counted to two, remember. "That happened twice."
+>
+> **Dmitry:** Now — three.
+>
+> **Botyr:** Four.
+>
+> **Pavel:** Three outages. In the notebook. Every one behind someone else's rollout.
+>
+> **Dmitry:** Behind the method of the rollout. The method is at fault, not the person — the rule from that same lunch. The build was correct, the method destructive.
+
+The `SHARE` lock let readers through but held every write: while the index was building, `INSERT`/`UPDATE`/`DELETE` queued up, and the register couldn't take orders.
 
 The goal of this unit is `CREATE INDEX CONCURRENTLY`: how to build an index **without blocking writes** to the table for the duration of the build, and at what cost. This is the closing unit of the indexing module — here it's not about "which index" but about "how to ship it safely."
 
@@ -131,3 +151,7 @@ The course boundary: your job is to **know that an index on a hot table is added
 - `CONCURRENTLY` isn't instant: it waits for current transactions at the start → in production use `lock_timeout`.
 
 That closes module **06 "Indexing and performance through EXPLAIN"**: reading `EXPLAIN ANALYZE` (with buffers, on by default in PG18), column order in a composite index and skip-scan, non-sargable conditions and the expression index, partial/covering/unique indexes, GIN for jsonb/arrays, and a safe rollout via `CONCURRENTLY`. Next up — module **07 "JSONB, arrays, and search"**: jsonb access and containment, when not to use jsonb, SQL/JSON path, arrays versus a junction table, full-text search, and fuzzy search via `pg_trgm`.
+
+And the reason to step there comes from Evgeny: he sees your "everything with a gift" filter from the previous unit and wants more.
+
+> **Evgeny:** The gift filter — exactly what I needed. Now let the guest build a drink however they like, and keep those options right inside the order.
