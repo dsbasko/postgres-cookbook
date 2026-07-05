@@ -1,6 +1,10 @@
 # 06-05 — GIN for jsonb and arrays
 
-In Brew's admin panel each drink had a "specs" block — a flexible `jsonb` (`{"milk": "oat", "size": "L"}`) and an array of tags (`{coffee, seasonal}`). While the menu was small, the filter "show everything with a gift" (`attrs @> '{"gift": true}'`) worked fine. At two hundred thousand items it stalled: every query a full `Seq Scan`. The developer tried the familiar `CREATE INDEX ON drink_specs (attrs)` — and `EXPLAIN` still showed a `Seq Scan`. The B-tree we built in every previous unit is useless here in principle: it indexes the value **as a whole**, but we need to look **inside** — does the jsonb have such a key, does the array contain such an element.
+In Brew's admin panel each drink had a "specs" block — a flexible `jsonb` (`{"milk": "oat", "size": "L"}`) and an array of tags (`{coffee, seasonal}`). While the menu was small, the filter "show everything with a gift" (`attrs @> '{"gift": true}'`) worked fine. Then Evgeny came down from the marketing floor:
+
+> **Evgeny:** I'm launching "everything with a gift" on the home page — a guest taps the filter and sees right away what comes with a gift. The storefront's ready, I'm turning it on by noon.
+
+At two hundred thousand items the filter stalled: every query a full `Seq Scan`. You try the familiar `CREATE INDEX ON drink_specs (attrs)` — and `EXPLAIN` still shows a `Seq Scan`. The B-tree we built in every previous unit is useless here in principle: it indexes the value **as a whole**, but we need to look **inside** — does the jsonb have such a key, does the array contain such an element.
 
 The goal of this unit is to understand why "searching inside" jsonb and arrays needs a different index type, and to meet **GIN** (Generalized Inverted Index), which is built exactly for that. This is the last brick before module 07, where jsonb, arrays, and full-text search are covered in detail — here we only put the right index under them.
 
