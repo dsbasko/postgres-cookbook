@@ -1,6 +1,10 @@
 # 06-04 — Partial, covering, and unique indexes
 
-A Brew worker asked once a second: "give me the next unprocessed orders": `WHERE status = 'pending' ORDER BY id LIMIT 100`. There are always few orders in `pending` — dozens out of a million, the rest long since `done`. But an ordinary index on `status` indexed **all** rows, including the useless million `done` ones: it was huge, ate memory, and was slow to update on every status change. Meanwhile a customer dashboard pulled `SELECT customer_id, total ... WHERE customer_id = ?` — and for every row the index also sent the database into the table itself for the `total` field, even though all it really needed was two numbers.
+A Brew worker asked once a second: "give me the next unprocessed orders": `WHERE status = 'pending' ORDER BY id LIMIT 100` — and it crawled. You bring a migration to review: an ordinary index on `status`, so the database finds `pending` by the index rather than by a scan. Pavel looks at the diff and answers in one line:
+
+> **Pavel (in review):** a million done rows in the index. why.
+
+There are always few orders in `pending` — dozens out of a million, the rest long since `done`. And an index on `status` would hold **all** rows, including the useless million `done` ones: it would be huge, eat memory, and be slow to update on every status change. Alongside, a second bill: a customer dashboard pulled `SELECT customer_id, total ... WHERE customer_id = ?`, and for every row the index also sent the database into the table itself for the `total` field, even though all it really needed was two numbers.
 
 Both scenarios are about an ordinary index taking **too much**: extra rows or extra trips into the table. The goal of this unit is three indexes that take exactly as much as needed: **partial** (only the rows that matter), **covering** (carries extra columns inside itself → Index-Only Scan, no trip to the table), and **unique** (which also guarantees uniqueness).
 
@@ -23,6 +27,10 @@ CREATE INDEX orders_lab_cust_cover_idx ON orders_lab (customer_id) INCLUDE (tota
 The key is `customer_id` (we search and sort by it), `total` rides along. The query `SELECT customer_id, total WHERE customer_id = ?` is fully **covered** by the index → Index-Only Scan, `Heap Fetches: 0` (not a single trip to the table). `Heap Fetches` is precisely the counter for "how many times we had to go to the heap after all."
 
 > ⚠️ `Heap Fetches: 0` is achieved not by index magic but by the **visibility map**: an Index-Only Scan can skip the heap only for pages marked "all-visible," and `VACUUM` is what marks them. On a freshly written table, before `VACUUM`, the same plan will show `Heap Fetches > 0`. So in the demo we call `VACUUM` before the measurement — in production autovacuum does this.
+
+> **Botyr:** Why hold back — let's shove every column into `INCLUDE`, and never touch the table again.
+>
+> **Dmitry:** You just bloated the index back.
 
 ## Unique index
 
