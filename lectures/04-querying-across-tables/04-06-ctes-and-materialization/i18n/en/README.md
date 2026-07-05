@@ -91,7 +91,7 @@ Here's the subtlety. Postgres can treat a `CTE` in two ways:
 - **Inline** — substitute the `CTE`'s body into the main query, like an ordinary subquery. Then the planner sees the whole query and can, for example, push a filter into the `CTE`.
 - **Materialize (fence)** — compute the `CTE` separately, once, store the result in a temporary buffer, and read from it afterwards. The optimizer doesn't peek behind that "fence."
 
-Since PG12 the default rule is: if a `CTE` is referenced **once** — it's inlined; if **more than once** (or it contains a write/`VOLATILE` function) — it's materialized (logically: computing once and reusing is cheaper than twice). A `VOLATILE` function is one whose result may change from call to call on the same arguments (`random()` or `now()`, say); inlining copies of it and calling it several times would be unsafe, so Postgres puts up a fence (volatility in detail — module 09). These defaults can be overridden with keywords: `AS MATERIALIZED` forces the fence, `AS NOT MATERIALIZED` forces inlining.
+Since PG12 the default rule is: if a `CTE` is referenced **once** — it's inlined; if **more than once** (or it contains a write/`VOLATILE` function) — it's materialized (logically: computing once and reusing is cheaper than twice). A `VOLATILE` function is one whose result may change from call to call on the same arguments (`random()` or `clock_timestamp()`, say); inlining copies of it and calling it several times would be unsafe, so Postgres puts up a fence (volatility in detail — module 09). These defaults can be overridden with keywords: `AS MATERIALIZED` forces the fence, `AS NOT MATERIALIZED` forces inlining.
 
 |   | inline | materialize (fence) |
 |---|---|---|
