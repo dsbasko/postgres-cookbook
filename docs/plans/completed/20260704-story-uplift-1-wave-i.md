@@ -2,7 +2,7 @@
 
 ## Overview
 
-Второй план семейства story-uplift (см. `docs/plans/20260704-story-uplift-0-pilot.md`
+Второй план семейства story-uplift (см. `docs/plans/completed/20260704-story-uplift-0-pilot.md`
 и архив `docs/plans/completed/20260703-story-uplift.md`). Раскатка сюжетного
 слоя на модули 01, 02 (кроме 02-04 и 02-06 — сделаны в пилоте) и 03 —
 15 юнитов Акта I: наставники объясняют, читатель осваивается.
@@ -462,4 +462,4 @@
   01-01 и 01-04), RU и EN.
 - При замечаниях к тону — правки интерактивной сессией + при необходимости
   уточнение канона/карты.
-- Дальше: `ralphex docs/plans/20260704-story-uplift-2-wave-ii.md`.
+- Дальше: `ralphex docs/plans/completed/20260704-story-uplift-2-wave-ii.md`.

@@ -244,4 +244,6 @@
 
 - Приёмка волны: выборочное чтение (минимум 07-02, 08-01 — проверка правила
   отката, 08-05 — форма плашки), RU и EN.
+- После приёмки волны — переместить этот план в `docs/plans/completed/`
+  (`git mv docs/plans/20260704-story-uplift-3-wave-iii.md docs/plans/completed/`).
 - Дальше: `ralphex docs/plans/20260704-story-uplift-4-wave-iv.md`.

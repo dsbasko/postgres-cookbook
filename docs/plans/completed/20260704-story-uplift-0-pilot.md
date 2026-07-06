@@ -540,4 +540,4 @@ pool.Stat/pg_stat_activity остаются нетронутыми.
   решение владельца: точечные правки или принять как есть.
 - **Ретро канона**: если тон потребовал — правки `docs/story-canon.md`
   (канон — живой документ, правки до раскатки дёшевы).
-- Дальше: `ralphex docs/plans/20260704-story-uplift-1-wave-i.md`.
+- Дальше: `ralphex docs/plans/completed/20260704-story-uplift-1-wave-i.md`.
