@@ -1,6 +1,6 @@
 # 00-01 — Meet Brew
 
-![Brew coffee shop poster](/posters/00-00.png)
+![Brew coffee shop poster](../../images/00-00.png)
 
 Day one at Brew. The dev office is the second floor above the chain's very first coffee shop: a grinder rumbles downstairs, a dozen desks sit upstairs, and nobody here is surprised by the smell of espresso.
 
