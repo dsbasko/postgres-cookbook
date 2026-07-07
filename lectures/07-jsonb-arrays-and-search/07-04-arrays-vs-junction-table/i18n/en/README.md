@@ -1,6 +1,14 @@
 # 07-04 — arrays vs a junction table
 
-Brew decides to attach tags to drinks: `coffee`, `hot`, `limited`, `classic`. The eternal modeling question arises: stash the tags as an array right on the drink row (`tags text[]`) — or set up a separate junction table, "one row per (drink, tag)"? Both are first-class in Postgres: arrays have their own operators and a GIN index, and a junction is classic normalization. The choice isn't "right/wrong," it's about which questions you'll be asking.
+Brew is hanging tags on drinks: `coffee`, `hot`, `limited`, `classic`. At a review Evgeny comes down with his phone — a mockup of the showcase filter on the screen.
+
+> **Evgeny:** A guest wants to filter "coffee only," "seasonal only." Tags: coffee, hot, limited, classic. By Friday.
+>
+> **Botyr:** An array. `tags text[]` right on the drink row — compact, not a single join: `@>` by tag, done.
+>
+> **Dmitry:** You can. One question: which queries will we ask? "Does the tag exist" — an array. "How many drinks per tag," "a dictionary with no typos," "a tag's own color" — a junction. Not an argument — a table.
+
+Both are first-class in Postgres: an array has its own operators and a GIN index, a junction is classic normalization.
 
 The goal of this unit is to feel both models on the same data: array operators (`@>` "contains," `= ANY` "belongs") versus ordinary joins and `GROUP BY` on a junction. We'll see where they're equivalent and where the cost of a question diverges sharply.
 

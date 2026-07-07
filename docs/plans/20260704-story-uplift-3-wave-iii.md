@@ -108,10 +108,10 @@
 - Modify: `lectures/07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table/i18n/ru/README.md`
 - Modify: `lectures/07-jsonb-arrays-and-search/07-04-arrays-vs-junction-table/i18n/en/README.md`
 
-- [ ] прочитать канон целиком, запись `07-04` в карте сцен, оба README юнита
-- [ ] RU: микро-диалог по записи карты
-- [ ] EN: зеркало — число реплик именованных персонажей равно RU
-- [ ] линтер юнита — зелёный; diff юнита — только два README
+- [x] прочитать канон целиком, запись `07-04` в карте сцен, оба README юнита
+- [x] RU: микро-диалог по записи карты
+- [x] EN: зеркало — число реплик именованных персонажей равно RU
+- [x] линтер юнита — зелёный; diff юнита — только два README
 
 ### Task 5: юнит `07-05-full-text-search` — микро-диалог
 
