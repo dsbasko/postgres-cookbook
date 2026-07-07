@@ -1,6 +1,20 @@
 # 07-01 — jsonb access and containment
 
-Brew's marketing launched drink customization: an order can carry "options" — size, milk type, number of shots, a list of extras. The catch is that everyone's option set differs: some have `extras`, some don't even have a `milk` key. This is exactly the case `jsonb` exists for: shapeless, sparse data you don't want to spread across forty nullable columns. Storing it is easy — but you have to know how to read and filter it back out.
+Evgeny comes down with his phone screen-forward — on the screen, a guest's order: "oat milk, double syrup, decaf, cinnamon on top."
+
+> **Evgeny:** The "everything with a gift" filter works. Now I want the options themselves — right in the orders. This guest built this one, the next builds something else. Everyone has their own set — I need a field for everything.
+>
+> **You:** Add columns? `milk`, `size`, `syrup`, `extras`…
+>
+> **Dmitry:** How many will there be by spring? Syrup, second syrup, temperature, "no lid," allergens. Forty nullable columns. You can. It'll hurt.
+>
+> **You:** And if we don't know the set in advance?
+>
+> **Dmitry:** Then you don't spread it across columns. The shapeless and sparse go into one `jsonb`. One `options` column, and any set fits.
+>
+> **Evgeny:** And can I filter by them? Find every oat-milk order?
+
+Filter — you can: `jsonb` has its own operator for that, and the very GIN from 06-05 speeds it up. First we'll learn to extract and check.
 
 The goal of this unit is to master four working `jsonb` access operators: `->` and `->>` (extract a value), `#>>` (extract by path), and `@>` (containment, "contains"), plus `?` (does the key exist). This is the foundation of any application work with `jsonb`; deep `jsonb_path`, document building, and indexes come in the next units of the module.
 
