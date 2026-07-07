@@ -1,6 +1,10 @@
 # 07-03 — SQL/JSON path and building
 
-Brew gained drink recipes: each has an array of ingredients with gram weights, nested inside `jsonb`. The barista trainer wants answers to questions like "what are the latte's ingredients?", "what weighs more than 100 grams?", "does the drink contain milk?". Writing this with the `->`/`#>` chains from 07-01 is clumsy: extract the array, unfold it, filter it, fold it back. For nested documents Postgres has a better language — **jsonpath**.
+Brew gained drink recipes: each has an array of ingredients with gram weights, nested inside `jsonb`. In the morning Ruslan forwards a request from the barista trainer into the chat:
+
+> **Ruslan (in chat, 08:40):** Trainer's asking: which recipes have milk, and what's heavier than a hundred grams. Allergens for the new hires. Before opening.
+
+The questions are easy with a menu in hand, but for the database each one means "walk the nested ingredient array and answer." Writing this with the `->`/`#>` chains from 07-01 is clumsy: extract the array, unfold it, filter it, fold it back. For nested documents Postgres has a better language — **jsonpath**.
 
 The goal of this unit is to learn to extract data from nested `jsonb` with path expressions (`jsonb_path_query_*`, the `@?`/`@@` predicates) and to build `jsonb` back (`jsonb_set`, `jsonb_build_object`, `jsonb_agg`). Along the way we note a version subtlety: `JSON_TABLE` (unfold `jsonb` into a relational table right in `FROM`) is **PG17**, not PG18; we don't need it here, and the `jsonb_path_*` and building functions have existed since PG12.
 
@@ -15,6 +19,10 @@ Sometimes you don't need values — you need a yes/no answer. There are two oper
 ## Building: jsonb_set, build_object, jsonb_agg
 
 The reverse task is to assemble `jsonb`. `jsonb_set(doc, '{path}', value)` patches a field precisely and returns a **new** document (the stored row is unchanged — it's a pure function; the same "edit = rebuild the value" that causes the write amplification in 07-02). `jsonb_build_object('a', x, 'b', y)` builds an object from key-value pairs, and the aggregate `jsonb_agg(... ORDER BY ...)` folds result rows into one `jsonb` array. Together they assemble an API response right in SQL: for example, the whole menu from the `drinks` table as one document.
+
+> **You:** Does `jsonb_set` edit the document right there in the database?
+>
+> **Dmitry:** It returns a new one. What rewriting a whole document costs — we saw last week.
 
 ## The path step by step
 
