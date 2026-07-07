@@ -1,6 +1,16 @@
 # 07-05 — full-text search
 
-Brew's knowledge base has grown: brewing articles, guides, barista notes. A naive search — `body LIKE '%brew%'` — is almost useless: it won't find `brewing` for the query `brew`, can't tell a title from a body, can't sort by relevance, and on a large table always reads everything. Postgres can do real full-text search right in the database — without a separate engine like Elasticsearch, as long as the volumes are moderate.
+Brew's knowledge base has grown: brewing articles, guides, barista notes. In the morning chat, a report from Ruslan lands:
+
+> **Ruslan (in chat, 09:15):** New hires can't find the guides. They search "brewing" — the article on "brew" stays silent. Substring search, right?
+
+The ticket reaches the team. Botyr reacts first:
+
+> **Botyr:** Should we bring in Elasticsearch? A separate engine, search out of the box.
+>
+> **Dmitry:** Let's first see what the database can do.
+
+A naive search — `body LIKE '%brew%'` — is almost useless: it won't find `brewing` for the query `brew`, can't tell a title from a body, can't sort by relevance, and on a large table always reads everything. Postgres can do real full-text search right in the database — without a separate engine like Elasticsearch, as long as the volumes are moderate.
 
 The goal of this unit is to assemble a working FTS on built-in types: text → `tsvector` (normalized lexemes), query → `tsquery`, the `@@` operator for matching, and `ts_rank` for ranking. Plus two production techniques: a generated `tsvector` column (the database keeps it in sync itself) and `setweight` (the title matters more than the body).
 
@@ -32,6 +42,8 @@ Both the text and the query go through the same normalization and meet at the `@
 ```
 
 That's why `brewing` finds `brew`: both sides are normalized by the same configuration, so one lexeme `brew` ends up in both the index and the query. `LIKE` can't do that — it compares substrings of raw text.
+
+> **Evgeny (in chat):** Guests search for "limited" — seasonal. Let a title with that word weigh more than an article where it just happened to slip into the description.
 
 ## What our code shows
 
