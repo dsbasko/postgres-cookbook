@@ -1,17 +1,29 @@
 # 08-01 — Window functions: the basics (PARTITION BY, ORDER BY, running total)
 
-The owner of Brew is hunched over a loyalty-customer export, frowning. His
-marketer brought him a report titled "how much each customer spent in total":
-Alice — 1270, Boris — 730, Karina — 780. The numbers are correct, but they don't
-satisfy him. "I don't want to know just the total. I want to see HOW it grew. Did
-Alice spend 1270 over three visits or over thirty? After which purchase did she
-cross a thousand? When should I have sent her a coupon?" — he jabs at the report.
-And the report holds one row per customer. The purchases themselves are gone.
+Morning in the openspace. Evgeny brings a printout — a report titled "how much
+each customer spent in total": Alice — 1270, Boris — 730, Karina — 780, one row
+per guest. Behind him, rarely seen on the dev floor, comes Emil himself — with
+the framed receipt for order #1, where it all began.
 
-That's not the marketer's fault. That's what `GROUP BY` does: it takes a group of
-rows and collapses it into one. To get a per-customer total, we sacrificed the
-purchases. The owner needs both at once — every purchase in place AND the total
-right beside it. That is exactly what window functions are for.
+> **Evgeny:** Done — a total per customer. Pretty, isn't it?
+>
+> **Emil:** I don't want to know just the total. I want to see HOW it grew. Did
+> Alice spend 1270 over three visits or over thirty? After which purchase did she
+> cross a thousand? When should I have sent her a coupon?
+>
+> **You:** We could run two queries — one for the total, one for the purchases —
+> and stitch them together in Go.
+>
+> **Dmitry:** We could. But there's a way to keep every purchase in place and glue
+> the total beside it — in one query. That's today's topic.
+>
+> **Emil:** And show me only the ones who crossed a thousand. The rest later.
+
+The report holds one row per guest, and the purchases themselves are gone. That's
+not Evgeny's fault: that's what `GROUP BY` does — it takes a group of rows and
+collapses it into one. To get a per-customer total, we sacrificed the purchases.
+Emil needs both at once — every purchase in place AND the total right beside it.
+That is exactly what window functions are for.
 
 ## An aggregate collapses, a window does not
 
