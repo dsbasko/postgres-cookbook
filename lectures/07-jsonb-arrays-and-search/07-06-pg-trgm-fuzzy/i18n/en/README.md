@@ -1,6 +1,14 @@
 # 07-06 — fuzzy search with pg_trgm
 
-The full-text search from 07-05 is strong on morphology but helpless against a typo: a guest types "capucino" into the menu search, and FTS, which searches by normalized lexemes, finds nothing — there's no such lexeme in the index. But the user meant "Cappuccino." You need a search that forgives mistakes and works by spelling similarity rather than by words — and in Postgres it lives in the `pg_trgm` extension.
+The search from 07-05 works — articles and guides come up by word. The next morning Evgeny brings a new log, this time from the menu search:
+
+> **Evgeny:** A guest typed "capucino." Zero results — and left without coffee. He obviously wanted a cappuccino; it's obvious to everyone but the search.
+>
+> **Botyr:** That's it, now it's definitely Elasticsearch. Typos aren't the database's job anymore.
+>
+> **Dmitry:** A typo changes a couple of letters, not the meaning. Let's see what `pg_trgm` can do — the engine can wait.
+
+The full-text search from 07-05 is strong on morphology but helpless against a typo: FTS searches by normalized lexemes, and there's no lexeme "capucino" in the index — "Cappuccino" and "capucino" are simply different words to it. You need a search that forgives mistakes and works by spelling similarity rather than by words — and in Postgres it lives in the `pg_trgm` extension.
 
 The goal of this unit is fuzzy search on trigrams: the `similarity` function (how alike two strings are), the `%` operator (alike above a threshold — a ready "did you mean"), and accelerating `LIKE`/`ILIKE` with a mid-string substring via a GIN index. And at the end — a decision matrix: when FTS, when `pg_trgm`, and when it's time for an external engine.
 
@@ -96,5 +104,9 @@ When you need morphology for a dozen languages, synonyms, learned relevance, or 
 - The `%` operator is "similar above a threshold" (`pg_trgm.similarity_threshold`, default `0.3`) — a ready "did-you-mean."
 - A GIN `gin_trgm_ops` accelerates both `%` and `ILIKE '%substring%'` (where a plain B-tree is useless).
 - The matrix: words/morphology → FTS; typos/`ILIKE` → trgm; exact membership → array/junction; scale/synonyms/ML → external engine.
+
+The search epic is closed: `pg_trgm` brought typos back into the results in one evening, and the boundary "beyond this — an external engine" stayed right where it belongs — in the matrix. Botyr's skepticism was vindicated exactly halfway. And by morning the next customer is already waiting in the chat:
+
+> **Emil (in chat):** Guests are finding coffee again — I can see it. Now, money. I want to see how revenue grew: not the total, the whole road — month by month.
 
 That closes module 07: from `jsonb` access and its limits — through SQL/JSON path, arrays-vs-junction, and full-text and fuzzy search. Next up — module **08 "Analytics, window functions, and LATERAL"**: we compute running totals, rank top-N per group, build day-over-day and moving averages, walk a category tree with a recursive CTE, and kill N+1 with LATERAL — analytics right inside SQL, without offloading to the application.
