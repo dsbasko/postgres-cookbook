@@ -1,6 +1,28 @@
 # 07-02 — when NOT to use jsonb
 
-In 07-01 `jsonb` looked almost free: store a document, read a field. A couple of sprints later Brew's whole drink card had moved into a single `doc jsonb` column — "it's more flexible, no schema changes." Then the oddities started: a drink's price went negative and nobody knew when; updating one flag in the card suddenly got write-heavy; an analyst couldn't put a simple `CHECK` on the price. Flexibility came with a bill, and that bill has two parts.
+Ruslan messages from BREW-CENTRAL in the middle of the day — the register won't ring up a latte.
+
+> **Ruslan (chat, 13:20):** Latte on the storefront — minus five rubles. Ring it up?
+>
+> **You:** Minus five? Where does a latte get a negative price?
+>
+> **Botyr:** Nobody set it. Last sprint I moved the drink card into a `doc jsonb` — more flexible, no schema changes. The price is a key inside the document now.
+>
+> **Dmitry:** And when did it go negative?
+>
+> **Botyr:** That's exactly what nobody can say. The column had `CHECK (price > 0)`. Inside the document there's none — a network analyst tried to add one, it won't fit `jsonb`.
+>
+> **Pavel:** And that's only half of it. Change one flag in the card — you rewrite the whole document. On a hot table I'll bring you the WAL bill.
+>
+> **Botyr:** It flew in testing. Ten cards — instant.
+>
+> **Dmitry:** Ten. In production there are thousands, each edited ten times a day. We'll count production, not the test.
+>
+> **Botyr:** I know. I'll write the postmortem myself. And the rule goes in it: a field with an invariant is a column, not a key in `jsonb`. Don't trust the word "just" — I'm the one who taught that.
+>
+> **Pavel:** Write it down. And return the constrained fields to the schema. I'll ask separately.
+
+Flexibility in `jsonb` has a price — and that price has two parts.
 
 The goal of this unit is to see both prices of `jsonb` in numbers: the **physical** one (write amplification — changing one field rewrites the whole document) and the **semantic** one (inside `jsonb` there's no type, no `CHECK`, no `NOT NULL` on an individual field). This is a "stop" unit: not "how to do it with `jsonb`," but "where you shouldn't."
 
