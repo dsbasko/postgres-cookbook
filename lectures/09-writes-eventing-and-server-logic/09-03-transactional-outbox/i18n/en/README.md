@@ -1,17 +1,35 @@
 # 09-03 — Transactional outbox: fact and event, atomically
 
-A customer placed an order. Brew has to do two things: write the order to its own
-database and announce it to the outside — so an email goes out, the analytics
-dashboard updates, and, in our universe, so that `kafka-cookbook` picks the event
-up. A naive backend writes to two places in a row: `INSERT` the order into
-Postgres, then `publish` the event to a broker. And right between those two lines
-lives a bug invisible on the happy path. The service crashes after the `INSERT`
-but before the `publish` — the order exists, the event doesn't, no email went out,
-Kafka knows nothing about the order. Or the other way around: the event was
-published, but the order's transaction rolled back — and now an event about an
-order that isn't in the database lives in the outside world. Two sources of truth
-cannot be updated atomically: a distributed transaction between a database and a
-broker is expensive and brittle.
+The morning after a night deploy. Evgeny comes up to your desk, phone turned
+screen-first toward you — the analytics dashboard is on it.
+
+> **Evgeny:** The dashboard is undercounting last night's orders. And Boris
+> Petrov writes: he placed an order, the money was charged, but there's no
+> confirmation email. Do we even have the order?
+>
+> **Dmitry:** The order is there. The email isn't. What happened between them?
+
+That night, mid-deploy, the service dies right in the gap: the `INSERT` of the
+order into Postgres goes through, but the `publish` of the event to the broker
+never happens. The order is in the database, the event is lost, the email never
+went out.
+
+> **Oleg:** Wait — why can't we just push to Kafka right after the `INSERT`, and
+> retry if it falls over?
+>
+> **Dmitry:** A retry won't save you: you can crash before the retry, and inside
+> the retry itself. A distributed transaction across two stores is expensive and
+> brittle. Two sources of truth can't be updated atomically.
+>
+> **You:** What if the event is another row in the same database?
+>
+> **Dmitry:** Exactly. The order and the event in one transaction — either both
+> or neither. And a separate process carries them outward: it drains the unsent
+> rows with that same `SKIP LOCKED` we worked through in the queue.
+
+"Just" is the very word Botyr weans newcomers off in their first week. Now Oleg
+repeats it, straight-faced. And so the **outbox** is born — that same "our best
+table" Botyr mentioned on day one: you'll get it closer to winter.
 
 The outbox closes the gap with a simple move: **don't write to two places at
 once**.
