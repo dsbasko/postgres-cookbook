@@ -1,15 +1,26 @@
 # 09-04 — LISTEN / NOTIFY: the database pushes a notification
 
 The Brew kitchen wants to see new orders in real time: placed — a card pops up on
-the barista's screen at once. You could poll the queue from 09-02 for this:
-`SELECT new orders every second`. But polling is a compromise. Poll too often and
-you burn the database with empty "anything new?" queries; poll too rarely and the
-delay between "order placed" and "card popped up" grows. We want the opposite: not
-to ask the database, but for the database **itself** to push a signal the moment
-something happens.
+the barista's screen at once. You poll the queue from 09-02 for this, a `SELECT`
+once a second. It works — but in the morning chat comes Ruslan's report.
 
-That is exactly what the `LISTEN` / `NOTIFY` pair gives — a publish-subscribe bus
-built into Postgres.
+> **Ruslan (in chat, 08:05):** Order cards pop up late. The shift calls out what's
+> ready by voice, like it's the nineties. The baristas aren't slow — the screen is.
+
+You decide the poll is too rare and bump the frequency in the code.
+
+> **You:** And if we poll more often — will the cards show up in time?
+
+The cards do show up faster. And right after, in the chat — Pavel.
+
+> **Pavel (in chat):** i see your poll. empty selects, every second, per location.
+> "nothing new". a database isn't free.
+
+Both extremes of polling are now plain: poll too often and you burn the database,
+poll too rarely and the card is late. We want the opposite: let the database push
+the signal first, the moment an order is placed, so the app doesn't have to prod
+it. That is exactly what the `LISTEN` / `NOTIFY` pair gives — a publish-subscribe
+bus built into Postgres.
 
 ## The mechanics: a channel, NOTIFY, and a listener
 
@@ -79,6 +90,8 @@ Two columns side by side — when to use which:
 | Latency | instant, no polling | one relay-cycle delay |
 | Size | payload ≤ 8000 bytes | row / jsonb size |
 | Role | "wake up" signal | reliable delivery |
+
+> **Dmitry:** NOTIFY wakes, the outbox guarantees. A signal, not delivery.
 
 ## What our code shows
 
