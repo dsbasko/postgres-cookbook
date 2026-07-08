@@ -93,10 +93,10 @@
 - Modify: `lectures/09-writes-eventing-and-server-logic/09-02-skip-locked-job-queue/i18n/ru/README.md`
 - Modify: `lectures/09-writes-eventing-and-server-logic/09-02-skip-locked-job-queue/i18n/en/README.md`
 
-- [ ] прочитать канон целиком, запись `09-02` в карте сцен, оба README юнита
-- [ ] RU: микро-диалог по записи карты
-- [ ] EN: зеркало — число реплик именованных персонажей равно RU
-- [ ] линтер юнита — зелёный; diff юнита — только два README
+- [x] прочитать канон целиком, запись `09-02` в карте сцен, оба README юнита
+- [x] RU: микро-диалог по записи карты
+- [x] EN: зеркало — число реплик именованных персонажей равно RU
+- [x] линтер юнита — зелёный; diff юнита — только два README
 
 ### Task 3: юнит `09-03-transactional-outbox` — ★ полная сцена
 

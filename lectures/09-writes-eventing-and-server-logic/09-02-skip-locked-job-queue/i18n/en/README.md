@@ -1,18 +1,25 @@
 # 09-02 — A job queue on FOR UPDATE SKIP LOCKED
 
 Brew has background work: send receipts, recompute stock, push "your order is
-ready". All of it lands in a queue table, and several workers drain it in
-parallel — the heavier the load, the more workers we spin up. And here the
-classic concurrent-queue bug surfaces. A naive worker does "`SELECT` the oldest
-job in status `queued`, then `UPDATE` it to `processing`". Two workers manage to
-read the *same* row before either claims it — and both take the job. The customer
-gets two identical pushes, the receipt goes out twice.
+ready". All of it lands in a queue table, drained in parallel by several workers.
 
-The obvious fix — lock the row on read (`FOR UPDATE`, see 05-03) — breaks
-something else: the workers line up *behind each other*. The first takes the row
-under a lock; the second, on the same `SELECT ... FOR UPDATE`, stalls and waits
-for the first to commit. No parallelism — N workers act as one. We need a way to
-say "take the first FREE row, and don't touch the busy ones".
+> **Evgeny:** Alice Ivanova got two "order ready" pushes and two receipts by
+> email. One order. She's already writing to support.
+>
+> **Dmitry:** Show me the worker.
+
+You show it: the worker grabs the oldest job in status `queued` with a `SELECT`,
+then flips it to `processing` with an `UPDATE`. Dmitry nods — two workers read
+the same row at the same moment, both take it, hence the two pushes.
+
+> **You:** What if we lock the row right on read?
+
+That's `FOR UPDATE` from 05-03 — but it breaks exactly what the queue was built
+for.
+
+> **Dmitry:** The workers line up in a train: the second waits for the first to
+> commit. No parallelism — N workers act as one. A queue needs something else:
+> skip what's busy, don't wait.
 
 ## SKIP LOCKED: "skip the locked ones, don't wait"
 
@@ -149,6 +156,9 @@ how many" split is deliberately not shown: it changes from run to run.
   your DBA's territory), it is time to look at a dedicated broker. Where exactly
   that line runs and how a DB queue hands off to a broker — in our universe the
   sibling `kafka-cookbook` course handles it.
+
+> **Pavel (in chat):** keep the worker's transaction short. claim, flip the
+> status, commit. heavy work goes outside.
 
 ## Takeaways
 
