@@ -1,14 +1,33 @@
 # 09-01 — MERGE and COPY: bulk load and reconcile in one pass
 
-Every night the supplier sends Brew a stock file: one row per drink —
-`SKU;quantity`. We need to do two things with it. First, load it fast: thousands
-of rows, and inserting them one `INSERT` at a time is thousands of round-trips —
-the nightly window is not elastic. Then, reconcile the file against our stock:
-where more arrived, update; what we don't carry yet, add; and what the supplier
-sent with a zero (discontinued) — remove. The backend used to grind through this
-in a loop: for each file row a `SELECT` to check whether the item exists, then an
-`INSERT` or `UPDATE`, and deletions in a separate pass entirely. Long-winded —
-and between "read" and "write" yawns a window where the data could shift.
+Monday, standup. A new face at the next desk: a lanky guy in a stretched-out
+sweater, a mug of cocoa instead of coffee in front of him. And in the team chat,
+sitting there since last night, a message from Nodyr, Brew's purchaser: that
+nightly stock import — the one Emil asked us to load ourselves at the end of last
+sprint — didn't finish before morning for the first time.
+
+> **Nodyr (in chat, 23:50):** The stock file didn't fit the window again.
+> Thousands of rows, loaded one by one — we don't make it by morning. The file's
+> just a file. What's wrong with it?
+>
+> **Dmitry:** Everyone, meet Oleg — joining us as a junior, the first newcomer
+> after you. Oleg, straight into the fire: the nightly stock import stopped
+> finishing inside the window.
+>
+> **Oleg:** Wait — why can't we push the inserts in bigger batches?
+>
+> **You:** A batch won't save you: `INSERT` still parses the query and makes a
+> round-trip to the server for every row.
+
+The answer is right — and it exposes the first of two tasks. The supplier file
+(one row per drink — `SKU;quantity`) first has to be loaded fast: thousands of
+rows one `INSERT` at a time is thousands of round-trips, and the nightly window
+is not elastic. Then it has to be reconciled against our stock: where more
+arrived, update; what we don't carry yet, add; and what the supplier sent with a
+zero (discontinued) — remove. The backend used to grind through this in a loop:
+for each file row a `SELECT` to check whether the item exists, then an `INSERT`
+or `UPDATE`, and deletions in a separate pass entirely. Long-winded — and between
+"read" and "write" yawns a window where the data could shift.
 
 Postgres closes both tasks with two tools: `COPY` for loading and `MERGE` for
 reconciling.
