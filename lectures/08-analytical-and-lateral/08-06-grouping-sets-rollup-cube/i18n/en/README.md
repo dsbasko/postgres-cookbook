@@ -132,4 +132,22 @@ Compare the three blocks. `ROLLUP` produced the leaves (`Central/coffee 1000` an
 
 That wraps up module 08, "Analytics and LATERAL." You've worked through Postgres's whole analytical toolkit: window functions that compute a summary without collapsing rows (`OVER (...)`); ranking (`row_number`, `rank`, `dense_rank`) for "top-N per group"; `lag`/`lead` and window frames for comparing a row with its neighbors and for running totals; recursive CTEs (`WITH RECURSIVE`) for walking trees and graphs; `LATERAL`, where the right-hand source of a `JOIN` sees the current row of the left; and now `GROUPING SETS`/`ROLLUP`/`CUBE` — subtotals and the grand total in a single pass. All of it is about how to **read** data for analytics.
 
+Two weeks later the dashboard is built — the very one Emil ordered at the start of the module. You bring it up on the big screen: every guest's purchases stand in a row, the running total beside each; a separate tile for what sells most; a revenue line by day that doesn't drop to zero on the days a shop wasn't open; and subtotals per shop and category, with the grand total for the chain underneath. Emil comes down to sign off in person; he won't let go of the frame with the receipt for order #1.
+
+> **Emil:** Before, I only knew the total — how much a guest spent. Now I can see HOW he got there. At this cup Alice crossed a thousand — the coupon should have gone here, not half a year later.
+>
+> **You:** Every purchase in place, the total right beside it.
+>
+> **Emil:** And the whole chain? It all used to drown in one number.
+>
+> **You:** Shops, categories, the grand total — here, on one screen.
+>
+> **Emil:** This shop is growing, that one is quietly sinking. That's exactly what I needed to see.
+>
+> **Dmitry:** One pass instead of a stack of glued reports. Keep it that way — it won't start lying on the gaps.
+>
+> **Emil:** Good work. And right away, the next thing: let me load the supplier price list myself — I'm tired of waiting until night for someone else to do it.
+
+The dashboard is signed off — and Emil's last request already turns the team toward the next task.
+
 Next comes module **09, "Writing, events, and server-side logic,"** and the focus shifts from reading to writing. There it's advanced writes: `MERGE` for upsert logic in one statement and `COPY` for bulk loading; a work queue on top of a table via `FOR UPDATE SKIP LOCKED`, so several workers can pull jobs without blocking each other; the transactional outbox pattern, which atomically commits business data and an event for the outside world (that very bridge to Kafka); `LISTEN`/`NOTIFY` for lightweight cross-session notifications; and triggers — server-side logic the database runs itself on insert, update, and delete.
