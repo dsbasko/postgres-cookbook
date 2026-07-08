@@ -1,10 +1,14 @@
 # 08-02 — Ranking and top-N per group
 
-Brew's marketer showed up with two requests, both of which sounded harmless. First: "give me the top-1 drink in each category — what exactly sells best in coffee, in cold drinks, in tea." Second: "lay out the whole menu by sales quartiles — who the leaders are, and who's due to be cut." The chain's analyst sat down to write the query, typed the usual `SELECT category, max(units) FROM drink_sales_lab GROUP BY category` — and froze.
+Evgeny came down with two requests, both of which sounded harmless.
 
-`max(units)` returned a number — `150` for coffee. But the marketer needed the *name of the drink* that made those 150. You can't just add `drink` to the `SELECT`: it's neither under an aggregate nor in `GROUP BY`, and Postgres won't allow that. You can wriggle out with a correlated subquery or a `JOIN` back on `max`, but then on ties — and within coffee two drinks each sold 120 — *both* show up, and it's unclear which one counts as "top-1." And `GROUP BY` can't do quartiles at all: to spread eight rows across four buckets, you need to compare a row against its neighbours in order, not collapse them into a single number.
+> **Evgeny:** Give me the top-1 drink per category and lay out the menu by quartiles: leaders, and who to cut. I need a row, not a number — which drink, not how much of it. And on a tie, top-1 is still one: the banner fits one.
 
-The incident is that aggregates answer the question "what value," while the marketer was asking "which row" and "what place it's in." Those are questions about rank — and ranking window functions answer them.
+Evgeny worked out "a row, not a number" back on the reports in module 04 — now he says it himself, unprompted. The chain's analyst sat down to write the query, typed the usual `SELECT category, max(units) FROM drink_sales_lab GROUP BY category` — and froze.
+
+`max(units)` returned a number — `150` for coffee. But Evgeny needed the *name of the drink* that made those 150. You can't just add `drink` to the `SELECT`: it's neither under an aggregate nor in `GROUP BY`, and Postgres won't allow that. You can wriggle out with a correlated subquery or a `JOIN` back on `max`, but then on ties — and within coffee two drinks each sold 120 — *both* show up, and it's unclear which one counts as "top-1." And `GROUP BY` can't do quartiles at all: to spread eight rows across four buckets, you need to compare a row against its neighbours in order, not collapse them into a single number.
+
+The incident is that aggregates answer the question "what value," while Evgeny was asking "which row" and "what place it's in." Those are questions about rank — and ranking window functions answer them.
 
 ## Three ranks and their behaviour on ties
 
