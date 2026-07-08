@@ -1,15 +1,16 @@
 # 08-05 — LATERAL joins: top-N per group and the N+1 killer
 
-The customer profile in the Brew app renders a "3 biggest orders" block. The
-backend first pulled the list of customers in one query, and then, in a loop,
-fired one more query per customer to fetch that customer's three orders. A
-thousand customers on the "top buyers" screen meant a thousand and one trips to
-Postgres. This pattern is called `N+1`, and in production it looked like this:
-the profile page loaded in a second, a dashboard with a hundred customers took
-almost a minute, the connection pool choked, and half the latency was spent
-purely on network round-trips between the service and the database. We wanted
-something else: a single query that, inside the database itself, computes the
-top-3 for every customer at once.
+Support ticket, 18:40: the customer profile opens in a second, the "top buyers"
+dashboard for a hundred customers takes almost a minute, and by evening the
+connection pool chokes. Scale: a thousand customers on the screen — a thousand
+and one trips to Postgres. On call for the ticket — you.
+
+Behind the symptom is the `N+1` pattern. The customer profile renders a "3
+biggest orders" block: the backend pulls the list of customers in one query, and
+then, in a loop, fires one more query per customer to fetch that customer's three
+orders. Half the latency is spent purely on network round-trips between the
+service and the database. We wanted something else: a single query that, inside
+the database itself, computes the top-3 for every customer at once.
 
 Doing this head-on runs into one SQL rule. And it is exactly that rule that
 `LATERAL` lifts.
@@ -44,6 +45,15 @@ which top-1 is just the special case `LIMIT 1`: `LIMIT 1` gives "the best/latest
 per group", `LIMIT 3` gives top-3, and switching between them costs exactly one
 digit. Where `DISTINCT ON` hits a ceiling (only one row), `LATERAL` calmly hands
 back as many as you need.
+
+With top-N assembled, Evgeny walks up to your desk — phone turned toward you, a
+customer profile on the screen.
+
+> **Evgeny:** Karina again?! She was on the list — and now she's gone from the profiles.
+>
+> **You:** `CROSS` drops the ones whose right-hand subquery is empty?
+
+That is exactly what the next cut is about.
 
 ## LEFT vs CROSS: what to do with order-less customers
 
