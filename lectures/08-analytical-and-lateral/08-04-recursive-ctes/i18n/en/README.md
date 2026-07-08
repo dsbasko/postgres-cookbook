@@ -2,7 +2,13 @@
 
 Brew opened the menu admin panel and realised the categories had long since become a tree: "Drinks" splits into "Coffee" and "Tea", "Coffee" splits into "Espresso drinks" and "Filter", and "Espresso drinks" is already "Cappuccino" and "Latte". In the table this is a single `parent_id` column pointing back at its own `id`. Marketing asked to export the menu "the way it looks on the board" — indented by nesting level, with the full path from the root — to drop into a banner. A plain `JOIN` is helpless here: nobody knows the depth of the tree in advance, and writing eight self-joins "just in case" is not an engineering solution.
 
-An hour later a second incident landed. The logistics lead built a "where to ship the batch next" graph: from the warehouse to the workshop, from the workshop to the café. Someone mistakenly entered a row saying the leftovers ship from the café back to the warehouse. That closed a ring, `Warehouse → Workshop → Café → Warehouse`, and the very first naive recursive query over this graph hung: it walked in circles forever until the server hit a limit. Both incidents are about the same construct — the recursive `CTE` we promised back in `04-06`, when we first started talking about trees in the relational model. Time to deliver it.
+An hour later a second incident landed. The logistics lead built a "where to ship the batch next" graph: from the warehouse to the workshop, from the workshop to the café. Someone mistakenly entered a row saying the leftovers ship from the café back to the warehouse — that closed a ring, `Warehouse → Workshop → Café → Warehouse`. The nightly route export, which usually finishes in a second, went round and round this ring forever:
+
+> **Nodyr (in chat, 23:50):** The route export is hanging. Usually a second.
+>
+> **Pavel (in chat):** i see it. the query is spinning in a circle. killed it.
+
+Pavel finds the stuck query in `pg_stat_activity`, among the server's active queries, and kills it by hand: without a guard, recursion over this ring never stops on its own — it just keeps walking in circles until the server hits a limit. Both incidents are about the same construct — the recursive `CTE` we promised back in `04-06`, when we first started talking about trees in the relational model. Time to deliver it.
 
 ## Why this unit is on psql, not sqlc
 
