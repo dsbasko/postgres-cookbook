@@ -1,6 +1,16 @@
 # 08-03 — lag/lead and window frames (ROWS vs RANGE)
 
-A Brew analyst is assembling a "revenue by day" dashboard. Two columns were requested by the owner personally: "day-over-day delta" — how much the till is up or down versus yesterday, and a "3-day smoothed trend" — so a one-off spike doesn't scare anyone. The first is computed from the "value of the previous row", the second from the "average over the three rows back". Across the week of February 1–7 everything looks smooth — until someone notices that for February 6 and 7 the "3-day trend" shows different numbers in two different versions of the report. One version gives 146.67, the other 175.00. The figures diverge right after February 5, and on February 5 the shop was closed: a day off, and the row for that day simply isn't in the table.
+A Brew analyst is assembling a "revenue by day" dashboard. Two columns were requested by the owner personally: "day-over-day delta" — how much the till is up or down versus yesterday, and a "3-day smoothed trend" — so a one-off spike doesn't scare anyone. The first is computed from the "value of the previous row", the second from the "average over the three rows back". Across the week of February 1–7 everything looks smooth — until someone notices that for February 6 and 7 the "3-day trend" comes out different in two versions of the report.
+
+One version gives 146.67, the other 175.00. The figures diverge right after February 5, and on February 5 the shop was closed: a day off, and the row for that day simply isn't in the table.
+
+> **Emil (in chat):** Why do two reports show two numbers? After the fifth they split. Same days, same guests. Which one is real?
+>
+> **Botyr:** The second version is mine. I just copied the first and tweaked a couple of little things, figured it would be tidier. Swore the queries were identical.
+
+You lay the two queries side by side. The difference is a single word.
+
+> **You:** One word. `ROWS` in one, `RANGE` in the other. One word, and the reports disagree?
 
 A hole in the series is exactly where "three rows back" stops meaning "three days back". This unit is about how Postgres answers the question "which rows fall into the window", and why there are actually two answers.
 
@@ -42,6 +52,16 @@ That very hole on February 5 — in one picture. The till was closed that day, s
 | Type in `ORDER BY` | any | sortable (date/number/timestamp) |
 | Cost | cheaper | pricier: bounds are found by value |
 | When to use | "last N events" (position) | "over N calendar days" (time) |
+
+> **Botyr:** Wait. So the default frame with `ORDER BY` is `RANGE`? My running total from 08-01 accumulated not because I meant it to, but because the default frame decided so on its own?
+>
+> **You:** And if you write no frame at all — what does Postgres put in by default?
+
+> [!NOTE]
+> **Check yourself.** `sum(cents) OVER (ORDER BY day)` — not a single word about a frame. Which rows will Postgres take into the sum for each day, and why is this already a "running total"?
+
+> [!TIP]
+> **Answer.** `ORDER BY` inside `OVER (...)` with no explicit frame means `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` — from the start of the window to the current row by the `ORDER BY` value. So the sum for each day is the sum of every day from the first through the current — a running total. Botyr's guess is right: `sum(...) OVER (ORDER BY ...)` back in 08-01 is a running total by the design of the default frame, not by accident. The practical breakdown of this trap is in "The fence" below.
 
 ## What our code shows
 
