@@ -53,7 +53,7 @@ That very hole on February 5 — in one picture. The till was closed that day, s
 | Cost | cheaper | pricier: bounds are found by value |
 | When to use | "last N events" (position) | "over N calendar days" (time) |
 
-> **Botyr:** Wait. So the default frame with `ORDER BY` is `RANGE`? My running total from 08-01 accumulated not because I meant it to, but because the default frame decided so on its own?
+> **Botyr:** Hold on. So the default frame with `ORDER BY` is `RANGE`? My running total from 08-01 accumulated not because I meant it to, but because the default frame decided so on its own?
 >
 > **You:** And if you write no frame at all — what does Postgres put in by default?
 
