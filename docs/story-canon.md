@@ -948,7 +948,7 @@ Debezium»). Павел делегирует периметр: «Слот тво
 | Персонаж | Ключ силуэта | Реквизит | Палитра-акцент |
 |---|---|---|---|
 | Дмитрий | высокий, худощавый, сутулость, прямоугольные очки, седина на висках | кофейная салфетка со схемой | тёмный худи |
-| Павел | невысокая, плотная, низкий пучок, прищур | литровая кружка без надписи + блокнот с закладками | фланель в клетку / серый жилет |
+| Павел | невысокий, плотный, прищур, тяжёлый взгляд | литровая кружка без надписи + блокнот с закладками | фланель в клетку / серый жилет |
 | Ботыр | подвижный, вьющиеся рыжевато-русые волосы, наушники на шее | ноутбук в стикерах (слон + гофер) | конференс-футболка |
 | Евгений | спортивный, аккуратная борода, смарт-кэжуал | телефон экраном к собеседнику | яркие носки |
 | Эмиль | крепкий, широкоплечий, бритая голова, густые брови | чек в рамке / дегустационная чашка; фартук поверх рубашки | пиджак без галстука |
@@ -995,7 +995,7 @@ Debezium»). Павел делегирует периметр: «Слот тво
 >
 > **Ботыр:** Это было два раза.
 
-Из-за перегородки, не поворачиваясь от двух мониторов, подаёт голос женщина
+Из-за перегородки, не поворачиваясь от двух мониторов, подаёт голос мужчина
 с литровой кружкой без единой надписи.
 
 > **Павел:** Павел. База — моя. Песочницу подниму к обеду. Прод не проси.
@@ -1004,7 +1004,7 @@ Debezium»). Павел делегирует периметр: «Слот тво
 >
 > **Павел:** Особенно если очень нужно.
 >
-> **Дмитрий:** С Павлом граница простая: всё, что внутри сервера, — её
+> **Дмитрий:** С Павлом граница простая: всё, что внутри сервера, — его
 > территория. Всё, что ходит к серверу с запросами, — наша. Где именно
 > проходит эта граница, я буду показывать весь год. Ещё есть Евгений из
 > маркетинга, этажом выше: он появляется со словами «маленькая доработка»,
@@ -1048,7 +1048,7 @@ Day one at Brew. The dev office is the second floor above the chain's very first
 >
 > **Botyr:** That happened twice.
 
-From behind a partition, without turning away from her two monitors, a woman with a liter mug — not a single word printed on it — speaks up.
+From behind a partition, without turning away from his two monitors, a man with a liter mug — not a single word printed on it — speaks up.
 
 > **Pavel:** Pavel. My database. The sandbox will be up by lunch. Don't ask for prod.
 >
@@ -1056,7 +1056,7 @@ From behind a partition, without turning away from her two monitors, a woman wit
 >
 > **Pavel:** Especially if you really need it.
 >
-> **Dmitry:** The boundary with Pavel is simple: everything inside the server is her territory. Everything that talks to the server with queries is ours. Where exactly that boundary runs, I'll be showing you all year. There's also Evgeny from marketing, one floor up: he shows up saying "small tweak," and it hasn't been true once yet.
+> **Dmitry:** The boundary with Pavel is simple: everything inside the server is his territory. Everything that talks to the server with queries is ours. Where exactly that boundary runs, I'll be showing you all year. There's also Evgeny from marketing, one floor up: he shows up saying "small tweak," and it hasn't been true once yet.
 
 Dmitry turns his laptop around. On the screen is the orders table, first row highlighted.
 
