@@ -1,15 +1,24 @@
 # 10-02 — Price-and-promo engine
 
 Brew is awash in promotions: the latte goes up in February, the `SUMMER` promo
-code runs all summer, and `AUTUMN` takes over in the fall. And here surfaces a
-class of bugs that no amount of application data fixes. A manager accidentally
-gave a drink **two prices for the same day** — the register doesn't know which to
-charge. A marketer launched that same `SUMMER` code with an **overlapping window**
-— the discount applies twice or not at all, depending on which row the scheduler
-picks. This is not a "bad query" but a missing invariant: "a drink has exactly one
-price at any moment" and "the windows of one promo code don't overlap". Such rules
-can't live in service code — every writer to the table has to check them, and
-sooner or later someone forgets. The invariant must live in the schema.
+code runs all summer, and `AUTUMN` takes over in the fall. First thing in the
+morning, a report lands from the shop:
+
+> **Ruslan (in chat, 09:03):** Register. Latte. Two prices. Which one do I charge?
+
+Here surfaces a class of bugs that no amount of application data fixes. A manager
+accidentally entered a drink **two prices for the same day** — the register
+doesn't know which to charge. And that same `SUMMER` code now runs with an
+**overlapping window** — the discount applies twice or not at all, depending on
+which row the scheduler picks. The author of the campaign owns up first:
+
+> **Evgeny:** That `SUMMER` overlap is on me — a new window over the old one. Put
+> the invariant in the schema; I don't trust myself.
+
+This is not a "bad query" but a missing invariant: "a drink has exactly one price
+at any moment" and "the windows of one promo code don't overlap". Such rules can't
+live in service code — every writer to the table has to check them, and sooner or
+later someone forgets. The invariant must live in the schema.
 
 Postgres can hold "these intervals don't overlap" right inside `CREATE TABLE`.
 
