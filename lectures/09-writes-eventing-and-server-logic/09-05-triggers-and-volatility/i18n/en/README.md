@@ -1,17 +1,35 @@
 # 09-05 — Triggers and function volatility
 
-Brew has two recurring pains. The first: the `updated_at` column. A backend
-developer updated an order and forgot to set `updated_at` — and now the row's
-"changed at" time lies, and data-freshness analytics are broken. We want this
-column filled automatically, without relying on the discipline of everyone who
-writes an `UPDATE`. The second: auditing. A regulator asks for a "who changed what
-in prices" log: was 480, became 500. Writing a log entry in every place in the
-code where a price changes means forgetting it somewhere sooner or later.
+Evgeny — with his phone: a menu-freshness report on the screen.
 
-Both pains are closed by server-side logic — **triggers**: a function the database
-calls itself on every `INSERT`/`UPDATE`/`DELETE`. And talking about functions runs
-into the notion of **volatility** — a promise to the database about how
-predictable a function is.
+> **Evgeny:** The report lies. Rows with an updated price are marked "not
+> touched," and guests see yesterday's price.
+
+You find the cause in your own commit: the price `UPDATE` is there, `updated_at`
+is not. And right behind it — a regulator's letter: they need a "who changes
+prices and when" log (Latte: was 480, became 500).
+
+> **Pavel:** Both cases go to a trigger. The database will set the time itself and
+> write the log itself. A person forgets — the database won't.
+>
+> **Dmitry:** And it will hide it. A plain `UPDATE` quietly drags along a write
+> nothing in the code shows.
+>
+> **You:** So who's right?
+>
+> **Pavel:** I'm about integrity. The change time and the price log must always be
+> there, whoever writes.
+>
+> **Dmitry:** But a discount, a shipment, a payment-gateway call — don't hide those
+> in the database; their place is in the application.
+>
+> **You:** So the boundary runs between "mandatory for everyone" and "depends on
+> the scenario"?
+>
+> **Dmitry:** That's the one we'll draw.
+
+The argument converges right here. Both pains are closed by server-side logic —
+**triggers** — while talking about functions runs into **volatility**.
 
 ## A BEFORE trigger: edits the row before it is written
 
@@ -78,6 +96,16 @@ fence). The most visible consequence: only `IMMUTABLE` functions are allowed in 
 **index expression**. Logical: an index stores the computed value, and if the
 function could return something else for the same data, the index would
 immediately go stale.
+
+How serious that promise is, Pavel shows with a story he tells newcomers.
+
+> **Pavel:** We had a function. `IMMUTABLE`, but inside it read the tariff table.
+> The planner trusted the label and cached the first result.
+>
+> **You:** And out came the old price?
+>
+> **Pavel:** For three days. The data changes, the function "doesn't" — we hunted
+> the leak as a whole team. The label has to be honest.
 
 ## What our code shows
 
@@ -182,3 +210,11 @@ work (`SKIP LOCKED`), reliably produce events (`outbox`), push signals (`NOTIFY`
 and move invariants into the DB (triggers). Next is module 10, the capstones: all
 of this ties into end-to-end scenarios, including `10-05`, where our `outbox` and
 the Brew base tables travel via CDC into the sibling `kafka-cookbook`.
+
+And the next module has already started — with a message in the team chat:
+
+> **Emil (in chat):** We're launching the loyalty program. I want guests to come
+> back, not pay once and vanish.
+
+Balances, credits, and debits will land in one database — and you'll be the one
+building the schema for them, in `10-01`.
