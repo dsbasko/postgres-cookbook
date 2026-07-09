@@ -1,17 +1,30 @@
 # 10-01 — Capstone: build the Brew schema
 
-Brew is launching a loyalty program: a member earns points, a barista grants
-bonuses, interest accrues overnight. It sounds like a couple of tables and three
-queries — but it's exactly the place where the course comes together. You can't
-store money in a `float`, or a fraction-of-a-cent drift accumulates over a
-thousand accruals. A duplicate email or a negative balance must not reach the
-database — no matter which of our two backends writes it. A point lookup by
-member must not scan the whole accrual ledger. And when two processes touch one
-balance at the same time — a barista hits "grant bonus" while the nightly job
-accrues interest in the very same second — the total must reconcile to the cent,
-not get lost.
+The loyalty-program kickoff meeting. At the whiteboard — you and Botyr: you
+co-lead the capstone as equals, Oleg taking notes on the side. Dmitry stands off
+to one side with his mug.
 
-We've already covered each of these problems separately. The capstone assembles
+> **Botyr:** A member earns points, a barista grants a bonus, interest accrues
+> overnight. Both our backends write the balance into one DB — and both must
+> reject the same things: a duplicate email, a negative balance, an out-of-set tier.
+>
+> **Oleg:** So we'll just do the checks in Go, at the entry point.
+>
+> **You:** One "just" in Go won't hold: my check and Botyr's check drift apart.
+>
+> **Botyr:** A field with an invariant is a column, not a line of code. Got burned
+> on that once — a postmortem to show for it.
+>
+> **Dmitry:** The invariant goes into the schema, and the DB holds it for every
+> writer. The retry goes into the client.
+
+Two items stay on the board that Go won't cover: a point lookup by member —
+without scanning the whole accrual ledger, and a barista's bonus and the nightly
+interest, if they land on the balance at the same time, must reconcile to the
+cent, not get lost. And money isn't a `float`: over a thousand accruals a
+fraction-of-a-cent drift piles up.
+
+We've already covered each of the four risks separately. The capstone assembles
 them into one small subservice and shows how they work together.
 
 ## The business rule lives in the DB, not the app
