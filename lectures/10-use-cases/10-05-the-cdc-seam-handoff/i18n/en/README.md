@@ -1,18 +1,31 @@
 # 10-05 — The CDC seam: handoff to kafka-cookbook
 
-Brew's menu changes on its own: a barista edits the espresso price, marketing
-publishes a new blog article, a customer's phone number changes. And every such
-change has to reach the neighbouring world — `kafka-cookbook`, where the very
-same coffee-chain Brew already lives as a stream of events in Kafka, feeds
-Elasticsearch, and powers menu search. The question of the whole course's finale
-is just one: **how do we hand our stream of changes to the Kafka course without
-rewriting anything on that side?**
+Evgeny brings two people from the neighbouring `kafka-cookbook` team to your desk.
+They need a live stream of Brew's changes: the price a barista edits, the article
+marketing publishes, a customer's phone that changes — all of it has to reach
+their world, where the same Brew lives as events in Kafka.
 
-The answer is Change Data Capture. We write no relay of our own (that was the
-09-03 path), we set up no triggers. We configure Postgres logical replication on
-exactly the tables we need, and Debezium from `kafka-cookbook` connects to it and
-reads the stream itself. Postgres becomes the source of truth, and the WAL
-becomes our event bus. This unit assembles the seam and proves it holds.
+> **Evgeny:** They need our changes — menu, blog, customers. As a live stream,
+> not a once-a-day dump. I promised we'd hand it over today.
+
+The guests wait in silence — a cross-team contract, no spare words. Oleg spins on
+his chair nearby.
+
+> **Oleg:** Wait — why not an outbox with a relay, like before?
+>
+> **You:** The outbox is our delivery, by hand. Here Postgres takes it on: the
+> change is already in the log.
+
+You open a `PUBLICATION` on three tables — `drinks`, `articles`, `customers` —
+and show Oleg: the WAL already holds every change, and Debezium reads it off
+without a line of our code. A guest nods at their own `init.sql` — the column
+names are the same as ours.
+
+> **You:** Rename even one column on our side and we break their Debezium.
+
+This is Change Data Capture: no relay of our own (the 09-03 path) and no triggers,
+just Postgres logical replication. That makes Postgres the source of truth, and
+the WAL our event bus.
 
 ## CDC instead of a relay: the WAL is already a changelog
 
@@ -208,5 +221,33 @@ Next is the sibling course `kafka-cookbook` (github.com/dsbasko/kafka-cookbook).
 It picks up exactly this stream: Debezium listens to our `dbz_publication`, puts
 the changes into Kafka, and from there sinks travel into Elasticsearch and build
 search over the same coffee-chain Brew. One world, one data model, two courses —
-Postgres has handed off the baton, Kafka takes it. This was the last unit. Thank
-you for making it to the end.
+Postgres has handed off the baton, Kafka takes it.
+
+The publication is open, the slot checked — and the whole team quietly gathers in
+the open space. Pavel sets his battered incident notebook down next to your
+keyboard, open to a blank page.
+
+> **Pavel:** The slot's yours. Watch the disk.
+
+He doesn't explain what a forgotten slot leads to — you already know that. Emil
+comes down from upstairs and puts a frame on the desk: the paper receipt for
+order #1 — Alice Ivanova, a cappuccino and a cold brew, January fifteenth.
+
+> **Emil:** The first order is heading out into the big world. See that it gets
+> there.
+
+Oleg rolls over on his chair, his screen glowing with a red question.
+
+> **Oleg:** Wait — why did our stream stall while their side stayed fine?
+>
+> **You:** Show me the query.
+
+He shows it. And for a second there are two of you in the room: you, asking now —
+and Oleg, a copy of you from a year ago. Dmitry stands behind you, finishing
+something on a coffee napkin, and lays it on top of Pavel's notebook.
+
+> **Dmitry:** A year on one napkin: show me the query, listen to what the database
+> answers, invariants go into the schema, don't write delivery by hand. The rest
+> is details.
+
+This was the last unit. Thank you for this year at Brew.
