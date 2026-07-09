@@ -6,9 +6,19 @@ instances, each with its own pool, and the sum of their connections has hit
 `max_connections`. The classic answer is to put **pgbouncer in transaction mode**
 in front of the database: it keeps a small set of real backends and hands them
 out to applications on demand. Connections to the database drop, everyone is
-happy — until things that worked flawlessly for years suddenly stop: an advisory
-lock "leaks", `LISTEN` goes silent, a parameterized query fails with an error
-about a missing prepared statement.
+happy — until the first night under load.
+
+pgbouncer went out at 03:11. A minute later the alerts started: the order screen
+is silent, an advisory lock is stuck, a parameterized query fails with an error
+about a missing prepared statement. It ran flawlessly for years — and went down
+all at once. You're on call, for the first time at night. At 03:14 you message
+Pavel.
+
+> **You (in chat, 03:14):** Lock stuck. LISTEN silent. prepared failing. What's the common thread?
+
+The reply is instant, in her signature lowercase.
+
+> **Pavel (in chat):** the pool. transaction mode. there's no session anymore.
 
 There is one cause, and it has to be understood literally. A transaction pool
 holds a real backend for you for exactly **one transaction**, not for a "session".
@@ -72,6 +82,19 @@ to the price — the simple protocol is a touch less efficient — but under a
 transaction pool it is the only reliable path. A real pgbouncer, by the way, can
 do the opposite too: `max_prepared_statements` lets it track prepared statements
 itself on top of the pool.
+
+The next morning — an incident retro at the whiteboard.
+
+> **Dmitry:** Three things went down at once. Name them — and why each one.
+>
+> **You:** Advisory lock, LISTEN, prepared statement. All three — on the session.
+>
+> **Pavel:** A pool gives you a backend per transaction, not per session. What's
+> on the session is no longer yours.
+>
+> **Dmitry:** So we don't fix the pool — we fix three places in the code. Each
+> session-scoped thing to its transaction-scoped equivalent. Below — the reseat
+> picture and the replacement table.
 
 ## The reseat between backends — and what survives it
 
