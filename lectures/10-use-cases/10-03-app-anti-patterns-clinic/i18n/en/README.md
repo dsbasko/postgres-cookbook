@@ -2,8 +2,12 @@
 
 Brew's database is healthy: the indexes are in place, the schema is fine, the
 hardware isn't strained. And yet the dashboard keeps flashing red — the menu endpoint
-drags, email lookup takes seconds, the orders pager times out on page forty. The DBA
-stares at `pg_stat_statements` and shrugs: "the queries are simple, nothing's broken."
+drags, email lookup takes seconds, the orders pager times out on page forty. The triage ticket
+goes to Pavel — and he closes it in one line:
+
+> **Pavel (on the ticket):** checked pg_stat_statements. queries are simple. database's
+> healthy. fix the code.
+
 And he's right — the database isn't broken, what's broken is **the way the application
 talks to it**. This is a familiar picture: five identical smells that are easy to grow
 in any service and nearly impossible to spot in a one-line synthetic test. Each one has
@@ -39,6 +43,23 @@ batch: one query for everyone
   app ──①──► SELECT orders WHERE customer_id = ANY([c1,c2,c3])  ──► all orders
             1 round-trip, the same answer
 ```
+
+This first disease isn't from the old legends about someone else's code. It's in your own
+fresh PR: you fetch the customers in one list, then pull each one's orders one at a time in
+a loop. Dmitry walks over with his mug, opens the diff — and instead of a dressing-down, he
+counts out loud.
+
+> **Dmitry:** The customer list — one query. And the orders?
+>
+> **You:** In a loop. One query per customer.
+>
+> **Dmitry:** So the trips are one more than the customers. And what did the database
+> answer each? The same one batch would return. The extra trips aren't a logic bug —
+> they're the query's shape. Gather it with one `= ANY`.
+
+No dressing-down — just a count: you don't scold this disease, you measure it. You rebuild,
+and the loop of trips collapses into one. The first disease is cured; the next lives in how
+much extra you ask the database for at once.
 
 ## 2. SELECT * → explicit columns
 
