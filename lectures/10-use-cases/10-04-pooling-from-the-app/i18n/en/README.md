@@ -16,7 +16,7 @@ Pavel.
 
 > **You (in chat, 03:14):** Lock stuck. LISTEN silent. prepared failing. What's the common thread?
 
-The reply is instant, in her signature lowercase.
+The reply is instant, in his signature lowercase.
 
 > **Pavel (in chat):** the pool. transaction mode. there's no session anymore.
 
