@@ -281,7 +281,11 @@ so course data resolves via `process.cwd()`.
   `docs/story-canon.md` (cast, voice registry, scene-form ladder, dialogue
   hygiene, threads); the per-unit scene spec is `docs/story-scene-map.md`;
   `docs/course-canon.md` stays the source of truth for data characters and
-  off-screen roles. Any edit to README prose must preserve scenes: named
+  off-screen roles. Scenes are written **to the canon**; their **gates** are
+  the `lecture-writer` skill's checklist
+  (`.claude/skills/lecture-writer/references/checklist.md`, a gitignored
+  local working-copy artefact — absent from a fresh clone). Any edit to
+  README prose must preserve scenes: named
   characters keep the same replica count in the RU and EN mirrors, reader
   lines are `**Ты:**`/`**You:**` (gender-neutral, present tense), Pavel's chat
   lines are lowercase (only his), and no dialogue inside theory blocks or
