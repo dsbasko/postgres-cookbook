@@ -6,7 +6,7 @@ Evening rush. You're on ticket duty today, and the first thing to land in chat i
 >
 > **You:** The query is trivial — `SELECT * FROM events WHERE ref_no = ?`, one row out. Why two seconds?
 >
-> **Dmitry:** The question isn't what you asked, it's how the database answered. Show me the plan.
+> **Dmitry:** The question isn't what you ask, it's how the database answers. Show me the plan.
 
 The dashboard opened instantly — while the register's event table was small. At a million rows the same page took seconds to load: the problem isn't the query but **how** the database ran it. With no index on `ref_no`, it had to read and check every one of a million rows to find the single match. One command makes this visible — `EXPLAIN ANALYZE`.
 

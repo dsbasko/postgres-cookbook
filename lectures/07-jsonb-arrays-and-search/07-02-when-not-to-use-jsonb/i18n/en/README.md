@@ -2,7 +2,7 @@
 
 Ruslan messages from BREW-CENTRAL in the middle of the day — the register won't ring up a latte.
 
-> **Ruslan (chat, 13:20):** Latte on the storefront — minus five rubles. Ring it up?
+> **Ruslan (in chat, 13:20):** Latte on the storefront — minus five rubles. Ring it up?
 >
 > **You:** Minus five? Where does a latte get a negative price?
 >
@@ -10,7 +10,7 @@ Ruslan messages from BREW-CENTRAL in the middle of the day — the register won'
 >
 > **Dmitry:** And when did it go negative?
 >
-> **Botyr:** That's exactly what nobody can say. The column had `CHECK (price > 0)`. Inside the document there's none — a network analyst tried to add one, it won't fit `jsonb`.
+> **Botyr:** That's exactly what nobody can say. The column had `CHECK (price > 0)`. Inside the document there's none — the chain's analyst tried to add one, it won't fit `jsonb`.
 >
 > **Pavel:** And that's only half of it. Change one flag in the card — you rewrite the whole document. On a hot table I'll bring you the WAL bill.
 >

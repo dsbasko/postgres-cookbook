@@ -326,4 +326,4 @@ staff-Анны (04-02; склейка §10.2 расторгнута — каме
 
 - Приёмка волны: выборочное чтение (минимум все ★, шапка Павла 05-02, рифма
   06-06), RU и EN.
-- Дальше: `ralphex docs/plans/20260704-story-uplift-3-wave-iii.md`.
+- Дальше: `ralphex docs/plans/completed/20260704-story-uplift-3-wave-iii.md`.
