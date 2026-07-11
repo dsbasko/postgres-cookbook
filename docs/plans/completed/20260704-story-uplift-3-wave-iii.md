@@ -304,4 +304,4 @@
   отката, 08-05 — форма плашки), RU и EN.
 - После приёмки волны — переместить этот план в `docs/plans/completed/`
   (`git mv docs/plans/20260704-story-uplift-3-wave-iii.md docs/plans/completed/`).
-- Дальше: `ralphex docs/plans/20260704-story-uplift-4-wave-iv.md`.
+- Дальше: `ralphex docs/plans/completed/20260704-story-uplift-4-wave-iv.md`.
